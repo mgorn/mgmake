@@ -29,23 +29,37 @@ namespace mgmake {
 
 	template<detail::StaticString name_v = "", auto cb = nullptr>
 	struct Project {
+		void build();
+	};
+
+	template<detail::StaticString... source_v>
+	struct SourcesImpl {
 
 	};
 
-
-	template<detail::StaticString name_v = "", >
+	template<detail::StaticString name_v = "", typename sources_t = SourcesImpl<>>
 	struct TargetImpl {
 		template<detail::StaticString new_name_v = "">
 		consteval decltype(auto) name() const {
 			return detail::poof<TargetImpl<new_name_v>>();
 		}
+		template<detail::StaticString... new_sources_v>
+		consteval decltype(auto) sources() const {
+			return detail::poof<TargetImpl<name_v, SourcesImpl<new_sources_v>...>>();
+		}
 	};
 	static constexpr TargetImpl Target{};
+
+	template<detail::StaticString name_v, auto cb>
+	void Project<name_v, cb>::build() {
+
+	}
 }
 namespace mgmk = mgmake;
 
 #define BUILD_ENTRY(ProjectType) \
 int main() { \
-	ProjectType build; \
+	ProjectType project; \
+	project.build(); \
 	return 0; \
 }
