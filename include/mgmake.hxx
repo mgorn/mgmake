@@ -35,6 +35,30 @@ namespace mgmake {
 		};
 	}
 
+	template<detail::StaticString compiler_v = "clang">
+	struct ToolchainImpl {
+		template<detail::StaticString new_compiler_v = "clang">
+		consteval decltype(auto) compiler() const {
+			return detail::poof<ToolchainImpl<new_compiler_v>>();
+		}
+
+		[[nodiscard]] constexpr decltype(auto) clang() const {
+			return detail::poof<ToolchainImpl<"clang">>();
+		}
+		[[nodiscard]] constexpr decltype(auto) gcc() const {
+			return detail::poof<ToolchainImpl<"gcc">>();
+		}
+
+		[[nodiscard]] constexpr std::string_view get_compiler() const {
+			return compiler_v.str();
+		}
+
+		template<auto sources_v>
+		void compile_sources() {
+
+		}
+	};
+
 	template<detail::StaticString name_v = "", auto target = nullptr>
 	struct Project {
 		void build() {
