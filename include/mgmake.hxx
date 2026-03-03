@@ -2,11 +2,13 @@
 
 #include <array>
 #include <cstddef>
+#include <print>
+#include <string>
 
 namespace mgmake {
 	namespace detail {
 		template<typename T>
-		decltype(auto) poof() {
+		consteval decltype(auto) poof() {
 			static constexpr T value;
 			return value;
 		}
@@ -22,22 +24,53 @@ namespace mgmake {
 				}
 			}
 
+			[[nodiscard]] constexpr std::string str() const {
+				return mData.data();
+			}
+
 			// Required for template parameter equivalence checks in C++20
 			constexpr operator const char*() const { return mData.data(); }
+
+			constexpr operator std::string() const { return mData.data(); }
 		};
 	}
 
-	template<detail::StaticString name_v = "", auto cb = nullptr>
+	template<detail::StaticString name_v = "", auto target = nullptr>
 	struct Project {
-
+		void build() {
+			std::print("Building project {}\n", name_v.str());
+			if constexpr (not std::is_same_v<decltype(target), std::nullptr_t>) {
+				std::print("Building target {}\n", target.get_name());
+			}
+		}
 	};
 
+	template<detail::StaticString... sources_v>
+	struct SourcesImpl {
+		template<detail::StaticString... new_sources_v>
+		consteval decltype(auto) sources() const {
+			return detail::poof<SourcesImpl<new_sources_v...>>();
+		}
+	};
+	static constexpr SourcesImpl Sources{};
 
-	template<detail::StaticString name_v = "", >
+	template<auto name_v = nullptr, auto sources_v = Sources>
 	struct TargetImpl {
+		[[nodiscard]] constexpr decltype(auto) get_name() const {
+			if constexpr (name_v != nullptr) {
+				return name_v.str();
+			}
+			return std::string{"Anonymous Target"};
+		}
+
 		template<detail::StaticString new_name_v = "">
 		consteval decltype(auto) name() const {
-			return detail::poof<TargetImpl<new_name_v>>();
+			return detail::poof<TargetImpl<new_name_v, sources_v>>();
+		}
+
+		template<auto new_sources_v = Sources>
+		consteval decltype(auto) with() const {
+			return detail::poof<TargetImpl<name_v, new_sources_v>>();
 		}
 	};
 	static constexpr TargetImpl Target{};
@@ -47,5 +80,6 @@ namespace mgmk = mgmake;
 #define BUILD_ENTRY(ProjectType) \
 int main() { \
 	ProjectType build; \
+	build.build(); \
 	return 0; \
 }
