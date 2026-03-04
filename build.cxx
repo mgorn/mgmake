@@ -1,11 +1,12 @@
-#include <mgmake.hxx>
-//$include <"https://mwg.codes/mgmake.hxx">
+#include <cstdlib>
+#include <iostream>
 
-using namespace mgmake;
-
-using MyProject = Project<
-	"MGMake",
-	Target.name<"mgmake">().with<Sources.sources<"build.cxx">()>()
->;
-
-BUILD_ENTRY(MyProject);
+int main() {
+	auto result = system("clang++ build.cxx -o builder");
+	if (result != 0) {
+		std::cout << "Build failed: " << result << std::endl;
+	} else {
+		std::cout << "Built successfully" << std::endl;
+	}
+	return result;
+}
