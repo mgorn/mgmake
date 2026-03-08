@@ -1,4 +1,3 @@
-#include <cstdlib>
 #include <format>
 #include <iostream>
 #include <string>
@@ -11,7 +10,7 @@ struct Toolchain {
 struct Sources {
 	std::vector<std::string> mSources{};
 
-	operator std::string() const {
+	explicit operator std::string() const {
 		return str();
 	}
 	[[nodiscard]] std::string str() const {
@@ -26,22 +25,31 @@ struct Sources {
 struct Target {
 	std::string mName;
 	Sources mSources{};
+	std::vector<Target*> mDependencies{};
+};
+
+struct Project {
+	std::string mName;
+	std::string mStandard = "c++2c";
+	std::vector<Target> mTargets{};
 };
 
 int main() {
 	Toolchain toolchain;
-	Target target{ "builder", {
-		{ "build.cxx" }
-	} };
-	auto standard = "c++2c";
+	Project project{ "mgmake", "c++2c", { { "builder", {
+			{ "build.cxx" }
+	} } } } ;
 
-	const auto cmd = std::format("{} -std={} -o {} {}", toolchain.mCompiler, standard, target.mName, target.mSources.str());
-	std::cout << "Invoking build command: '" << cmd << "'" << std::endl;
-	const auto result = system(cmd.c_str());
-	if (result != 0) {
-		std::cout << "Build failed: " << result << std::endl;
-	} else {
-		std::cout << "Built successfully" << std::endl;
+	auto result = 0;
+	for (const auto& target : project.mTargets) {
+		const auto cmd = std::format("{} -std={} -o {} {}", toolchain.mCompiler, project.mStandard, target.mName, target.mSources.str());
+		std::cout << "Invoking build command: '" << cmd << "'" << std::endl;
+		result |= system(cmd.c_str());
+		if (result != 0) {
+			std::cout << "Build failed: " << result << std::endl;
+		} else {
+			std::cout << "Built successfully" << std::endl;
+		}
 	}
 	return result;
 }
