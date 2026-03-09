@@ -16,7 +16,7 @@ using MgMake = Project
 	::add_target<Builder>;
 
 int main() {
-	const Toolchain toolchain;
-	const MgMake project;
+	Toolchain toolchain;
+	MgMake project;
 	return project.build(toolchain);
 }

@@ -50,21 +50,21 @@ namespace mgmake {
 	}
 
 	template<
-		mgmake::detail::StaticString... sources_v
+		detail::StaticString... sources_v
 	>
 	struct ListImpl {
-		template<mgmake::detail::StaticString new_source_v>
+		template<detail::StaticString new_source_v>
 		[[nodiscard]] constexpr auto add() const {
-			return mgmake::detail::poof<ListImpl<sources_v..., new_source_v>>();
+			return detail::poof<ListImpl<sources_v..., new_source_v>>();
 		}
 
 		[[nodiscard]] constexpr auto collect() const {
 			if constexpr (sizeof...(sources_v) == 0) {
-				return mgmake::detail::StaticString{""};
+				return detail::StaticString{""};
 			} else if constexpr (sizeof...(sources_v) == 1) {
 				return (sources_v + ...);
 			} else {
-				constexpr mgmake::detail::StaticString space{" "};
+				constexpr detail::StaticString space{" "};
 				return ((sources_v + space) + ...);
 			}
 		}
@@ -77,12 +77,12 @@ namespace mgmake {
 	static_assert(Sources.add<"build.cxx">().add<"another.cxx">().collect().str() == "build.cxx another.cxx ");
 
 	template<
-		mgmake::detail::StaticString name_v = "",
+		detail::StaticString name_v = "",
 		auto sources_v = Sources,
 		auto includes_v = Includes
 	>
 	struct TargetImpl {
-		template<mgmake::detail::StaticString new_name_v>
+		template<detail::StaticString new_name_v>
 		using name = TargetImpl<new_name_v, sources_v, includes_v>;
 		template<auto new_sources_v = Sources>
 		using sources = TargetImpl<name_v, new_sources_v, includes_v>;
@@ -101,15 +101,15 @@ namespace mgmake {
 	using Target = TargetImpl<>;
 
 	template<
-		mgmake::detail::StaticString name_v = "",
-		mgmake::detail::StaticString standard_v = "c++2c",
+		detail::StaticString name_v = "",
+		detail::StaticString standard_v = "c++2c",
 		typename... target_ts
 	>
 	struct ProjectImpl {
-		template<mgmake::detail::StaticString new_name_v>
+		template<detail::StaticString new_name_v>
 		using name = ProjectImpl<new_name_v, standard_v, target_ts...>;
 
-		template<mgmake::detail::StaticString new_standard_v>
+		template<detail::StaticString new_standard_v>
 		using standard = ProjectImpl<name_v, new_standard_v, target_ts...>;
 
 		template<typename new_target_t>
