@@ -19,5 +19,5 @@ Please open an issue on GitHub!!! I want this project to really be the best it c
     include/ - mgmake library headers
         mgmake.hxx - mgmake header
     build.cxx - The build script that builds the build script
-    CMakeLists.txt - The cmake project file to compile the build script without the build script
+    build.sh - A script to compile & run the build script on unix-like platforms (Mac, Linux, etc)
 ```
