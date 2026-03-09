@@ -1,4 +1,4 @@
-#include <mgmake.hxx>
+#include <mgmake/mgmake.hxx>
 
 using namespace mgmk;
 

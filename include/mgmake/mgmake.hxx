@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef MGMAKE_HXX
+#define MGMAKE_HXX
+
 #include <array>
 #include <cstddef>
 #include <print>
@@ -7,12 +10,14 @@
 
 namespace mgmake {
 	namespace detail {
+		// Poof! You have a T
 		template<typename T>
 		consteval decltype(auto) poof() {
 			static constexpr T value;
 			return value;
 		}
 
+		// Compile-time string type
 		template<std::size_t N>
 		struct StaticString {
 			std::array<char, N> mData{};
@@ -35,6 +40,7 @@ namespace mgmake {
 			constexpr operator std::string() const { return mData.data(); }
 		};
 
+		// Concat 2 static strings
 		template<size_t N1, size_t N2>
 		constexpr auto operator+(const StaticString<N1>& a, const StaticString<N2>& b) {
 			StaticString<N1 + N2 - 1> result;
@@ -49,10 +55,12 @@ namespace mgmake {
 		}
 	}
 
+	// (unfinished) toolchain structure
 	struct Toolchain {
 		std::string mCompiler = "clang++";
 	};
 
+	// A compile-time string list
 	template<
 		detail::StaticString... sources_v
 	>
@@ -72,9 +80,16 @@ namespace mgmake {
 				return ((sources_v + space) + ...);
 			}
 		}
+
+		[[nodiscard]] constexpr auto size() const {
+			return sizeof...(sources_v);
+		}
+		constexpr bool empty() const {
+			return size() == 0;
+		}
 	};
-	static constexpr ListImpl Sources{};
-	static constexpr ListImpl Includes{};
+	static constexpr ListImpl Sources{}; // Used for sources
+	static constexpr ListImpl Includes{}; // Used for include paths
 
 	// Assertions to make sure sources are collected properly
 	static_assert(Sources.add<"build.cxx">().collect().str() == "build.cxx");
@@ -94,7 +109,11 @@ namespace mgmake {
 		using includes = TargetImpl<name_v, sources_v, new_includes_v>;
 
 		[[nodiscard]] static auto command(const auto& toolchain, const auto& project) {
-			return std::format("{} -std={} -o {} {} -I {}", toolchain.mCompiler, project.standard_value.str(), name_v.str(), sources_v.collect().str(), includes_v.collect().str());
+			if constexpr (includes_v.empty()) {
+				return std::format("{} -std={} -o {} {}", toolchain.mCompiler, project.standard_value.str(), name_v.str(), sources_v.collect().str());
+			} else {
+				return std::format("{} -std={} -o {} {} -I {}", toolchain.mCompiler, project.standard_value.str(), name_v.str(), sources_v.collect().str(), includes_v.collect().str());
+			}
 		}
 		static auto build(const auto& toolchain, const auto& project) {
 			auto cmd = command(toolchain, project);
@@ -137,3 +156,5 @@ int main() { \
 	ProjectType build; \
 	return build.build(toolchain); \
 }
+
+#endif
