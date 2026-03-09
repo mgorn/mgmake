@@ -17,6 +17,7 @@ namespace mgmake {
 		struct StaticString {
 			std::array<char, N> mData{};
 
+			constexpr StaticString() = default;
 			// Constexpr constructor to allow implicit conversion from string literals
 			constexpr StaticString(const char (&str)[N]) {
 				for (std::size_t i = 0; i < N; ++i) {
@@ -33,6 +34,19 @@ namespace mgmake {
 
 			constexpr operator std::string() const { return mData.data(); }
 		};
+
+		template<size_t N1, size_t N2>
+		constexpr auto operator+(const StaticString<N1>& a, const StaticString<N2>& b) {
+			StaticString<N1 + N2 - 1> result;
+
+			for (size_t i = 0; i < N1 - 1; ++i)
+				result.mData[i] = a.mData[i];
+
+			for (size_t i = 0; i < N2; ++i)
+				result.mData[i + N1 - 1] = b.mData[i];
+
+			return result;
+		}
 	}
 
 	template<detail::StaticString compiler_v = "clang">

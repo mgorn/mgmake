@@ -4,6 +4,9 @@ A CMake-inspired C++ build system using C++ as it's DSL. The inspiration is that
 ## Disclaimer
 This project is still in it's infancy. I don't even use this myself *yet*, but keep an eye out I'm working on it!
 
+## Have issues?
+Please open an issue on GitHub!!! I wan't this project to really be the best it can, so I'll be making sure to help out however I can!!
+
 # Usage
 1) Use a `#include` directive to include the `mgmake.hxx` file.
 2) Set up your build (see examples)
