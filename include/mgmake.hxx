@@ -49,69 +49,81 @@ namespace mgmake {
 		}
 	}
 
-	template<detail::StaticString compiler_v = "clang">
-	struct ToolchainImpl {
-		template<detail::StaticString new_compiler_v = "clang">
-		consteval decltype(auto) compiler() const {
-			return detail::poof<ToolchainImpl<new_compiler_v>>();
+	template<
+		mgmake::detail::StaticString... sources_v
+	>
+	struct ListImpl {
+		template<mgmake::detail::StaticString new_source_v>
+		[[nodiscard]] constexpr auto add() const {
+			return mgmake::detail::poof<ListImpl<sources_v..., new_source_v>>();
 		}
 
-		[[nodiscard]] constexpr decltype(auto) clang() const {
-			return detail::poof<ToolchainImpl<"clang">>();
-		}
-		[[nodiscard]] constexpr decltype(auto) gcc() const {
-			return detail::poof<ToolchainImpl<"gcc">>();
-		}
-
-		[[nodiscard]] constexpr std::string_view get_compiler() const {
-			return compiler_v.str();
-		}
-
-		template<auto sources_v>
-		void compile_sources() {
-
-		}
-	};
-
-	template<detail::StaticString name_v = "", auto target = nullptr>
-	struct Project {
-		void build() {
-			std::print("Building project {}\n", name_v.str());
-			if constexpr (not std::is_same_v<decltype(target), std::nullptr_t>) {
-				std::print("Building target {}\n", target.get_name());
+		[[nodiscard]] constexpr auto collect() const {
+			if constexpr (sizeof...(sources_v) == 0) {
+				return mgmake::detail::StaticString{""};
+			} else if constexpr (sizeof...(sources_v) == 1) {
+				return (sources_v + ...);
+			} else {
+				constexpr mgmake::detail::StaticString space{" "};
+				return ((sources_v + space) + ...);
 			}
 		}
 	};
+	static constexpr ListImpl Sources{};
+	static constexpr ListImpl Includes{};
 
-	template<detail::StaticString... sources_v>
-	struct SourcesImpl {
-		template<detail::StaticString... new_sources_v>
-		consteval decltype(auto) sources() const {
-			return detail::poof<SourcesImpl<new_sources_v...>>();
-		}
-	};
-	static constexpr SourcesImpl Sources{};
+	// Assertions to make sure sources are collected properly
+	static_assert(Sources.add<"build.cxx">().collect().str() == "build.cxx");
+	static_assert(Sources.add<"build.cxx">().add<"another.cxx">().collect().str() == "build.cxx another.cxx ");
 
-	template<auto name_v = nullptr, auto sources_v = Sources>
+	template<
+		mgmake::detail::StaticString name_v = "",
+		auto sources_v = Sources,
+		auto includes_v = Includes
+	>
 	struct TargetImpl {
-		[[nodiscard]] constexpr decltype(auto) get_name() const {
-			if constexpr (name_v != nullptr) {
-				return name_v.str();
-			}
-			return std::string{"Anonymous Target"};
-		}
-
-		template<detail::StaticString new_name_v = "">
-		consteval decltype(auto) name() const {
-			return detail::poof<TargetImpl<new_name_v, sources_v>>();
-		}
-
+		template<mgmake::detail::StaticString new_name_v>
+		using name = TargetImpl<new_name_v, sources_v, includes_v>;
 		template<auto new_sources_v = Sources>
-		consteval decltype(auto) with() const {
-			return detail::poof<TargetImpl<name_v, new_sources_v>>();
+		using sources = TargetImpl<name_v, new_sources_v, includes_v>;
+		template<auto new_includes_v = Includes>
+		using includes = TargetImpl<name_v, sources_v, new_includes_v>;
+
+		[[nodiscard]] static auto command(const auto& toolchain, const auto& project) {
+			return std::format("{} -std={} -o {} {} -I {}", toolchain.mCompiler, project.standard_value.str(), name_v.str(), sources_v.collect().str(), includes_v.collect().str());
+		}
+		static auto build(const auto& toolchain, const auto& project) {
+			auto cmd = command(toolchain, project);
+			std::print("Invoking build command: {}\n", cmd);
+			return system(cmd.c_str());
 		}
 	};
-	static constexpr TargetImpl Target{};
+	using Target = TargetImpl<>;
+
+	template<
+		mgmake::detail::StaticString name_v = "",
+		mgmake::detail::StaticString standard_v = "c++2c",
+		typename... target_ts
+	>
+	struct ProjectImpl {
+		template<mgmake::detail::StaticString new_name_v>
+		using name = ProjectImpl<new_name_v, standard_v, target_ts...>;
+
+		template<mgmake::detail::StaticString new_standard_v>
+		using standard = ProjectImpl<name_v, new_standard_v, target_ts...>;
+
+		template<typename new_target_t>
+		using add_target = ProjectImpl<name_v, standard_v, target_ts..., new_target_t>;
+
+		static constexpr auto name_value = name_v;
+		static constexpr auto standard_value = standard_v;
+
+		[[nodiscard]] auto build(const auto& toolchain) const {
+			std::print("Building project '{}'\n", name_value.str());
+			return (target_ts::build(toolchain, *this) | ...);
+		}
+	};
+	using Project = ProjectImpl<>;
 }
 namespace mgmk = mgmake;
 
