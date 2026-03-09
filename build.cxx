@@ -1,9 +1,5 @@
 #include <mgmake.hxx>
 
-struct Toolchain {
-	std::string mCompiler = "clang++";
-};
-
 using namespace mgmk;
 
 using Builder = Target::name<"builder">
@@ -15,8 +11,4 @@ using MgMake = Project
 	::standard<"c++2c">
 	::add_target<Builder>;
 
-int main() {
-	Toolchain toolchain;
-	MgMake project;
-	return project.build(toolchain);
-}
+BUILD_ENTRY(MgMake);

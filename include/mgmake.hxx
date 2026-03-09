@@ -49,6 +49,10 @@ namespace mgmake {
 		}
 	}
 
+	struct Toolchain {
+		std::string mCompiler = "clang++";
+	};
+
 	template<
 		detail::StaticString... sources_v
 	>
@@ -129,7 +133,7 @@ namespace mgmk = mgmake;
 
 #define BUILD_ENTRY(ProjectType) \
 int main() { \
+	Toolchain toolchain; \
 	ProjectType build; \
-	build.build(); \
-	return 0; \
+	return build.build(toolchain); \
 }
