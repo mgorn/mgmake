@@ -10,10 +10,7 @@ struct Toolchain {
 struct Sources {
 	std::vector<std::string> mSources{};
 
-	explicit operator std::string() const {
-		return str();
-	}
-	[[nodiscard]] std::string str() const {
+	[[nodiscard]] std::string collect() const {
 		std::string result;
 		for (const auto& source : mSources) {
 			result += source + " ";
@@ -22,16 +19,24 @@ struct Sources {
 	}
 };
 
-struct Target {
-	std::string mName;
-	Sources mSources{};
-	std::vector<Target*> mDependencies{};
-};
+struct Target;
 
 struct Project {
 	std::string mName;
 	std::string mStandard = "c++2c";
 	std::vector<Target> mTargets{};
+	std::vector<std::string> mIncludePaths{};
+};
+
+struct Target {
+	std::string mName;
+	Sources mSources{};
+	std::vector<Target*> mDependencies{};
+
+	
+	[[nodiscard]] auto command(const Toolchain &toolchain, const Project &project) const {
+		return std::format("{} -std={} -o {} {}", toolchain.mCompiler, project.mStandard, mName, mSources.collect());
+	}
 };
 
 int main() {
@@ -42,7 +47,7 @@ int main() {
 
 	auto result = 0;
 	for (const auto& target : project.mTargets) {
-		const auto cmd = std::format("{} -std={} -o {} {}", toolchain.mCompiler, project.mStandard, target.mName, target.mSources.str());
+		const auto cmd = target.command(toolchain, project);
 		std::cout << "Invoking build command: '" << cmd << "'" << std::endl;
 		result |= system(cmd.c_str());
 		if (result != 0) {
