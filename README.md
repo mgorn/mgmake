@@ -1,5 +1,8 @@
-# mgmake
-A C++ build system using C++ as it's DSL
+# Michael Gorney's Make
+A CMake-inspired C++ build system using C++ as it's DSL. The inspiration is that I don't like using CMake.
+
+## Disclaimer
+This project is still in it's infancy. I don't even use this myself *yet*, but keep an eye out I'm working on it!
 
 # Usage
 1) Use a `#include` directive to include the `mgmake.hxx` file.

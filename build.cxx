@@ -1,3 +1,4 @@
+#include <mgmake.hxx>
 #include <format>
 #include <iostream>
 #include <string>
@@ -21,29 +22,42 @@ struct Sources {
 
 struct Target;
 
-struct Project {
-	std::string mName;
-	std::string mStandard = "c++2c";
-	std::vector<Target> mTargets{};
-	std::vector<std::string> mIncludePaths{};
+template<
+	mgmake::detail::StaticString name_v = "",
+	mgmake::detail::StaticString standard_v = "c++2c",
+	auto... targets_v
+>
+struct ProjectImpl {
+	template<mgmake::detail::StaticString new_name_v>
+	using name = ProjectImpl<new_name_v, standard_v, targets_v...>;
+
+	template<mgmake::detail::StaticString new_standard_v>
+	using standard = ProjectImpl<name_v, new_standard_v, targets_v...>;
+
+	static constexpr auto name_value = name_v;
+	static constexpr auto standard_value = standard_v;
 };
+using Project = ProjectImpl<>;
 
 struct Target {
 	std::string mName;
 	Sources mSources{};
 	std::vector<Target*> mDependencies{};
+	std::vector<std::string> mIncludePaths{};
 
-	
-	[[nodiscard]] auto command(const Toolchain &toolchain, const Project &project) const {
-		return std::format("{} -std={} -o {} {}", toolchain.mCompiler, project.mStandard, mName, mSources.collect());
+
+	[[nodiscard]] auto command(const Toolchain& toolchain, const auto& project) const {
+		return std::format("{} -std={} -o {} {}", toolchain.mCompiler, project.standard(), mName, mSources.collect());
 	}
 };
 
+using MgMake = Project::name<"mgmake">::standard<"c++2c">;
+
 int main() {
 	Toolchain toolchain;
-	Project project{ "mgmake", "c++2c", { { "builder", {
+	/*Project project{ "mgmake", "c++2c", { { "builder", {
 			{ "build.cxx" }
-	} } } } ;
+	} } } } ;*/
 
 	auto result = 0;
 	for (const auto& target : project.mTargets) {
