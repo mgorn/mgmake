@@ -1,8 +1,8 @@
+//usr/bin/env mkdir .mgmake && clang++ "$0" -I include -std=c++2c -o .mgmake/build && exec ./.mgmake/build "$@" && exit 0
 #include <mgmake/mgmake.hxx>
-
 using namespace mgmk;
 
-using Builder = Target::name<"builder">
+using Builder = Target::name<"build">
 	::sources<Sources.add<"build.cxx">()>
 	::includes<Includes.add<"include">()>;
 
