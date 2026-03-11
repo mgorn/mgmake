@@ -14,7 +14,7 @@ Please open an issue on GitHub!!! I want this project to really be the best it c
 //usr/bin/env mkdir .mgmake && clang++ "$0" -I include -std=c++2c -o .mgmake/build && exec ./.mgmake/build "$@" && exit 0
 #include <mgmake/mgmake.hxx>
 ```
-3) Optionally add this using statement for convenience:
+3) (Optional) add this using statement for convenience:
 ```c++
 using namespace mgmk;
 ```
