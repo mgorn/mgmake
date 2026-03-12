@@ -9,25 +9,42 @@ Please open an issue on GitHub!!! I want this project to really be the best it c
 
 # Usage
 1) Download the `mgmake.hxx` file.
-2) Copy this segment into your build script (typically `build.cxx`).
+2) Copy this snippet to the top of your build script (call it `build.cxx`).
 ```c++
-//usr/bin/env mkdir .mgmake && clang++ "$0" -I include -std=c++2c -o .mgmake/build && exec ./.mgmake/build "$@" && exit 0
-#include <mgmake/mgmake.hxx>
+//usr/bin/env mkdir .mgmake && clang++ "$0" -std=c++2c -o .mgmake/build && exec ./.mgmake/build "$@" && exit 0
+#if 0 //WINDOWS
+echo "[BUILD] Entering Developer Command Prompt"
+rd /S /Q .mgmake
+call "C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat" && echo "[BUILD] Building!" && md .mgmake && clang-cl "build.cxx" /std:c++latest /Fe".mgmake\build.exe" && ".mgmake\build.exe" %*
+exit /b
+#endif
+
+#include "mgmake.hxx"
 ```
-3) (Optional) add this using statement for convenience:
+(Optional) add this using statement for convenience:
 ```c++
 using namespace mgmk;
 ```
+3) Create your project and target(s).
 4) Run the source file (`build.cxx`) as a script
-```shell
+
+Mac/Linux/Unix-like
+```shell 
 chmod +x build.cxx
 ./build.cxx
+```
+Windows
+```commandline 
+cmd < build.cxx
 ```
 
 # Files
 ```
 / - Project root
     include/ - mgmake library headers
-        mgmake.hxx - mgmake header
+        mgmake/
+            ext/ - Extension headers
+                cmake.hxx - Extension for using CMake projects & targets as dependencies
+    mgmake.hxx - mgmake header
     build.cxx - The build script that builds the build script
 ```

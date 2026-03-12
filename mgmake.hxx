@@ -5,6 +5,7 @@
 
 #include <array>
 #include <cstddef>
+#include <format>
 #include <print>
 #include <string>
 
