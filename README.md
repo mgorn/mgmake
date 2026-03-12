@@ -7,6 +7,8 @@ This project is still in its infancy. I don't even use this myself *yet*, but ke
 ## Have issues?
 Please open an issue on GitHub!!! I want this project to really be the best it can, so I'll be making sure to help out however I can!!
 
+[Join the GornCord](https://discord.gg/ECDfZGTzVQ)
+
 # Usage
 1) Download the `mgmake.hxx` file.
 2) Copy this snippet to the top of your build script (call it `build.cxx`).

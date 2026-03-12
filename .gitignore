@@ -41,3 +41,4 @@
 *.dwo
 /.idea
 /.mgmake
+/cmake-build-debug
