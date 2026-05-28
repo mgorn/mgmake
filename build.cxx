@@ -22,10 +22,12 @@ int main() {
 	auto build_exe = build_graph.create_artifact(dag::artifact::kind::generated, "build.exe");
 	auto compile_action = build_graph.create_action(
 		std::string{ "Compile build.cxx" }, std::string{ "Compiles build.cxx as the build program." },
-		std::vector<dag::artifact::id>{ build_src }, std::vector<dag::artifact::id>{ build_exe }, true);
+		std::vector<dag::artifact::id>{ build_src }, std::vector<dag::artifact::id>{ build_exe },
+		true, sys::command_line{std::vector<std::string>{"clang-mg++", "build.cxx", "-o", "build2.exe" }});
 
-	backend::graphviz back;
+	backend::ninja back;
 	back.generate(build_graph);
+	back.build(build_graph);
 
 	return 0;
 }

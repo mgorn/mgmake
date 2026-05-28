@@ -44,3 +44,5 @@
 /cmake-build-debug
 build
 *.dot
+*.ninja
+.ninja_log

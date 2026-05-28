@@ -5,10 +5,359 @@
 
 #include "../dag/graph.hxx"
 
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+
 namespace mgmake::backend {
+    namespace detail {
+        inline std::string ninja_escape_build_text(std::string_view text) {
+            std::string result;
+
+            for (const char ch : text) {
+                switch (ch) {
+                    case '$':
+                        result += "$$";
+                        break;
+
+                    case ' ':
+                        result += "$ ";
+                        break;
+
+                    case ':':
+                        result += "$:";
+                        break;
+
+                    case '|':
+                        result += "$|";
+                        break;
+
+                    case '\n':
+                        result += "$\n";
+                        break;
+
+                    default:
+                        result += ch;
+                        break;
+                }
+            }
+
+            return result;
+        }
+
+        inline std::string ninja_escape_path(const std::filesystem::path& path) {
+            return ninja_escape_build_text(path.generic_string());
+        }
+
+        inline std::string ninja_escape_variable_text(std::string_view text) {
+            std::string result;
+
+            for (const char ch : text) {
+                switch (ch) {
+                    case '$':
+                        result += "$$";
+                        break;
+
+                    case '\n':
+                        result += "$\n";
+                        break;
+
+                    default:
+                        result += ch;
+                        break;
+                }
+            }
+
+            return result;
+        }
+
+#if defined(_WIN32)
+        inline std::string shell_escape(std::string_view arg) {
+            if (arg.empty()) {
+                return "\"\"";
+            }
+
+            bool needs_quotes = false;
+
+            for (const char ch : arg) {
+                if (ch == ' ' || ch == '\t' || ch == '"' || ch == '\\') {
+                    needs_quotes = true;
+                    break;
+                }
+            }
+
+            if (!needs_quotes) {
+                return std::string(arg);
+            }
+
+            std::string result;
+            result += '"';
+
+            std::size_t backslashes = 0;
+
+            for (const char ch : arg) {
+                if (ch == '\\') {
+                    ++backslashes;
+                    continue;
+                }
+
+                if (ch == '"') {
+                    result.append(backslashes * 2 + 1, '\\');
+                    result += '"';
+                    backslashes = 0;
+                    continue;
+                }
+
+                if (backslashes != 0) {
+                    result.append(backslashes, '\\');
+                    backslashes = 0;
+                }
+
+                result += ch;
+            }
+
+            if (backslashes != 0) {
+                result.append(backslashes * 2, '\\');
+            }
+
+            result += '"';
+            return result;
+        }
+#else
+        inline std::string shell_escape(std::string_view arg) {
+            if (arg.empty()) {
+                return "''";
+            }
+
+            bool needs_quotes = false;
+
+            for (const char ch : arg) {
+                if (ch == ' ' || ch == '\t' || ch == '\'' || ch == '"' || ch == '$' || ch == '\\' || ch == '&' || ch == ';' || ch == '(' || ch == ')' || ch == '<' || ch == '>' || ch == '|') {
+                    needs_quotes = true;
+                    break;
+                }
+            }
+
+            if (!needs_quotes) {
+                return std::string(arg);
+            }
+
+            std::string result;
+            result += '\'';
+
+            for (const char ch : arg) {
+                if (ch == '\'') {
+                    result += "'\\''";
+                } else {
+                    result += ch;
+                }
+            }
+
+            result += '\'';
+            return result;
+        }
+#endif
+
+        inline std::string ninja_command_line(const sys::command_line& command) {
+            std::string result;
+
+            for (std::size_t i = 0; i < command.m_args.size(); ++i) {
+                if (i != 0) {
+                    result += ' ';
+                }
+
+                result += shell_escape(command.m_args[i]);
+            }
+
+            return ninja_escape_variable_text(result);
+        }
+
+        inline const dag::artifact& checked_artifact(const dag::graph& graph, dag::artifact::id id) {
+            if (id >= graph.m_artifacts.size()) {
+                throw std::runtime_error("ninja backend: invalid artifact id");
+            }
+
+            return graph.m_artifacts[id];
+        }
+
+        inline void write_artifact_list(std::ofstream& out, const dag::graph& graph, const std::vector<dag::artifact::id>& artifacts) {
+            bool first = true;
+
+            for (const auto id : artifacts) {
+                const auto& artifact = checked_artifact(graph, id);
+
+                if (!first) {
+                    out << ' ';
+                }
+
+                out << ninja_escape_path(artifact.m_path);
+                first = false;
+            }
+        }
+
+        inline void create_output_directories(const dag::graph& graph) {
+            for (const auto& action : graph.m_actions) {
+                for (const auto output_id : action.m_outputs) {
+                    const auto& output = checked_artifact(graph, output_id);
+
+                    if (output.m_kind == dag::artifact::kind::phony) {
+                        continue;
+                    }
+
+                    const auto parent = output.m_path.parent_path();
+
+                    if (!parent.empty()) {
+                        std::filesystem::create_directories(parent);
+                    }
+                }
+            }
+        }
+
+        inline void write_target_defaults(std::ofstream& out, const dag::graph& graph) {
+            if (graph.m_targets.empty()) {
+                return;
+            }
+
+            out << "\ndefault";
+
+            for (const auto& target : graph.m_targets) {
+                out << ' ' << ninja_escape_build_text(target.m_name);
+            }
+
+            out << "\n";
+        }
+
+        inline std::string system_command_line(const sys::command_line& command) {
+            std::string result;
+
+            for (std::size_t i = 0; i < command.m_args.size(); ++i) {
+                if (i != 0) {
+                    result += ' ';
+                }
+
+                result += shell_escape(command.m_args[i]);
+            }
+
+            return result;
+        }
+    }
+
     struct ninja {
-        void generate(const dag::graph& graph);
-        void build(const dag::graph& graph);
+        std::filesystem::path m_output_path = std::filesystem::current_path() / "build.ninja";
+
+        void generate(const dag::graph& graph) {
+            if (m_output_path.has_parent_path()) {
+                std::filesystem::create_directories(m_output_path.parent_path());
+            }
+
+            detail::create_output_directories(graph);
+
+            std::ofstream out(m_output_path);
+
+            if (!out) {
+                throw std::runtime_error("ninja backend: failed to open " + m_output_path.string());
+            }
+
+            out << "# generated by mgmake\n\n";
+
+            bool needs_always = false;
+
+            for (const auto& action : graph.m_actions) {
+                if (action.m_always_run) {
+                    needs_always = true;
+                    break;
+                }
+            }
+
+            if (needs_always) {
+                out << "build __mgmake_always: phony\n\n";
+            }
+
+            for (std::size_t i = 0; i < graph.m_actions.size(); ++i) {
+                const auto& action = graph.m_actions[i];
+
+                if (action.m_outputs.empty()) {
+                    throw std::runtime_error("ninja backend: action '" + action.m_name + "' has no outputs");
+                }
+
+                if (action.m_command.m_args.empty()) {
+                    throw std::runtime_error("ninja backend: action '" + action.m_name + "' has no command");
+                }
+
+                out << "rule action_" << i << "\n";
+                out << "  command = " << detail::ninja_command_line(action.m_command) << "\n";
+
+                if (!action.m_description.empty()) {
+                    out << "  description = " << detail::ninja_escape_variable_text(action.m_description) << "\n";
+                } else if (!action.m_name.empty()) {
+                    out << "  description = " << detail::ninja_escape_variable_text(action.m_name) << "\n";
+                }
+
+                if (!action.m_working_directory.empty()) {
+#if defined(_WIN32)
+                    out << "  command = cd /d "
+                        << detail::ninja_escape_variable_text(detail::shell_escape(action.m_working_directory.string()))
+                        << " && "
+                        << detail::ninja_command_line(action.m_command)
+                        << "\n";
+#else
+                    out << "  command = cd "
+                        << detail::ninja_escape_variable_text(detail::shell_escape(action.m_working_directory.string()))
+                        << " && "
+                        << detail::ninja_command_line(action.m_command)
+                        << "\n";
+#endif
+                }
+
+                out << "\n";
+
+                out << "build ";
+                detail::write_artifact_list(out, graph, action.m_outputs);
+                out << ": action_" << i;
+
+                if (!action.m_inputs.empty()) {
+                    out << ' ';
+                    detail::write_artifact_list(out, graph, action.m_inputs);
+                }
+
+                if (action.m_always_run) {
+                    out << " | __mgmake_always";
+                }
+
+                out << "\n\n";
+            }
+
+            for (const auto& target : graph.m_targets) {
+                if (target.m_outputs.empty()) {
+                    throw std::runtime_error("ninja backend: target '" + target.m_name + "' has no outputs");
+                }
+
+                out << "build " << detail::ninja_escape_build_text(target.m_name) << ": phony ";
+                detail::write_artifact_list(out, graph, target.m_outputs);
+                out << "\n";
+            }
+
+            detail::write_target_defaults(out, graph);
+        }
+
+        void build(const dag::graph& graph) {
+            generate(graph);
+
+            sys::command_line command;
+            command.m_args.emplace_back("ninja");
+            command.m_args.emplace_back("-f");
+            command.m_args.emplace_back(m_output_path.string());
+
+            const std::string text = detail::system_command_line(command);
+            const int exit_code = std::system(text.c_str());
+
+            if (exit_code != 0) {
+                throw std::runtime_error("ninja backend: ninja failed");
+            }
+        }
     };
 }
 
