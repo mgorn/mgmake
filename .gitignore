@@ -42,3 +42,5 @@
 /.idea
 /.mgmake
 /cmake-build-debug
+build
+*.dot
