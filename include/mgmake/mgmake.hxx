@@ -3,11 +3,18 @@
 #ifndef MGMAKE_MGMAKE_HXX
 #define MGMAKE_MGMAKE_HXX
 
+#include "backend/graphviz.hxx"
+#include "backend/ninja.hxx"
+#include "backend/traits.hxx"
 #include "cli/action.hxx"
 #include "cli/backend.hxx"
 #include "cli/options.hxx"
 #include "cli/parse.hxx"
 #include "cli/util.hxx"
+#include "dag/action.hxx"
+#include "dag/artifact.hxx"
+#include "dag/graph.hxx"
+#include "dag/target.hxx"
 #include "sys/command_line.hxx"
 
 namespace mgmake {
@@ -16,23 +23,23 @@ namespace mgmake {
 		auto parsed = cli::parse(command_line.user_args());
 
 		if (!parsed) {
-			std::println(stderr, "mgmake: error: {}", parsed.error);
+			std::println(stderr, "mgmake: error: {}", parsed.m_error);
 			std::println(stderr, "try '{} help'", command_line.program_name());
 			return 2;
 		}
 
-		const cli::options& opts = parsed.value;
+		const cli::options& opts = parsed.m_value;
 
 		if (opts.show_help) {
 			cli::print_help(command_line.program_name());
 			return 0;
 		}
 
-		std::println("action: {}", cli::action_name(opts.action));
-		std::println("backend: {}", cli::backend_name(opts.backend));
-		std::println("build dir: {}", opts.build_dir);
+		std::println("action: {}", cli::action_name(opts.m_action));
+		std::println("backend: {}", cli::backend_name(opts.m_backend));
+		std::println("build dir: {}", opts.m_build_dir);
 
-		for (const auto& target : opts.targets) {
+		for (const auto& target : opts.m_targets) {
 			std::println("target: {}", target);
 		}
 

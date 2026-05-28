@@ -8,6 +8,7 @@
 namespace mgmake::cli {
 	enum struct backend_kind {
 		automatic,
+		graphviz,
 		ninja,
 		make,
 		direct
@@ -17,6 +18,8 @@ namespace mgmake::cli {
 		switch (backend) {
 			case backend_kind::automatic:
 				return "automatic";
+			case backend_kind::graphviz:
+    			return "graphviz";
 			case backend_kind::ninja:
 				return "ninja";
 			case backend_kind::make:
@@ -31,6 +34,11 @@ namespace mgmake::cli {
 	[[nodiscard]] inline constexpr bool parse_backend(std::string_view text, backend_kind& out) {
 		if (text == "auto" || text == "automatic") {
 			out = backend_kind::automatic;
+			return true;
+		}
+
+		if (text == "graphviz" || text == "dot" || text == "graph") {
+			out = backend_kind::graphviz;
 			return true;
 		}
 

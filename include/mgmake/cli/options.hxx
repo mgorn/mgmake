@@ -11,20 +11,20 @@
 
 namespace mgmake::cli {
 	struct options {
-		action_kind action = action_kind::build;
-		backend_kind backend = backend_kind::automatic;
+		action_kind m_action = action_kind::build;
+		backend_kind m_backend = backend_kind::automatic;
 
-		std::string build_dir = "build";
+		std::string m_build_dir = "build";
 
-		std::vector<std::string> targets;
-		std::vector<std::string> passthrough_args;
+		std::vector<std::string> m_targets;
+		std::vector<std::string> m_passthrough_args;
 
-		int jobs = 0;
+		int m_jobs = 0;
 
-		bool verbose = false;
-		bool dry_run = false;
-		bool show_help = false;
-		bool show_version = false;
+		bool m_verbose = false;
+		bool m_dry_run = false;
+		bool m_show_help = false;
+		bool m_show_version = false;
 	};
 }
 

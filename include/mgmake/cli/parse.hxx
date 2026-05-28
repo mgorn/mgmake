@@ -14,25 +14,25 @@
 
 namespace mgmake::cli {
 	struct parse_result {
-		bool ok = false;
-		options value{};
-		std::string error{};
+		bool m_ok = false;
+		options m_value{};
+		std::string m_error{};
 
 		[[nodiscard]] explicit operator bool() const {
-			return ok;
+			return m_ok;
 		}
 
 		static parse_result success(options opts) {
 			parse_result result;
-			result.ok = true;
-			result.value = std::move(opts);
+			result.m_ok = true;
+			result.m_value = std::move(opts);
 			return result;
 		}
 
 		static parse_result failure(std::string message) {
 			parse_result result;
-			result.ok = false;
-			result.error = std::move(message);
+			result.m_ok = false;
+			result.m_error = std::move(message);
 			return result;
 		}
 	};
@@ -47,31 +47,31 @@ namespace mgmake::cli {
 
 			if (arg == "--") {
 				for (++i; i < args.size(); ++i) {
-					opts.passthrough_args.emplace_back(args[i]);
+					opts.m_passthrough_args.emplace_back(args[i]);
 				}
 
 				break;
 			}
 
 			if (arg == "-h" || arg == "--help") {
-				opts.action = action_kind::help;
-				opts.show_help = true;
+				opts.m_action = action_kind::help;
+				opts.m_show_help = true;
 				continue;
 			}
 
 			if (arg == "--version") {
-				opts.action = action_kind::version;
-				opts.show_version = true;
+				opts.m_action = action_kind::version;
+				opts.m_show_version = true;
 				continue;
 			}
 
 			if (arg == "-v" || arg == "--verbose") {
-				opts.verbose = true;
+				opts.m_verbose = true;
 				continue;
 			}
 
 			if (arg == "--dry-run") {
-				opts.dry_run = true;
+				opts.m_dry_run = true;
 				continue;
 			}
 
@@ -91,7 +91,7 @@ namespace mgmake::cli {
 					);
 				}
 
-				opts.backend = backend;
+				opts.m_backend = backend;
 				continue;
 			}
 
@@ -106,7 +106,7 @@ namespace mgmake::cli {
 					);
 				}
 
-				opts.backend = backend;
+				opts.m_backend = backend;
 				continue;
 			}
 
@@ -118,7 +118,7 @@ namespace mgmake::cli {
 					return parse_result::failure(std::move(error));
 				}
 
-				opts.build_dir = std::move(value);
+				opts.m_build_dir = std::move(value);
 				continue;
 			}
 
@@ -129,7 +129,7 @@ namespace mgmake::cli {
 					return parse_result::failure("missing value after '--build-dir='");
 				}
 
-				opts.build_dir = std::string(value);
+				opts.m_build_dir = std::string(value);
 				continue;
 			}
 
@@ -141,7 +141,7 @@ namespace mgmake::cli {
 					return parse_result::failure(std::move(error));
 				}
 
-				opts.targets.emplace_back(std::move(value));
+				opts.m_targets.emplace_back(std::move(value));
 				continue;
 			}
 
@@ -152,7 +152,7 @@ namespace mgmake::cli {
 					return parse_result::failure("missing value after '--target='");
 				}
 
-				opts.targets.emplace_back(value);
+				opts.m_targets.emplace_back(value);
 				continue;
 			}
 
@@ -172,7 +172,7 @@ namespace mgmake::cli {
 					);
 				}
 
-				opts.jobs = jobs;
+				opts.m_jobs = jobs;
 				continue;
 			}
 
@@ -187,7 +187,7 @@ namespace mgmake::cli {
 					);
 				}
 
-				opts.jobs = jobs;
+				opts.m_jobs = jobs;
 				continue;
 			}
 
@@ -202,7 +202,7 @@ namespace mgmake::cli {
 					);
 				}
 
-				opts.jobs = jobs;
+				opts.m_jobs = jobs;
 				continue;
 			}
 
@@ -218,21 +218,21 @@ namespace mgmake::cli {
 				action_kind parsed_action{};
 
 				if (parse_action(arg, parsed_action)) {
-					opts.action = parsed_action;
+					opts.m_action = parsed_action;
 
 					if (parsed_action == action_kind::help) {
-						opts.show_help = true;
+						opts.m_show_help = true;
 					}
 
 					if (parsed_action == action_kind::version) {
-						opts.show_version = true;
+						opts.m_show_version = true;
 					}
 
 					continue;
 				}
 			}
 
-			opts.targets.emplace_back(arg);
+			opts.m_targets.emplace_back(arg);
 		}
 
 		return parse_result::success(std::move(opts));

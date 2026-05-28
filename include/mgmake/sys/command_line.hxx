@@ -9,18 +9,18 @@
 
 namespace mgmake::sys {
 	struct command_line {
-		std::vector<std::string> args;
+		std::vector<std::string> m_args;
 
 		std::string_view program_name() const {
-			return args.empty() ? std::string_view{} : std::string_view(args[0]);
+			return m_args.empty() ? std::string_view{} : std::string_view(m_args[0]);
 		}
 
 		std::span<const std::string> user_args() const {
-			if (args.size() <= 1) {
+			if (m_args.size() <= 1) {
 				return {};
 			}
 
-			return std::span<const std::string>(args).subspan(1);
+			return std::span<const std::string>(m_args).subspan(1);
 		}
 	};
 
@@ -28,7 +28,7 @@ namespace mgmake::sys {
 		command_line result;
 
 		for (int i = 0; i < argc; ++i) {
-			result.args.emplace_back(argv[i] ? argv[i] : "");
+			result.m_args.emplace_back(argv[i] ? argv[i] : "");
 		}
 
 		return result;
@@ -40,13 +40,13 @@ namespace mgmake::sys {
 		if (argc <= 0 || argv == nullptr) {
 			return result;
 		}
-		result.args.reserve(static_cast<std::size_t>(argc));
+		result.m_args.reserve(static_cast<std::size_t>(argc));
 		for (int i = 0; i < argc; ++i) {
 			if (argv[i] == nullptr) {
-				result.args.emplace_back();
+				result.m_args.emplace_back();
 				continue;
 			}
-			result.args.emplace_back(detail::wide_to_utf8(argv[i]));
+			result.m_args.emplace_back(detail::wide_to_utf8(argv[i]));
 		}
 		return result;
 	}
