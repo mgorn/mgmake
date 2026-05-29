@@ -15,7 +15,11 @@
 #include "dag/artifact.hxx"
 #include "dag/graph.hxx"
 #include "dag/target.hxx"
+#include "detail/convert.hxx"
+#include "detail/static_string.hxx"
 #include "sys/command_line.hxx"
+#include "sys/platform.hxx"
+#include "sys/util.hxx"
 
 namespace mgmake {
 	template<typename ProjectType>
@@ -48,7 +52,7 @@ namespace mgmake {
 }
 namespace mgmk = mgmake;
 
-#ifdef MGMK_PLATFORM_WINDOWS
+#if defined(MGMK_PLATFORM_WINDOWS) and defined(WIN32_LEAN_AND_MEAN)
 #define MGMAKE_BUILD_ENTRY(ProjectType) \
 int wmain(int argc, wchar_t** argv) { \
     auto args = ::mgmk::sys::args_from_wide(argc, argv); \

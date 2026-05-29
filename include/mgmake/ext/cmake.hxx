@@ -1,6 +1,6 @@
 #pragma once
 
-#ifndef MGMAKE_HXX
+#ifndef MGMAKE_MGMAKE_HXX
 #error "Please include mgmake before including extensions!"
 #else
 

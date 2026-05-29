@@ -74,7 +74,7 @@ namespace mgmake::dag {
 #define MGMAKE_SYS_UTIL_HXX
 
 namespace mgmake::sys {
-#if defined(_WIN32)
+#ifdef defined(MGMK_PLATFORM_WINDOWS) and defined(WIN32_LEAN_AND_MEAN) // windows.h is included and should be used
 	inline constexpr std::string shell_escape(std::string_view arg) {
 		if (arg.empty()) {
 			return "\"\"";
@@ -215,7 +215,7 @@ namespace mgmake::sys {
 		return result;
 	}
 
-#ifdef MGMK_PLATFORM_WINDOWS
+#ifdef defined(MGMK_PLATFORM_WINDOWS) and defined(WIN32_LEAN_AND_MEAN)
 	inline constexpr command_line args_from_wide(int argc, wchar_t** argv) {
 		command_line result;
 		if (argc <= 0 || argv == nullptr) {
@@ -1292,7 +1292,159 @@ namespace mgmake::cli {
 // skipped duplicate include: include\mgmake\dag\artifact.hxx
 // skipped duplicate include: include\mgmake\dag\graph.hxx
 // skipped duplicate include: include\mgmake\dag\target.hxx
+
+// ===== begin include\mgmake\detail\convert.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DETAIL_CONVERT_HXX
+#define MGMAKE_DETAIL_CONVERT_HXX
+
+
+// ===== begin include\mgmake\sys\platform.hxx =====
+#pragma once
+
+#ifndef MGMAKE_SYS_PLATFORM_HXX
+#define MGMAKE_SYS_PLATFORM_HXX
+
+// Cursed windows shit here
+#if defined(_WIN32) 
+    // You can still use MGMake on Windows without windows.h <3
+    // with love - Michael
+    #ifndef MGMK_NO_WINDOWS
+        #ifndef NOMINMAX
+            #define NOMINMAX
+        #endif
+
+        #ifndef WIN32_LEAN_AND_MEAN
+            #define WIN32_LEAN_AND_MEAN
+        #endif
+
+        #include <windows.h>
+	    #pragma message("Windows is included here. This is probably the source of your pain.")
+    #endif
+
+    #define MGMK_PLATFORM_WINDOWS 1
+#elif defined(__unix__) || defined(__APPLE__)
+    #define MGMK_PLATFORM_POSIX 1
+#else
+    #define MGMK_PLATFORM_UNSUPPORTED 1
+#endif
+
+namespace mgmake::sys {
+	enum struct platform {
+		windows,
+		posix,
+		unsupported
+	};
+}
+
+#endif// ===== end include\mgmake\sys\platform.hxx =====
+
+
+namespace mgmake::detail {
+	#ifdef MGMK_PLATFORM_WINDOWS
+	inline constexpr std::string wide_to_utf8(std::wstring_view text) {
+		if (text.empty()) {
+			return {};
+		}
+
+		if (text.size() > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+			throw std::runtime_error("Wide string is too large to convert to UTF-8");
+		}
+
+		int wide_size = static_cast<int>(text.size());
+
+		int utf8_size = WideCharToMultiByte(
+			CP_UTF8,
+			WC_ERR_INVALID_CHARS,
+			text.data(),
+			wide_size,
+			nullptr,
+			0,
+			nullptr,
+			nullptr
+		);
+
+		if (utf8_size <= 0) {
+			throw std::runtime_error("Failed to calculate UTF-8 argument size");
+		}
+
+		std::string result;
+		result.resize(static_cast<std::size_t>(utf8_size));
+
+		int written = WideCharToMultiByte(
+			CP_UTF8,
+			WC_ERR_INVALID_CHARS,
+			text.data(),
+			wide_size,
+			result.data(),
+			utf8_size,
+			nullptr,
+			nullptr
+		);
+
+		if (written <= 0) {
+			throw std::runtime_error("Failed to convert command line argument to UTF-8");
+		}
+
+		return result;
+	}
+#endif
+}
+
+#endif// ===== end include\mgmake\detail\convert.hxx =====
+
+
+// ===== begin include\mgmake\detail\static_string.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DETAIL_STATIC_STRING_HXX
+#define MGMAKE_DETAIL_STATIC_STRING_HXX
+
+namespace mgmake::detail {
+	// Compile-time string type
+	template<std::size_t N>
+	struct static_string {
+		std::array<char, N> m_data{};
+
+		constexpr static_string() = default;
+		// Constexpr constructor to allow implicit conversion from string literals
+		constexpr static_string(const char (&str)[N]) {
+			for (std::size_t i = 0; i < N; ++i) {
+				m_data[i] = str[i];
+			}
+		}
+
+		[[nodiscard]] constexpr std::string_view view() const {
+			return m_data.data();
+		}
+
+		// Required for template parameter equivalence checks in C++20
+		constexpr operator const char*() const { return m_data.data(); }
+
+		constexpr operator std::string_view() const { return m_data.view(); }
+	};
+
+	// Concat 2 static strings
+	template<size_t N1, size_t N2>
+	constexpr auto operator+(const static_string<N1>& a, const static_string<N2>& b) {
+		static_string<N1 + N2 - 1> result;
+
+		for (size_t i = 0; i < N1 - 1; ++i)
+			result.m_data[i] = a.m_data[i];
+
+		for (size_t i = 0; i < N2; ++i)
+			result.m_data[i + N1 - 1] = b.m_data[i];
+
+		return result;
+	}
+}
+
+#endif// ===== end include\mgmake\detail\static_string.hxx =====
+
 // skipped duplicate include: include\mgmake\sys\command_line.hxx
+// skipped duplicate include: include\mgmake\sys\platform.hxx
+// skipped duplicate include: include\mgmake\sys\util.hxx
 
 namespace mgmake {
 	template<typename ProjectType>
@@ -1325,7 +1477,7 @@ namespace mgmake {
 }
 namespace mgmk = mgmake;
 
-#ifdef MGMK_PLATFORM_WINDOWS
+#if defined(MGMK_PLATFORM_WINDOWS) and defined(WIN32_LEAN_AND_MEAN)
 #define MGMAKE_BUILD_ENTRY(ProjectType) \
 int wmain(int argc, wchar_t** argv) { \
     auto args = ::mgmk::sys::args_from_wide(argc, argv); \

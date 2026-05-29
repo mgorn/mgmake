@@ -4,19 +4,23 @@
 #define MGMAKE_SYS_PLATFORM_HXX
 
 // Cursed windows shit here
-#if defined(_WIN32)
-    #ifndef NOMINMAX
-        #define NOMINMAX
-    #endif
+#if defined(_WIN32) 
+    // You can still use MGMake on Windows without windows.h <3
+    // with love - Michael
+    #ifndef MGMK_NO_WINDOWS
+        #ifndef NOMINMAX
+            #define NOMINMAX
+        #endif
 
-    #ifndef WIN32_LEAN_AND_MEAN
-        #define WIN32_LEAN_AND_MEAN
-    #endif
+        #ifndef WIN32_LEAN_AND_MEAN
+            #define WIN32_LEAN_AND_MEAN
+        #endif
 
-    #include <windows.h>
+        #include <windows.h>
+	    #pragma message("Windows is included here. This is probably the source of your pain.")
+    #endif
 
     #define MGMK_PLATFORM_WINDOWS 1
-	#pragma message("Windows is included here. This is probably the source of your pain.")
 #elif defined(__unix__) || defined(__APPLE__)
     #define MGMK_PLATFORM_POSIX 1
 #else
