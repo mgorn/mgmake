@@ -1337,6 +1337,16 @@ namespace mgmake::sys {
 		posix,
 		unsupported
 	};
+
+	static constexpr platform g_platform = [] constexpr {
+#ifdef MGMK_PLATFORM_WINDOWS
+		return platform::windows;
+#elifdef MGMK_PLATFORM_POSIX
+		return platform::posix;
+#else
+		return platform::unsupported;
+#endif
+	};
 }
 
 #endif// ===== end include/mgmake/sys/platform.hxx =====
@@ -1442,6 +1452,94 @@ namespace mgmake::detail {
 }
 
 #endif// ===== end include/mgmake/detail/static_string.hxx =====
+
+
+// ===== begin include/mgmake/spec/executable.hxx =====
+#pragma once
+
+#ifndef MGMK_SPEC_EXECUTABLE_HXX
+#define MGMK_SPEC_EXECUTABLE_HXX
+
+// skipped duplicate include: include/mgmake/dag/target.hxx
+
+namespace mgmake::spec {
+	struct executable {
+		struct project& m_project;
+		dag::target::id m_graph_target;
+	};
+}
+
+#endif// ===== end include/mgmake/spec/executable.hxx =====
+
+
+// ===== begin include/mgmake/spec/library.hxx =====
+#pragma once
+
+#ifndef MGMK_SPEC_LIBRARY_HXX
+#define MGMK_SPEC_LIBRARY_HXX
+
+// skipped duplicate include: include/mgmake/dag/target.hxx
+
+namespace mgmake::spec {
+	struct library {
+		enum struct kind {
+			static,
+			dynamic,
+			interface
+		};
+		struct project& m_project;
+		dag::target::id m_graph_target;
+	};
+}
+
+#endif// ===== end include/mgmake/spec/library.hxx =====
+
+
+// ===== begin include/mgmake/spec/project.hxx =====
+#pragma once
+
+#ifndef MGMK_SPEC_PROJECT_HXX
+#define MGMK_SPEC_PROJECT_HXX
+
+// skipped duplicate include: include/mgmake/backend/traits.hxx
+// skipped duplicate include: include/mgmake/dag/graph.hxx
+// skipped duplicate include: include/mgmake/spec/executable.hxx
+
+#include <string>
+#include <string_view>
+
+namespace mgmake::spec {
+	struct project {
+		std::string m_name;
+		dag::graph m_graph{};
+
+		inline constexpr library create_library(std::string_view name) {
+			return { *this, m_graph.create_target(name) };
+		}
+		inline constexpr executable create_executable(std::string_view name) {
+			return { *this, m_graph.create_target(name) };
+		}
+
+		inline constexpr auto build(const auto& backend) {
+			using backend_t = std::decay_t<decltype(backend)>;
+			constexpr bool is_gen = backend::generator && backend_t;
+			constexpr bool is_build = backend::builder && backend_t;
+
+			if constexpr (is_gen) {
+				backend.generate(m_graph);
+			}
+			if constexpr (is_build) {
+				return backend.build(m_graph);
+			}
+		}
+		template<typename backend_t>
+		inline constexpr auto build() {
+			return build(backend_t{});
+		}
+	};
+}
+
+#endif// ===== end include/mgmake/spec/project.hxx =====
 
 // skipped duplicate include: include/mgmake/sys/command_line.hxx
 // skipped duplicate include: include/mgmake/sys/platform.hxx

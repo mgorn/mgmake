@@ -34,6 +34,16 @@ namespace mgmake::sys {
 		posix,
 		unsupported
 	};
+
+	static constexpr platform g_platform = [] constexpr {
+#ifdef MGMK_PLATFORM_WINDOWS
+		return platform::windows;
+#elifdef MGMK_PLATFORM_POSIX
+		return platform::posix;
+#else
+		return platform::unsupported;
+#endif
+	};
 }
 
 #endif

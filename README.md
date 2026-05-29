@@ -45,8 +45,31 @@ cmd < build.cxx
 / - Project root
     include/ - mgmake library headers
         mgmake/
+			backend/ - Backend implementations
+				graphviz.hxx - Graphviz backend, great for debugging and visualizing your build
+				ninja.hxx - Ninja backend, uses the Ninja build tool to compiler your project
+				traits.hxx - Traits for conditional compilation of backend features
+			cli/ - Command line interface & related utilities
+				action.hxx - Command line actions/options (build, generate, clean, etc)
+				backend.hxx - Backend options
+				options.hxx - Actual user configured state based on command line arguments
+				parse.hxx - Parser & utilities for parsing the cli arguments
+				util.hxx - Other command line utilities such as printing the help menu
+			dag/ - Direct Acyclic Graph, a common structure among other build systems
+				action.hxx - An action in the DAG (e.g. a command to run)
+				artifact.hxx - An item in the graph (usually some file) that is consumed, produced, or both
+				graph.hxx - The main graph structure that collects actions, artifacts & targets
+				target.hxx - A target that produces any number of artifacts
+			detail/ - Internal helpers & utilities
+				convert.hxx - Converts Windows "wide strings" to normal utf8 strings (std::wstring -> std::string)
+				static_string.hxx - Compile-time string type, should std::string not be suitable (soon to be deprecated)
             ext/ - Extension headers
                 cmake.hxx - Extension for using CMake projects & targets as dependencies
+			spec/ - Project specification tools
+			sys/ - Platform/system specific utilities
+				command_line.hxx - A structure for command line data
+				platform.hxx - Util header for determining the host platform, includes <windows.h> unless MGMK_NO_WINDOWS is defined
+				util.hxx - Platform specific utilities
     mgmake.hxx - mgmake header
     build.cxx - The build script that builds the build script
 ```

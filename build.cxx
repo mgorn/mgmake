@@ -14,6 +14,7 @@ using MgMake = Project
 
 //MGMK_BUILD_ENTRY(void);
 
+/*
 int main() {
 	dag::graph build_graph{};
 
@@ -31,16 +32,15 @@ int main() {
 
 	return 0;
 }
+*/
 
-/*
 int main(int argc, const char** argv) {
-	mgmk::project proj{"project_name"};
-	auto core = proj.create_library("core", target::kind::static_library);
+	spec::project proj{"project_name"};
+	auto core = proj.create_library("core", spec::library::kind::static);
 	auto app = proj.create_executable("app");
 	app.add_source("main.cxx");
 
-	proj.build(argc, argv);
+	proj.build<backend::graphviz<>>();
 
 	return 0;
 }
-	*/
