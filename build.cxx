@@ -30,7 +30,7 @@ int main() {
 	back.build(build_graph);
 
 	return 0;
-}}
+}
 
 /*
 int main(int argc, const char** argv) {
