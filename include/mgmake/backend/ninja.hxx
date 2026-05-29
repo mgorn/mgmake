@@ -183,7 +183,7 @@ namespace mgmake::backend {
                 }
 
                 if (!action.m_working_directory.empty()) {
-#if defined(_WIN32)
+#if defined(_WIN32) // bruh
                     out << "  command = cd /d "
                         << detail::ninja_escape_variable_text(sys::shell_escape(action.m_working_directory.string()))
                         << " && "

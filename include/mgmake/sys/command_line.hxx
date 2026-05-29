@@ -55,7 +55,7 @@ namespace mgmake::sys {
 		return result;
 	}
 
-#ifdef defined(MGMK_PLATFORM_WINDOWS) and defined(WIN32_LEAN_AND_MEAN)
+#ifdef MGMK_INCLUDED_WINDOWS
 	inline constexpr command_line args_from_wide(int argc, wchar_t** argv) {
 		command_line result;
 		if (argc <= 0 || argv == nullptr) {

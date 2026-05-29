@@ -18,6 +18,7 @@
 
         #include <windows.h>
 	    #pragma message("Windows is included here. This is probably the source of your pain.")
+        #define MGMK_INCLUDED_WINDOWS
     #endif
 
     #define MGMK_PLATFORM_WINDOWS 1

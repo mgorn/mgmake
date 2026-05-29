@@ -74,7 +74,7 @@ namespace mgmake::dag {
 #define MGMAKE_SYS_UTIL_HXX
 
 namespace mgmake::sys {
-#ifdef defined(MGMK_PLATFORM_WINDOWS) and defined(WIN32_LEAN_AND_MEAN) // windows.h is included and should be used
+#ifdef MGMK_INCLUDED_WINDOWS
 	inline constexpr std::string shell_escape(std::string_view arg) {
 		if (arg.empty()) {
 			return "\"\"";
@@ -215,7 +215,7 @@ namespace mgmake::sys {
 		return result;
 	}
 
-#ifdef defined(MGMK_PLATFORM_WINDOWS) and defined(WIN32_LEAN_AND_MEAN)
+#ifdef MGMK_INCLUDED_WINDOWS
 	inline constexpr command_line args_from_wide(int argc, wchar_t** argv) {
 		command_line result;
 		if (argc <= 0 || argv == nullptr) {
@@ -693,7 +693,7 @@ namespace mgmake::backend {
                 }
 
                 if (!action.m_working_directory.empty()) {
-#if defined(_WIN32)
+#if defined(_WIN32) // bruh
                     out << "  command = cd /d "
                         << detail::ninja_escape_variable_text(sys::shell_escape(action.m_working_directory.string()))
                         << " && "
@@ -1321,6 +1321,7 @@ namespace mgmake::cli {
 
         #include <windows.h>
 	    #pragma message("Windows is included here. This is probably the source of your pain.")
+        #define MGMK_INCLUDED_WINDOWS
     #endif
 
     #define MGMK_PLATFORM_WINDOWS 1
@@ -1342,7 +1343,7 @@ namespace mgmake::sys {
 
 
 namespace mgmake::detail {
-	#ifdef MGMK_PLATFORM_WINDOWS
+#if MGMK_INCLUDED_WINDOWS
 	inline constexpr std::string wide_to_utf8(std::wstring_view text) {
 		if (text.empty()) {
 			return {};

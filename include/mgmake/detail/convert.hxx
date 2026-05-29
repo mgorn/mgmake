@@ -3,10 +3,10 @@
 #ifndef MGMAKE_DETAIL_CONVERT_HXX
 #define MGMAKE_DETAIL_CONVERT_HXX
 
-#include <mgmake/sys/platform.hxx>
+#include "../sys/platform.hxx"
 
 namespace mgmake::detail {
-	#ifdef MGMK_PLATFORM_WINDOWS
+#if MGMK_INCLUDED_WINDOWS
 	inline constexpr std::string wide_to_utf8(std::wstring_view text) {
 		if (text.empty()) {
 			return {};

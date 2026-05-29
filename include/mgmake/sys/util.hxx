@@ -4,7 +4,7 @@
 #define MGMAKE_SYS_UTIL_HXX
 
 namespace mgmake::sys {
-#ifdef defined(MGMK_PLATFORM_WINDOWS) and defined(WIN32_LEAN_AND_MEAN) // windows.h is included and should be used
+#ifdef MGMK_INCLUDED_WINDOWS
 	inline constexpr std::string shell_escape(std::string_view arg) {
 		if (arg.empty()) {
 			return "\"\"";
