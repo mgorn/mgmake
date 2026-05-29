@@ -129,10 +129,6 @@ namespace mgmake::backend {
 
             out << "\n";
         }
-
-        inline std::string system_command_line(const sys::command_line& command) {
-            
-        }
     }
 
     struct ninja {
@@ -178,7 +174,7 @@ namespace mgmake::backend {
                 }
 
                 out << "rule action_" << i << "\n";
-                out << "  command = " << detail::ninja_command_line(action.m_command) << "\n";
+                out << "  command = " << action.m_command.full_command() << "\n";
 
                 if (!action.m_description.empty()) {
                     out << "  description = " << detail::ninja_escape_variable_text(action.m_description) << "\n";
@@ -189,15 +185,15 @@ namespace mgmake::backend {
                 if (!action.m_working_directory.empty()) {
 #if defined(_WIN32)
                     out << "  command = cd /d "
-                        << detail::ninja_escape_variable_text(detail::shell_escape(action.m_working_directory.string()))
+                        << detail::ninja_escape_variable_text(sys::shell_escape(action.m_working_directory.string()))
                         << " && "
-                        << detail::ninja_command_line(action.m_command)
+                        << action.m_command.full_command()
                         << "\n";
 #else
                     out << "  command = cd "
-                        << detail::ninja_escape_variable_text(detail::shell_escape(action.m_working_directory.string()))
+                        << detail::ninja_escape_variable_text(sys::shell_escape(action.m_working_directory.string()))
                         << " && "
-                        << detail::ninja_command_line(action.m_command)
+                        << action.m_command.full_command()
                         << "\n";
 #endif
                 }

@@ -77,7 +77,7 @@ namespace mgmake::backend {
 
     template<bool show_commands = true, bool show_action_ids = true, bool show_artifact_ids = true, bool show_targets = true>
     struct graphviz {
-        auto m_output_path = std::filesystem::current_path() / "graph.dot";
+        std::filesystem::path m_output_path = std::filesystem::current_path() / "graph.dot";
 
         void generate(const dag::graph& graph) {
             if (m_output_path.has_parent_path()) {

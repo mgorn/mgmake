@@ -66,6 +66,106 @@ namespace mgmake::dag {
 #ifndef MGMAKE_SYS_COMMAND_LINE_HXX
 #define MGMAKE_SYS_COMMAND_LINE_HXX
 
+
+// ===== begin include\mgmake\sys\util.hxx =====
+#pragma once
+
+#ifndef MGMAKE_SYS_UTIL_HXX
+#define MGMAKE_SYS_UTIL_HXX
+
+namespace mgmake::sys {
+#if defined(_WIN32)
+	inline constexpr std::string shell_escape(std::string_view arg) {
+		if (arg.empty()) {
+			return "\"\"";
+		}
+
+		bool needs_quotes = false;
+
+		for (const char ch : arg) {
+			if (ch == ' ' || ch == '\t' || ch == '"' || ch == '\\') {
+				needs_quotes = true;
+				break;
+			}
+		}
+
+		if (!needs_quotes) {
+			return std::string(arg);
+		}
+
+		std::string result;
+		result += '"';
+
+		std::size_t backslashes = 0;
+
+		for (const char ch : arg) {
+			if (ch == '\\') {
+				++backslashes;
+				continue;
+			}
+
+			if (ch == '"') {
+				result.append(backslashes * 2 + 1, '\\');
+				result += '"';
+				backslashes = 0;
+				continue;
+			}
+
+			if (backslashes != 0) {
+				result.append(backslashes, '\\');
+				backslashes = 0;
+			}
+
+			result += ch;
+		}
+
+		if (backslashes != 0) {
+			result.append(backslashes * 2, '\\');
+		}
+
+		result += '"';
+		return result;
+	}
+#else
+	inline constexpr std::string shell_escape(std::string_view arg) {
+		if (arg.empty()) {
+			return "''";
+		}
+
+		bool needs_quotes = false;
+
+		for (const char ch : arg) {
+			if (ch == ' ' || ch == '\t' || ch == '\'' || ch == '"' || ch == '$' || ch == '\\' || ch == '&' || ch == ';' || ch == '(' || ch == ')' || ch == '<' || ch == '>' || ch == '|') {
+				needs_quotes = true;
+				break;
+			}
+		}
+
+		if (!needs_quotes) {
+			return std::string(arg);
+		}
+
+		std::string result;
+		result += '\'';
+
+		for (const char ch : arg) {
+			if (ch == '\'') {
+				result += "'\\''";
+			} else {
+				result += ch;
+			}
+		}
+
+		result += '\'';
+		return result;
+	}
+#endif
+}
+
+#endif// ===== end include\mgmake\sys\util.hxx =====
+
+
+#include <cstdlib>
 #include <span>
 #include <string_view>
 #include <vector>
@@ -74,16 +174,34 @@ namespace mgmake::sys {
 	struct command_line {
 		std::vector<std::string> m_args;
 
-		std::string_view program_name() const {
+		inline constexpr std::string_view program_name() const {
 			return m_args.empty() ? std::string_view{} : std::string_view(m_args[0]);
 		}
 
-		std::span<const std::string> user_args() const {
+		inline constexpr std::span<const std::string> user_args() const {
 			if (m_args.size() <= 1) {
 				return {};
 			}
 
 			return std::span<const std::string>(m_args).subspan(1);
+		}
+
+		inline constexpr std::string full_command() const {
+			std::string result;
+
+            for (std::size_t i = 0; i < m_args.size(); ++i) {
+                if (i != 0) {
+                    result += ' ';
+                }
+
+                result += sys::shell_escape(m_args[i]);
+            }
+
+            return result;
+		}
+
+		auto invoke() const {
+			return std::system(full_command().c_str());
 		}
 	};
 
@@ -265,14 +383,14 @@ namespace mgmake::backend {
 
     template<bool show_commands = true, bool show_action_ids = true, bool show_artifact_ids = true, bool show_targets = true>
     struct graphviz {
-        void generate(const dag::graph& graph) {
-            auto output_path = std::filesystem::current_path() / "graph.dot";
+        std::filesystem::path m_output_path = std::filesystem::current_path() / "graph.dot";
 
-            if (output_path.has_parent_path()) {
-                std::filesystem::create_directories(output_path.parent_path());
+        void generate(const dag::graph& graph) {
+            if (m_output_path.has_parent_path()) {
+                std::filesystem::create_directories(m_output_path.parent_path());
             }
 
-            std::ofstream out(output_path);
+            std::ofstream out(m_output_path);
 
             out << "digraph mgmake {\n";
             out << "    rankdir=LR;\n";
@@ -396,6 +514,7 @@ namespace mgmake::backend {
 #define MGMAKE_BACKEND_NINJA_HXX
 
 // skipped duplicate include: include\mgmake\dag\graph.hxx
+// skipped duplicate include: include\mgmake\sys\util.hxx
 
 #include <cstdlib>
 #include <filesystem>
@@ -466,107 +585,6 @@ namespace mgmake::backend {
             return result;
         }
 
-#if defined(_WIN32)
-        inline std::string shell_escape(std::string_view arg) {
-            if (arg.empty()) {
-                return "\"\"";
-            }
-
-            bool needs_quotes = false;
-
-            for (const char ch : arg) {
-                if (ch == ' ' || ch == '\t' || ch == '"' || ch == '\\') {
-                    needs_quotes = true;
-                    break;
-                }
-            }
-
-            if (!needs_quotes) {
-                return std::string(arg);
-            }
-
-            std::string result;
-            result += '"';
-
-            std::size_t backslashes = 0;
-
-            for (const char ch : arg) {
-                if (ch == '\\') {
-                    ++backslashes;
-                    continue;
-                }
-
-                if (ch == '"') {
-                    result.append(backslashes * 2 + 1, '\\');
-                    result += '"';
-                    backslashes = 0;
-                    continue;
-                }
-
-                if (backslashes != 0) {
-                    result.append(backslashes, '\\');
-                    backslashes = 0;
-                }
-
-                result += ch;
-            }
-
-            if (backslashes != 0) {
-                result.append(backslashes * 2, '\\');
-            }
-
-            result += '"';
-            return result;
-        }
-#else
-        inline std::string shell_escape(std::string_view arg) {
-            if (arg.empty()) {
-                return "''";
-            }
-
-            bool needs_quotes = false;
-
-            for (const char ch : arg) {
-                if (ch == ' ' || ch == '\t' || ch == '\'' || ch == '"' || ch == '$' || ch == '\\' || ch == '&' || ch == ';' || ch == '(' || ch == ')' || ch == '<' || ch == '>' || ch == '|') {
-                    needs_quotes = true;
-                    break;
-                }
-            }
-
-            if (!needs_quotes) {
-                return std::string(arg);
-            }
-
-            std::string result;
-            result += '\'';
-
-            for (const char ch : arg) {
-                if (ch == '\'') {
-                    result += "'\\''";
-                } else {
-                    result += ch;
-                }
-            }
-
-            result += '\'';
-            return result;
-        }
-#endif
-
-        inline std::string ninja_command_line(const sys::command_line& command) {
-            std::string result;
-
-            for (std::size_t i = 0; i < command.m_args.size(); ++i) {
-                if (i != 0) {
-                    result += ' ';
-                }
-
-                result += shell_escape(command.m_args[i]);
-            }
-
-            return ninja_escape_variable_text(result);
-        }
-
         inline const dag::artifact& checked_artifact(const dag::graph& graph, dag::artifact::id id) {
             if (id >= graph.m_artifacts.size()) {
                 throw std::runtime_error("ninja backend: invalid artifact id");
@@ -621,20 +639,6 @@ namespace mgmake::backend {
 
             out << "\n";
         }
-
-        inline std::string system_command_line(const sys::command_line& command) {
-            std::string result;
-
-            for (std::size_t i = 0; i < command.m_args.size(); ++i) {
-                if (i != 0) {
-                    result += ' ';
-                }
-
-                result += shell_escape(command.m_args[i]);
-            }
-
-            return result;
-        }
     }
 
     struct ninja {
@@ -680,7 +684,7 @@ namespace mgmake::backend {
                 }
 
                 out << "rule action_" << i << "\n";
-                out << "  command = " << detail::ninja_command_line(action.m_command) << "\n";
+                out << "  command = " << action.m_command.full_command() << "\n";
 
                 if (!action.m_description.empty()) {
                     out << "  description = " << detail::ninja_escape_variable_text(action.m_description) << "\n";
@@ -691,15 +695,15 @@ namespace mgmake::backend {
                 if (!action.m_working_directory.empty()) {
 #if defined(_WIN32)
                     out << "  command = cd /d "
-                        << detail::ninja_escape_variable_text(detail::shell_escape(action.m_working_directory.string()))
+                        << detail::ninja_escape_variable_text(sys::shell_escape(action.m_working_directory.string()))
                         << " && "
-                        << detail::ninja_command_line(action.m_command)
+                        << action.m_command.full_command()
                         << "\n";
 #else
                     out << "  command = cd "
-                        << detail::ninja_escape_variable_text(detail::shell_escape(action.m_working_directory.string()))
+                        << detail::ninja_escape_variable_text(sys::shell_escape(action.m_working_directory.string()))
                         << " && "
-                        << detail::ninja_command_line(action.m_command)
+                        << action.m_command.full_command()
                         << "\n";
 #endif
                 }
@@ -743,8 +747,7 @@ namespace mgmake::backend {
             command.m_args.emplace_back("-f");
             command.m_args.emplace_back(m_output_path.string());
 
-            const std::string text = detail::system_command_line(command);
-            const int exit_code = std::system(text.c_str());
+            const auto exit_code = command.invoke();
 
             if (exit_code != 0) {
                 throw std::runtime_error("ninja backend: ninja failed");
@@ -969,6 +972,7 @@ namespace mgmake::cli {
 #define MGMAKE_CLI_UTIL_HXX
 
 #include <charconv>
+#include <cstdint>
 #include <format>
 #include <print>
 #include <span>

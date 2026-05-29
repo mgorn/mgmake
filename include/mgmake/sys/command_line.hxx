@@ -29,19 +29,19 @@ namespace mgmake::sys {
 		inline constexpr std::string full_command() const {
 			std::string result;
 
-            for (std::size_t i = 0; i < command.m_args.size(); ++i) {
+            for (std::size_t i = 0; i < m_args.size(); ++i) {
                 if (i != 0) {
                     result += ' ';
                 }
 
-                result += sys::shell_escape(command.m_args[i]);
+                result += sys::shell_escape(m_args[i]);
             }
 
             return result;
 		}
 
 		auto invoke() const {
-			return std::system(full_command());
+			return std::system(full_command().c_str());
 		}
 	};
 
