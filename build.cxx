@@ -15,7 +15,6 @@ using MgMake = Project
 //MGMK_BUILD_ENTRY(void);
 
 int main() {
-
 	dag::graph build_graph{};
 
 	auto build_src = build_graph.create_artifact(dag::artifact::kind::source, "build.cxx");
@@ -31,4 +30,17 @@ int main() {
 	back.build(build_graph);
 
 	return 0;
+}}
+
+/*
+int main(int argc, const char** argv) {
+	mgmk::project proj{"project_name"};
+	auto core = proj.create_library("core", target::kind::static_library);
+	auto app = proj.create_executable("app");
+	app.add_source("main.cxx");
+
+	proj.build(argc, argv);
+
+	return 0;
 }
+	*/
