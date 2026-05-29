@@ -19,11 +19,11 @@ int main() {
 	dag::graph build_graph{};
 
 	auto build_src = build_graph.create_artifact(dag::artifact::kind::source, "build.cxx");
-	auto build_exe = build_graph.create_artifact(dag::artifact::kind::generated, ".build/build.exe");
+	auto build_exe = build_graph.create_artifact(dag::artifact::kind::generated, ".build/build");
 	auto compile_action = build_graph.create_action(
 		std::string{ "Compile build.cxx" }, std::string{ "Compiles build.cxx as the build program." },
 		std::vector<dag::artifact::id>{ build_src }, std::vector<dag::artifact::id>{ build_exe },
-		true, sys::command_line{std::vector<std::string>{"clang-mg++", "build.cxx", "-o", "build/build.exe" }});
+		true, sys::command_line{std::vector<std::string>{"clang-mg++", "build.cxx", "-o", ".build/build" }});
 
 	backend::graphviz viz;
 	viz.generate(build_graph);

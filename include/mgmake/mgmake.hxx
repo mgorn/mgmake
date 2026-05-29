@@ -34,7 +34,7 @@ namespace mgmake {
 
 		const cli::options& opts = parsed.m_value;
 
-		if (opts.show_help) {
+		if (opts.m_show_help) {
 			cli::print_help(command_line.program_name());
 			return 0;
 		}
