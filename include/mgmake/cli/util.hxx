@@ -4,6 +4,7 @@
 #define MGMAKE_CLI_UTIL_HXX
 
 #include <charconv>
+#include <cstdint>
 #include <format>
 #include <print>
 #include <span>

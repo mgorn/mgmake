@@ -3,6 +3,9 @@
 #ifndef MGMAKE_SYS_COMMAND_LINE_HXX
 #define MGMAKE_SYS_COMMAND_LINE_HXX
 
+#include "util.hxx"
+
+#include <cstdlib>
 #include <span>
 #include <string_view>
 #include <vector>
@@ -11,16 +14,34 @@ namespace mgmake::sys {
 	struct command_line {
 		std::vector<std::string> m_args;
 
-		std::string_view program_name() const {
+		inline constexpr std::string_view program_name() const {
 			return m_args.empty() ? std::string_view{} : std::string_view(m_args[0]);
 		}
 
-		std::span<const std::string> user_args() const {
+		inline constexpr std::span<const std::string> user_args() const {
 			if (m_args.size() <= 1) {
 				return {};
 			}
 
 			return std::span<const std::string>(m_args).subspan(1);
+		}
+
+		inline constexpr std::string full_command() const {
+			std::string result;
+
+            for (std::size_t i = 0; i < command.m_args.size(); ++i) {
+                if (i != 0) {
+                    result += ' ';
+                }
+
+                result += sys::shell_escape(command.m_args[i]);
+            }
+
+            return result;
+		}
+
+		auto invoke() const {
+			return std::system(full_command());
 		}
 	};
 

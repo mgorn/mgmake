@@ -4,6 +4,7 @@
 #define MGMAKE_BACKEND_NINJA_HXX
 
 #include "../dag/graph.hxx"
+#include "../sys/util.hxx"
 
 #include <cstdlib>
 #include <filesystem>
@@ -74,107 +75,6 @@ namespace mgmake::backend {
             return result;
         }
 
-#if defined(_WIN32)
-        inline std::string shell_escape(std::string_view arg) {
-            if (arg.empty()) {
-                return "\"\"";
-            }
-
-            bool needs_quotes = false;
-
-            for (const char ch : arg) {
-                if (ch == ' ' || ch == '\t' || ch == '"' || ch == '\\') {
-                    needs_quotes = true;
-                    break;
-                }
-            }
-
-            if (!needs_quotes) {
-                return std::string(arg);
-            }
-
-            std::string result;
-            result += '"';
-
-            std::size_t backslashes = 0;
-
-            for (const char ch : arg) {
-                if (ch == '\\') {
-                    ++backslashes;
-                    continue;
-                }
-
-                if (ch == '"') {
-                    result.append(backslashes * 2 + 1, '\\');
-                    result += '"';
-                    backslashes = 0;
-                    continue;
-                }
-
-                if (backslashes != 0) {
-                    result.append(backslashes, '\\');
-                    backslashes = 0;
-                }
-
-                result += ch;
-            }
-
-            if (backslashes != 0) {
-                result.append(backslashes * 2, '\\');
-            }
-
-            result += '"';
-            return result;
-        }
-#else
-        inline std::string shell_escape(std::string_view arg) {
-            if (arg.empty()) {
-                return "''";
-            }
-
-            bool needs_quotes = false;
-
-            for (const char ch : arg) {
-                if (ch == ' ' || ch == '\t' || ch == '\'' || ch == '"' || ch == '$' || ch == '\\' || ch == '&' || ch == ';' || ch == '(' || ch == ')' || ch == '<' || ch == '>' || ch == '|') {
-                    needs_quotes = true;
-                    break;
-                }
-            }
-
-            if (!needs_quotes) {
-                return std::string(arg);
-            }
-
-            std::string result;
-            result += '\'';
-
-            for (const char ch : arg) {
-                if (ch == '\'') {
-                    result += "'\\''";
-                } else {
-                    result += ch;
-                }
-            }
-
-            result += '\'';
-            return result;
-        }
-#endif
-
-        inline std::string ninja_command_line(const sys::command_line& command) {
-            std::string result;
-
-            for (std::size_t i = 0; i < command.m_args.size(); ++i) {
-                if (i != 0) {
-                    result += ' ';
-                }
-
-                result += shell_escape(command.m_args[i]);
-            }
-
-            return ninja_escape_variable_text(result);
-        }
-
         inline const dag::artifact& checked_artifact(const dag::graph& graph, dag::artifact::id id) {
             if (id >= graph.m_artifacts.size()) {
                 throw std::runtime_error("ninja backend: invalid artifact id");
@@ -231,17 +131,7 @@ namespace mgmake::backend {
         }
 
         inline std::string system_command_line(const sys::command_line& command) {
-            std::string result;
-
-            for (std::size_t i = 0; i < command.m_args.size(); ++i) {
-                if (i != 0) {
-                    result += ' ';
-                }
-
-                result += shell_escape(command.m_args[i]);
-            }
-
-            return result;
+            
         }
     }
 
@@ -351,8 +241,7 @@ namespace mgmake::backend {
             command.m_args.emplace_back("-f");
             command.m_args.emplace_back(m_output_path.string());
 
-            const std::string text = detail::system_command_line(command);
-            const int exit_code = std::system(text.c_str());
+            const auto exit_code = command.invoke();
 
             if (exit_code != 0) {
                 throw std::runtime_error("ninja backend: ninja failed");

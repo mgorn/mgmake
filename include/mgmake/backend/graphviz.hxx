@@ -77,14 +77,14 @@ namespace mgmake::backend {
 
     template<bool show_commands = true, bool show_action_ids = true, bool show_artifact_ids = true, bool show_targets = true>
     struct graphviz {
-        void generate(const dag::graph& graph) {
-            auto output_path = std::filesystem::current_path() / "graph.dot";
+        auto m_output_path = std::filesystem::current_path() / "graph.dot";
 
-            if (output_path.has_parent_path()) {
-                std::filesystem::create_directories(output_path.parent_path());
+        void generate(const dag::graph& graph) {
+            if (m_output_path.has_parent_path()) {
+                std::filesystem::create_directories(m_output_path.parent_path());
             }
 
-            std::ofstream out(output_path);
+            std::ofstream out(m_output_path);
 
             out << "digraph mgmake {\n";
             out << "    rankdir=LR;\n";
