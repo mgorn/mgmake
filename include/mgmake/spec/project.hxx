@@ -10,19 +10,19 @@
 
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace mgmake::spec {
 	struct project {
 		std::string m_name;
-		dag::graph m_graph{};
+		std::vector<spec::executble> m_executables;
+		std::vector<spec::library> m_libraries;
 
 		inline constexpr library create_library(std::string_view name, library::kind kind) {
-			return { m_graph, m_graph.create_target(std::string{ name }) };
+			return m_libraries.emplace_back().name(name).kind(kind);
 		}
 		inline constexpr executable create_executable(std::string_view name) {
-			executable e{ m_graph, m_graph.create_target(std::string{ name }) };
-			e.name(name);
-			return e;
+			return m_executables.emplace_back().name(name);
 		}
 
 		inline constexpr auto build(const auto& be) {

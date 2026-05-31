@@ -6,7 +6,7 @@
 #include "../sys/platform.hxx"
 
 namespace mgmake::detail {
-#if MGMK_INCLUDED_WINDOWS
+#ifdef MGMK_INCLUDED_WINDOWS
 	inline constexpr std::string wide_to_utf8(std::wstring_view text) {
 		if (text.empty()) {
 			return {};
