@@ -43,7 +43,7 @@ namespace mgmake::sys {
 #else
 		return platform::unsupported;
 #endif
-	};
+	}();
 }
 
 #endif

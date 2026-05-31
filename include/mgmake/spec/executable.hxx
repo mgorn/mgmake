@@ -4,12 +4,12 @@
 #define MGMK_SPEC_EXECUTABLE_HXX
 
 #include "../dag/target.hxx"
+#include "target.hxx"
+
+#include <string_view>
 
 namespace mgmake::spec {
-	struct executable {
-		struct project& m_project;
-		dag::target::id m_graph_target;
-	};
+	struct executable : public target {};
 }
 
 #endif

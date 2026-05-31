@@ -3,17 +3,17 @@
 #ifndef MGMK_SPEC_LIBRARY_HXX
 #define MGMK_SPEC_LIBRARY_HXX
 
+#include "../dag/graph.hxx"
 #include "../dag/target.hxx"
+#include "target.hxx"
 
 namespace mgmake::spec {
-	struct library {
+	struct library : public target {
 		enum struct kind {
-			static,
-			dynamic,
+			kstatic,
+			kdynamic,
 			interface
 		};
-		struct project& m_project;
-		dag::target::id m_graph_target;
 	};
 }
 

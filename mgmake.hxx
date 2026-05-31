@@ -385,7 +385,7 @@ namespace mgmake::backend {
     struct graphviz {
         std::filesystem::path m_output_path = std::filesystem::current_path() / "graph.dot";
 
-        void generate(const dag::graph& graph) {
+        void generate(const dag::graph& graph) const {
             if (m_output_path.has_parent_path()) {
                 std::filesystem::create_directories(m_output_path.parent_path());
             }
@@ -644,7 +644,7 @@ namespace mgmake::backend {
     struct ninja {
         std::filesystem::path m_output_path = std::filesystem::current_path() / "build.ninja";
 
-        void generate(const dag::graph& graph) {
+        void generate(const dag::graph& graph) const {
             if (m_output_path.has_parent_path()) {
                 std::filesystem::create_directories(m_output_path.parent_path());
             }
@@ -739,7 +739,7 @@ namespace mgmake::backend {
             detail::write_target_defaults(out, graph);
         }
 
-        void build(const dag::graph& graph) {
+        void build(const dag::graph& graph) const {
             generate(graph);
 
             sys::command_line command;
@@ -770,11 +770,11 @@ namespace mgmake::backend {
 namespace mgmake::backend {
     // Generates graph output (graph.dot, build.ninja)
     trait generator {
-        void generate(const dag::graph& graph);
+        void generate(const dag::graph& graph) const;
     };
     // Actually builds the program from the graph (invokes compiler, runs ninja)
     trait builder {
-        void build(const dag::graph& graph);
+        void build(const dag::graph& graph) const;
     };
 }
 
@@ -1346,7 +1346,7 @@ namespace mgmake::sys {
 #else
 		return platform::unsupported;
 #endif
-	};
+	}();
 }
 
 #endif// ===== end include/mgmake/sys/platform.hxx =====
@@ -1462,11 +1462,47 @@ namespace mgmake::detail {
 
 // skipped duplicate include: include/mgmake/dag/target.hxx
 
+// ===== begin include/mgmake/spec/target.hxx =====
+#pragma once
+
+#ifndef MGMK_SPEC_TARGET_HXX
+#define MGMK_SPEC_TARGET_HXX
+
+// skipped duplicate include: include/mgmake/dag/artifact.hxx
+// skipped duplicate include: include/mgmake/dag/target.hxx
+
+#include <string_view>
+
 namespace mgmake::spec {
-	struct executable {
-		struct project& m_project;
+	struct target {
+		dag::graph& m_graph;
 		dag::target::id m_graph_target;
+		std::string m_name = "out";
+		std::optional<dag::artifact::id> m_out_artifact;
+
+		inline constexpr auto name(std::string_view file) {
+			m_out_artifact = m_graph.create_artifact(dag::artifact::kind::generated, file);
+			m_name = file;
+		}
+		inline constexpr auto add_source(std::string_view file) {
+			if (not m_out_artifact.has_value()) {
+				name("out");
+			}
+			auto artifact = m_graph.create_artifact(dag::artifact::kind::source, file);
+			m_graph.create_action("Compile", std::format("Compiles the source file '{}'", file),
+				std::vector<dag::artifact::id>{ artifact }, std::vector<dag::artifact::id>{ m_out_artifact.value() },
+				true, sys::command_line{std::vector<std::string>{ std::string{"clang-mg++"}, std::string{file}, std::string{"-o"}, std::string{m_name} }});
+		}
 	};
+}
+
+#endif// ===== end include/mgmake/spec/target.hxx =====
+
+
+#include <string_view>
+
+namespace mgmake::spec {
+	struct executable : public target {};
 }
 
 #endif// ===== end include/mgmake/spec/executable.hxx =====
@@ -1478,17 +1514,17 @@ namespace mgmake::spec {
 #ifndef MGMK_SPEC_LIBRARY_HXX
 #define MGMK_SPEC_LIBRARY_HXX
 
+// skipped duplicate include: include/mgmake/dag/graph.hxx
 // skipped duplicate include: include/mgmake/dag/target.hxx
+// skipped duplicate include: include/mgmake/spec/target.hxx
 
 namespace mgmake::spec {
-	struct library {
+	struct library : public target {
 		enum struct kind {
-			static,
-			dynamic,
+			kstatic,
+			kdynamic,
 			interface
 		};
-		struct project& m_project;
-		dag::target::id m_graph_target;
 	};
 }
 
@@ -1504,6 +1540,7 @@ namespace mgmake::spec {
 // skipped duplicate include: include/mgmake/backend/traits.hxx
 // skipped duplicate include: include/mgmake/dag/graph.hxx
 // skipped duplicate include: include/mgmake/spec/executable.hxx
+// skipped duplicate include: include/mgmake/spec/library.hxx
 
 #include <string>
 #include <string_view>
@@ -1513,23 +1550,25 @@ namespace mgmake::spec {
 		std::string m_name;
 		dag::graph m_graph{};
 
-		inline constexpr library create_library(std::string_view name) {
-			return { *this, m_graph.create_target(name) };
+		inline constexpr library create_library(std::string_view name, library::kind kind) {
+			return { m_graph, m_graph.create_target(std::string{ name }) };
 		}
 		inline constexpr executable create_executable(std::string_view name) {
-			return { *this, m_graph.create_target(name) };
+			executable e{ m_graph, m_graph.create_target(std::string{ name }) };
+			e.name(name);
+			return e;
 		}
 
-		inline constexpr auto build(const auto& backend) {
-			using backend_t = std::decay_t<decltype(backend)>;
-			constexpr bool is_gen = backend::generator && backend_t;
-			constexpr bool is_build = backend::builder && backend_t;
+		inline constexpr auto build(const auto& be) {
+			using backend_t = std::decay_t<decltype(be)>;
+			static constexpr bool is_gen = backend_t <> backend::generator;
+			static constexpr bool is_build = backend_t implements backend::builder;
 
 			if constexpr (is_gen) {
-				backend.generate(m_graph);
+				be.generate(m_graph);
 			}
 			if constexpr (is_build) {
-				return backend.build(m_graph);
+				return be.build(m_graph);
 			}
 		}
 		template<typename backend_t>

@@ -35,12 +35,11 @@ int main() {
 */
 
 int main(int argc, const char** argv) {
-	spec::project proj{"project_name"};
-	auto core = proj.create_library("core", spec::library::kind::static);
-	auto app = proj.create_executable("app");
-	app.add_source("main.cxx");
+	spec::project proj{"mkmake"};
+	auto app = proj.create_executable("build");
+	app.add_source("build.cxx");
 
-	proj.build<backend::graphviz<>>();
+	proj.build<backend::ninja>();
 
 	return 0;
 }

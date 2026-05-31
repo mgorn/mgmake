@@ -79,7 +79,7 @@ namespace mgmake::backend {
     struct graphviz {
         std::filesystem::path m_output_path = std::filesystem::current_path() / "graph.dot";
 
-        void generate(const dag::graph& graph) {
+        void generate(const dag::graph& graph) const {
             if (m_output_path.has_parent_path()) {
                 std::filesystem::create_directories(m_output_path.parent_path());
             }
