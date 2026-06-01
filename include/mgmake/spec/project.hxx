@@ -32,13 +32,8 @@ namespace mgmake::spec {
 			dag::graph result{};
 
 			for (const auto& exe : m_executables) {
-				if (exe.m_name.empty()) {
-					throw std::runtime_error("mgmake spec: executable target has no name");
-				}
-
-				if (exe.m_sources.empty()) {
-					throw std::runtime_error("mgmake spec: executable target '" + exe.m_name + "' has no sources");
-				}
+				mgmkassert(not exe.m_name.empty(), "mgmake spec: executable target has no name");
+				mgmkassert (not exe.m_sources.empty(), "mgmake spec: executable target '" + exe.m_name + "' has no sources");
 
 				std::vector<dag::artifact::id> inputs{};
 				inputs.reserve(exe.m_sources.size());
@@ -86,11 +81,7 @@ namespace mgmake::spec {
 				);
 			}
 
-			if (!m_libraries.empty()) {
-				throw std::runtime_error(
-					"mgmake spec: lowering libraries to dag::graph is not implemented yet"
-				);
-			}
+			mgmkassert(m_libraries.empty(), "mgmake spec: lowering libraries to dag::graph is not implemented yet");
 
 			return result;
 		}

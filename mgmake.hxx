@@ -51,6 +51,102 @@ namespace mgmake::dag {
 #define MGMAKE_DAG_GRAPH_HXX
 
 
+// ===== begin include/mgmake/detail/assert.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DETAIL_ASSERT_HXX
+#define MGMAKE_DETAIL_ASSERT_HXX
+
+#include <cstdio>
+#include <cstdlib>
+#include <source_location>
+#include <string_view>
+
+#if defined(_MSC_VER)
+    #include <intrin.h>
+#endif
+
+namespace mgmake::detail {
+
+inline void debug_break() {
+#if defined(_MSC_VER)
+    __debugbreak();
+#elif defined(__clang__) || defined(__GNUC__)
+    __builtin_trap();
+#else
+    std::abort();
+#endif
+}
+
+[[noreturn]] inline void assertion_failed(
+    std::string_view condition,
+    std::string_view message,
+    std::source_location location = std::source_location::current()
+) {
+    std::fprintf(
+        stderr,
+        "\nmgmake assertion failed\n"
+        "  condition: %.*s\n"
+        "  message:   %.*s\n"
+        "  location:  %s:%u:%u\n"
+        "  function:  %s\n\n",
+        static_cast<int>(condition.size()),
+        condition.data(),
+        static_cast<int>(message.size()),
+        message.data(),
+        location.file_name(),
+        location.line(),
+        location.column(),
+        location.function_name()
+    );
+
+    debug_break();
+
+    // In case the platform/debugger allows execution to continue.
+    std::abort();
+}
+
+inline void mgmk_assert_impl(
+    bool condition,
+    std::string_view condition_text,
+    std::string_view message,
+    std::source_location location = std::source_location::current()
+) {
+    if (!condition) {
+        assertion_failed(condition_text, message, location);
+    }
+}
+
+} // namespace mgmake::detail
+
+#ifndef MGMK_ENABLE_ASSERTS
+    #ifndef NDEBUG
+        #define MGMK_ENABLE_ASSERTS 1
+    #else
+        #define MGMK_ENABLE_ASSERTS 0
+    #endif
+#endif
+
+#if MGMK_ENABLE_ASSERTS
+    #define mgmkassert(condition, message)                                      \
+        do {                                                                    \
+            ::mgmake::detail::mgmk_assert_impl(                                 \
+                static_cast<bool>(condition),                                   \
+                #condition,                                                     \
+                message,                                                        \
+                std::source_location::current()                                 \
+            );                                                                  \
+        } while (false)
+#else
+    #define mgmkassert(condition, message)                                      \
+        do {                                                                    \
+            (void)sizeof(condition);                                            \
+        } while (false)
+#endif
+
+#endif// ===== end include/mgmake/detail/assert.hxx =====
+
+
 // ===== begin include/mgmake/dag/action.hxx =====
 #pragma once
 
@@ -306,6 +402,37 @@ namespace mgmake::dag {
             m_targets.emplace_back(std::forward<decltype(args)>(args)...);
             return { m_targets.size() - 1 };
         }
+
+		inline constexpr struct artifact& artifact(const artifact::id id) {
+			mgmkassert(not m_artifacts.empty(), "Invalid artifact ID: there are no artifacts.");
+			mgmkassert(id >= m_artifacts.size(), "Invalid artifact ID");
+			return m_artifacts.at(id);
+		}
+		inline constexpr const struct artifact& artifact(const artifact::id id) const {
+			mgmkassert(not m_artifacts.empty(), "Invalid artifact ID: there are no artifacts.");
+			mgmkassert(id >= m_artifacts.size(), "Invalid artifact ID");
+			return m_artifacts.at(id);
+		}
+		inline constexpr struct action& action(const action::id id) {
+			mgmkassert(not m_actions.empty(), "Invalid action ID: there are no actions.");
+			mgmkassert(id >= m_actions.size(), "Invalid action ID");
+			return m_actions.at(id);
+		}
+		inline constexpr const struct action& action(const action::id id) const {
+			mgmkassert(not m_actions.empty(), "Invalid action ID: there are no actions.");
+			mgmkassert(id >= m_actions.size(), "Invalid action ID");
+			return m_actions.at(id);
+		}
+		inline constexpr struct target& target(const target::id id) {
+			mgmkassert(not m_targets.empty(), "Invalid target ID: there are no targets.");
+			mgmkassert(id >= m_targets.size(), "Invalid target ID");
+			return m_targets.at(id);
+		}
+		inline constexpr const struct target& target(const target::id id) const {
+			mgmkassert(not m_targets.empty(), "Invalid target ID: there are no targets.");
+			mgmkassert(id >= m_targets.size(), "Invalid target ID");
+			return m_targets.at(id);
+		}
     };
 }
 
@@ -517,9 +644,9 @@ namespace mgmake::backend {
 // skipped duplicate include: include/mgmake/sys/util.hxx
 
 #include <cstdlib>
+#include <expected>
 #include <filesystem>
 #include <fstream>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 
@@ -585,19 +712,11 @@ namespace mgmake::backend {
             return result;
         }
 
-        inline const dag::artifact& checked_artifact(const dag::graph& graph, dag::artifact::id id) {
-            if (id >= graph.m_artifacts.size()) {
-                throw std::runtime_error("ninja backend: invalid artifact id");
-            }
-
-            return graph.m_artifacts[id];
-        }
-
         inline void write_artifact_list(std::ofstream& out, const dag::graph& graph, const std::vector<dag::artifact::id>& artifacts) {
             bool first = true;
 
             for (const auto id : artifacts) {
-                const auto& artifact = checked_artifact(graph, id);
+                const auto& artifact = graph.artifact(id);
 
                 if (!first) {
                     out << ' ';
@@ -611,7 +730,7 @@ namespace mgmake::backend {
         inline void create_output_directories(const dag::graph& graph) {
             for (const auto& action : graph.m_actions) {
                 for (const auto output_id : action.m_outputs) {
-                    const auto& output = checked_artifact(graph, output_id);
+                    const auto& output = graph.artifact(output_id);
 
                     if (output.m_kind == dag::artifact::kind::phony) {
                         continue;
@@ -652,10 +771,7 @@ namespace mgmake::backend {
             detail::create_output_directories(graph);
 
             std::ofstream out(m_output_path);
-
-            if (!out) {
-                throw std::runtime_error("ninja backend: failed to open " + m_output_path.string());
-            }
+			mgmkassert(out.is_open(), "ninja backend: failed to open " + m_output_path.string());
 
             out << "# generated by mgmake\n\n";
 
@@ -675,13 +791,8 @@ namespace mgmake::backend {
             for (std::size_t i = 0; i < graph.m_actions.size(); ++i) {
                 const auto& action = graph.m_actions[i];
 
-                if (action.m_outputs.empty()) {
-                    throw std::runtime_error("ninja backend: action '" + action.m_name + "' has no outputs");
-                }
-
-                if (action.m_command.m_args.empty()) {
-                    throw std::runtime_error("ninja backend: action '" + action.m_name + "' has no command");
-                }
+                mgmkassert(not action.m_outputs.empty(), "ninja backend: action '" + action.m_name + "' has no outputs");
+				mgmkassert(not action.m_command.m_args.empty(), "ninja backend: action '" + action.m_name + "' has no command");
 
                 out << "rule action_" << i << "\n";
                 out << "  command = " << action.m_command.full_command() << "\n";
@@ -727,9 +838,7 @@ namespace mgmake::backend {
             }
 
             for (const auto& target : graph.m_targets) {
-                if (target.m_outputs.empty()) {
-                    throw std::runtime_error("ninja backend: target '" + target.m_name + "' has no outputs");
-                }
+                mgmkassert(not target.m_outputs.empty(), "ninja backend: target '" + target.m_name + "' has no outputs");
 
                 out << "build " << detail::ninja_escape_build_text(target.m_name) << ": phony ";
                 detail::write_artifact_list(out, graph, target.m_outputs);
@@ -739,20 +848,24 @@ namespace mgmake::backend {
             detail::write_target_defaults(out, graph);
         }
 
-        void build(const dag::graph& graph) const {
-            generate(graph);
+		std::expected<void, std::string> build(const dag::graph& graph) const {
+			generate(graph);
 
-            sys::command_line command;
-            command.m_args.emplace_back("ninja");
-            command.m_args.emplace_back("-f");
-            command.m_args.emplace_back(m_output_path.string());
+			sys::command_line command;
+			command.m_args.emplace_back("ninja");
+			command.m_args.emplace_back("-f");
+			command.m_args.emplace_back(m_output_path.string());
 
-            const auto exit_code = command.invoke();
+			const auto exit_code = command.invoke();
 
-            if (exit_code != 0) {
-                throw std::runtime_error("ninja backend: ninja failed");
-            }
-        }
+			if (exit_code != 0) {
+				return std::unexpected(
+					"ninja backend: ninja failed with exit code " + std::to_string(exit_code)
+				);
+			}
+
+			return {};
+		}
     };
 }
 
@@ -1359,9 +1472,7 @@ namespace mgmake::detail {
 			return {};
 		}
 
-		if (text.size() > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
-			throw std::runtime_error("Wide string is too large to convert to UTF-8");
-		}
+		mgmkassert(text.size() < static_cast<std::size_t>(std::numeric_limits<int>::max()), "Wide string is too large to convert to UTF-8");
 
 		int wide_size = static_cast<int>(text.size());
 
@@ -1376,9 +1487,7 @@ namespace mgmake::detail {
 			nullptr
 		);
 
-		if (utf8_size <= 0) {
-			throw std::runtime_error("Failed to calculate UTF-8 argument size");
-		}
+		mgmkassert(utf8_size > 0, "Failed to calculate UTF-8 argument size");
 
 		std::string result;
 		result.resize(static_cast<std::size_t>(utf8_size));
@@ -1394,9 +1503,7 @@ namespace mgmake::detail {
 			nullptr
 		);
 
-		if (written <= 0) {
-			throw std::runtime_error("Failed to convert command line argument to UTF-8");
-		}
+		mgmkassert(written > 0, "Failed to convert command line argument to UTF-8");
 
 		return result;
 	}
@@ -1561,13 +1668,8 @@ namespace mgmake::spec {
 			dag::graph result{};
 
 			for (const auto& exe : m_executables) {
-				if (exe.m_name.empty()) {
-					throw std::runtime_error("mgmake spec: executable target has no name");
-				}
-
-				if (exe.m_sources.empty()) {
-					throw std::runtime_error("mgmake spec: executable target '" + exe.m_name + "' has no sources");
-				}
+				mgmkassert(not exe.m_name.empty(), "mgmake spec: executable target has no name");
+				mgmkassert (not exe.m_sources.empty(), "mgmake spec: executable target '" + exe.m_name + "' has no sources");
 
 				std::vector<dag::artifact::id> inputs{};
 				inputs.reserve(exe.m_sources.size());
@@ -1615,11 +1717,7 @@ namespace mgmake::spec {
 				);
 			}
 
-			if (!m_libraries.empty()) {
-				throw std::runtime_error(
-					"mgmake spec: lowering libraries to dag::graph is not implemented yet"
-				);
-			}
+			mgmkassert(m_libraries.empty(), "mgmake spec: lowering libraries to dag::graph is not implemented yet");
 
 			return result;
 		}

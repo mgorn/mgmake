@@ -12,9 +12,7 @@ namespace mgmake::detail {
 			return {};
 		}
 
-		if (text.size() > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
-			throw std::runtime_error("Wide string is too large to convert to UTF-8");
-		}
+		mgmkassert(text.size() < static_cast<std::size_t>(std::numeric_limits<int>::max()), "Wide string is too large to convert to UTF-8");
 
 		int wide_size = static_cast<int>(text.size());
 
@@ -29,9 +27,7 @@ namespace mgmake::detail {
 			nullptr
 		);
 
-		if (utf8_size <= 0) {
-			throw std::runtime_error("Failed to calculate UTF-8 argument size");
-		}
+		mgmkassert(utf8_size > 0, "Failed to calculate UTF-8 argument size");
 
 		std::string result;
 		result.resize(static_cast<std::size_t>(utf8_size));
@@ -47,9 +43,7 @@ namespace mgmake::detail {
 			nullptr
 		);
 
-		if (written <= 0) {
-			throw std::runtime_error("Failed to convert command line argument to UTF-8");
-		}
+		mgmkassert(written > 0, "Failed to convert command line argument to UTF-8");
 
 		return result;
 	}
