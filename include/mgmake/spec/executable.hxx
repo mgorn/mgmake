@@ -9,7 +9,7 @@
 #include <string_view>
 
 namespace mgmake::spec {
-	struct executable : public target {};
+	struct executable : public target<executable> {};
 }
 
 #endif

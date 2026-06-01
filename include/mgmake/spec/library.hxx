@@ -8,7 +8,7 @@
 #include "target.hxx"
 
 namespace mgmake::spec {
-	struct library : public target {
+	struct library : public target<library> {
 		enum struct kind {
 			kstatic,
 			kdynamic,

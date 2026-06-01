@@ -9,17 +9,19 @@
 #include <filesystem>
 
 namespace mgmake::spec {
+	template<typename target_t>
 	struct target {
 		std::string m_name;
 		std::vector<std::filesystem::path> m_sources;
 
-		inline constexpr auto name(const std::filesystem::path& file) {
-			m_name = file;
-			return *this;
-		}
-		inline constexpr auto add_source(const std::filesystem::path& file) {
+		inline constexpr auto& add_source(const std::filesystem::path& file) {
 			m_sources.emplace_back(file);
-			return *this;
+			return self();
+		}
+
+	private:
+		inline constexpr target_t& self() {
+			return *static_cast<target_t*>(this);
 		}
 	};
 }

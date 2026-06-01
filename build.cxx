@@ -35,11 +35,13 @@ int main() {
 */
 
 int main(int argc, const char** argv) {
-	spec::project proj{"mkmake"};
-	auto app = proj.create_executable("build");
-	app.add_source("build.cxx");
-
-	proj.build<backend::ninja>();
+	auto builder = spec::executable{"build"}.add_source("build.cxx");
+	auto proj = spec::project{"mkmake"}.add_target(builder);
+	auto graph = proj.graph();
+	backend::graphviz viz;
+	viz.generate(graph);
+	//backend::ninja be;
+	//be.build(graph);
 
 	return 0;
 }
