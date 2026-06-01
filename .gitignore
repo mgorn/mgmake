@@ -46,3 +46,4 @@ build
 *.dot
 *.ninja
 .ninja_log
+.DS_Store
