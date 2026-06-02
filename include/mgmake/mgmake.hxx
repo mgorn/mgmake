@@ -6,6 +6,8 @@
 #include "backend/graphviz.hxx"
 #include "backend/ninja.hxx"
 #include "backend/traits.hxx"
+#include "build/request.hxx"
+#include "build/toolchain.hxx"
 #include "cli/action.hxx"
 #include "cli/backend.hxx"
 #include "cli/options.hxx"

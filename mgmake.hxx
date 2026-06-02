@@ -5,21 +5,21 @@
 #define MGMAKE_SINGLE_HEADER_HXX
 
 
-// ===== begin include/mgmake/mgmake.hxx =====
+// ===== begin include\mgmake\mgmake.hxx =====
 #pragma once
 
 #ifndef MGMAKE_MGMAKE_HXX
 #define MGMAKE_MGMAKE_HXX
 
 
-// ===== begin include/mgmake/backend/graphviz.hxx =====
+// ===== begin include\mgmake\backend\graphviz.hxx =====
 #pragma once
 
 #ifndef MGMAKE_BACKEND_GRAPHVIZ_HXX
 #define MGMAKE_BACKEND_GRAPHVIZ_HXX
 
 
-// ===== begin include/mgmake/dag/artifact.hxx =====
+// ===== begin include\mgmake\dag\artifact.hxx =====
 #pragma once
 
 #ifndef MGMAKE_DAG_ARTIFACT_HXX
@@ -41,17 +41,17 @@ namespace mgmake::dag {
     };
 }
 
-#endif// ===== end include/mgmake/dag/artifact.hxx =====
+#endif// ===== end include\mgmake\dag\artifact.hxx =====
 
 
-// ===== begin include/mgmake/dag/graph.hxx =====
+// ===== begin include\mgmake\dag\graph.hxx =====
 #pragma once
 
 #ifndef MGMAKE_DAG_GRAPH_HXX
 #define MGMAKE_DAG_GRAPH_HXX
 
 
-// ===== begin include/mgmake/detail/assert.hxx =====
+// ===== begin include\mgmake\detail\assert.hxx =====
 #pragma once
 
 #ifndef MGMAKE_DETAIL_ASSERT_HXX
@@ -144,26 +144,26 @@ inline void mgmk_assert_impl(
         } while (false)
 #endif
 
-#endif// ===== end include/mgmake/detail/assert.hxx =====
+#endif// ===== end include\mgmake\detail\assert.hxx =====
 
 
-// ===== begin include/mgmake/dag/action.hxx =====
+// ===== begin include\mgmake\dag\action.hxx =====
 #pragma once
 
 #ifndef MGMAKE_DAG_ACTION_HXX
 #define MGMAKE_DAG_ACTION_HXX
 
-// skipped duplicate include: include/mgmake/dag/artifact.hxx
+// skipped duplicate include: include\mgmake\dag\artifact.hxx
 
 
-// ===== begin include/mgmake/sys/command_line.hxx =====
+// ===== begin include\mgmake\sys\command_line.hxx =====
 #pragma once
 
 #ifndef MGMAKE_SYS_COMMAND_LINE_HXX
 #define MGMAKE_SYS_COMMAND_LINE_HXX
 
 
-// ===== begin include/mgmake/sys/util.hxx =====
+// ===== begin include\mgmake\sys\util.hxx =====
 #pragma once
 
 #ifndef MGMAKE_SYS_UTIL_HXX
@@ -258,7 +258,7 @@ namespace mgmake::sys {
 #endif
 }
 
-#endif// ===== end include/mgmake/sys/util.hxx =====
+#endif// ===== end include\mgmake\sys\util.hxx =====
 
 
 #include <cstdlib>
@@ -330,7 +330,7 @@ namespace mgmake::sys {
 #endif
 }
 
-#endif// ===== end include/mgmake/sys/command_line.hxx =====
+#endif// ===== end include\mgmake\sys\command_line.hxx =====
 
 
 #include <filesystem>
@@ -354,17 +354,17 @@ namespace mgmake::dag {
     };
 }
 
-#endif// ===== end include/mgmake/dag/action.hxx =====
+#endif// ===== end include\mgmake\dag\action.hxx =====
 
-// skipped duplicate include: include/mgmake/dag/artifact.hxx
+// skipped duplicate include: include\mgmake\dag\artifact.hxx
 
-// ===== begin include/mgmake/dag/target.hxx =====
+// ===== begin include\mgmake\dag\target.hxx =====
 #pragma once
 
 #ifndef MGMAKE_DAG_TARGET_HXX
 #define MGMAKE_DAG_TARGET_HXX
 
-// skipped duplicate include: include/mgmake/dag/artifact.hxx
+// skipped duplicate include: include\mgmake\dag\artifact.hxx
 
 #include <string>
 #include <vector>
@@ -378,7 +378,7 @@ namespace mgmake::dag {
     };
 }
 
-#endif// ===== end include/mgmake/dag/target.hxx =====
+#endif// ===== end include\mgmake\dag\target.hxx =====
 
 
 #include <utility>
@@ -436,7 +436,7 @@ namespace mgmake::dag {
     };
 }
 
-#endif// ===== end include/mgmake/dag/graph.hxx =====
+#endif// ===== end include\mgmake\dag\graph.hxx =====
 
 
 #include <filesystem>
@@ -631,17 +631,17 @@ namespace mgmake::backend {
     };
 }
 
-#endif// ===== end include/mgmake/backend/graphviz.hxx =====
+#endif// ===== end include\mgmake\backend\graphviz.hxx =====
 
 
-// ===== begin include/mgmake/backend/ninja.hxx =====
+// ===== begin include\mgmake\backend\ninja.hxx =====
 #pragma once
 
 #ifndef MGMAKE_BACKEND_NINJA_HXX
 #define MGMAKE_BACKEND_NINJA_HXX
 
-// skipped duplicate include: include/mgmake/dag/graph.hxx
-// skipped duplicate include: include/mgmake/sys/util.hxx
+// skipped duplicate include: include\mgmake\dag\graph.hxx
+// skipped duplicate include: include\mgmake\sys\util.hxx
 
 #include <cstdlib>
 #include <expected>
@@ -869,16 +869,16 @@ namespace mgmake::backend {
     };
 }
 
-#endif// ===== end include/mgmake/backend/ninja.hxx =====
+#endif// ===== end include\mgmake\backend\ninja.hxx =====
 
 
-// ===== begin include/mgmake/backend/traits.hxx =====
+// ===== begin include\mgmake\backend\traits.hxx =====
 #pragma once
 
 #ifndef MGMAKE_BACKEND_TRAITS_HXX
 #define MGMAKE_BACKEND_TRAITS_HXX
 
-// skipped duplicate include: include/mgmake/dag/graph.hxx
+// skipped duplicate include: include\mgmake\dag\graph.hxx
 
 namespace mgmake::backend {
     // Generates graph output (graph.dot, build.ninja)
@@ -891,10 +891,313 @@ namespace mgmake::backend {
     };
 }
 
-#endif// ===== end include/mgmake/backend/traits.hxx =====
+#endif// ===== end include\mgmake\backend\traits.hxx =====
 
 
-// ===== begin include/mgmake/cli/action.hxx =====
+// ===== begin include\mgmake\build\request.hxx =====
+#pragma once
+
+#ifndef MGMAKE_BUILD_REQUEST_HXX
+#define MGMAKE_BUILD_REQUEST_HXX
+
+namespace mgmake::build {
+    struct request {
+        
+    };
+}
+
+#endif// ===== end include\mgmake\build\request.hxx =====
+
+
+// ===== begin include\mgmake\build\toolchain.hxx =====
+#pragma once
+
+#ifndef MGMAKE_BUILD_TOOLCHAIN_HXX
+#define MGMAKE_BUILD_TOOLCHAIN_HXX
+
+#include <string>
+
+namespace mgmake::build {
+    struct toolchain {
+        // Determines how MGMake should pass args to the compiler driver(s)
+        enum struct dialect {
+            gcc, // GCC-like command arguments (typically with a '-' dash)
+            msvc // Windows-like arguments (typically with a '/' slash)
+        };
+
+        std::string m_name; // The name of the toolchain
+        dialect m_dialect = []{
+#ifdef MGMAKE_PLATFORM_WINDOWS
+            return dialect::msvc;
+#else
+            return dialect::gcc;
+#endif
+        }();
+
+        std::string m_cc;
+        std::string m_cxx;
+        std::string m_ar;
+        std::string m_linker;
+
+        std::vector<std::string> m_compile_flags;
+        std::vector<std::string> m_c_flags;
+        std::vector<std::string> m_cxx_flags;
+        std::vector<std::string> m_archive_flags;
+        std::vector<std::string> m_link_flags;
+
+        std::optional<std::string> m_arch_triple;
+        std::optional<std::string> m_sysroot;
+
+       [[nodiscard]] inline constexpr std::string_view name() const {
+            return m_name;
+        }
+        inline constexpr auto& name(std::string_view str) {
+            m_name = str;
+            return *this;
+        }
+
+        [[nodiscard]] inline constexpr enum dialect dialect() const noexcept {
+            return m_dialect;
+        }
+        inline constexpr auto& dialect(enum dialect value) noexcept {
+            m_dialect = value;
+            return *this;
+        }
+
+        // cc
+        [[nodiscard]] inline constexpr const std::string& cc() const noexcept {
+            return m_cc;
+        }
+        inline constexpr auto& cc(std::string path) {
+            m_cc = std::move(path);
+            return *this;
+        }
+
+        // cxx
+        [[nodiscard]] inline constexpr const std::string& cxx() const noexcept {
+            return m_cxx;
+        }
+        inline constexpr auto& cxx(std::string path) {
+            m_cxx = std::move(path);
+            return *this;
+        }
+
+        // ar
+        [[nodiscard]] inline constexpr const std::string& ar() const noexcept {
+            return m_ar;
+        }
+        inline constexpr auto& ar(std::string path) {
+            m_ar = std::move(path);
+            return *this;
+        }
+
+        // linker
+        [[nodiscard]] inline constexpr const std::string& linker() const noexcept {
+            return m_linker;
+        }
+        inline constexpr auto& linker(std::string path) {
+            m_linker = std::move(path);
+            return *this;
+        }
+
+        // compile_flags
+        [[nodiscard]] inline constexpr const std::vector<std::string>& compile_flags() const noexcept {
+            return m_compile_flags;
+        }
+        inline constexpr auto& compile_flags(std::vector<std::string> flags) {
+            m_compile_flags = std::move(flags);
+            return *this;
+        }
+        inline constexpr auto& compile_flags(std::initializer_list<std::string_view> flags) {
+            m_compile_flags.clear();
+
+            for (std::string_view flag : flags) {
+                m_compile_flags.emplace_back(flag);
+            }
+
+            return *this;
+        }
+        inline constexpr auto& add_compile_flag(std::string_view flag) {
+            m_compile_flags.emplace_back(flag);
+            return *this;
+        }
+        inline constexpr auto& clear_compile_flags() noexcept {
+            m_compile_flags.clear();
+            return *this;
+        }
+
+        // c_flags
+        [[nodiscard]] inline constexpr const std::vector<std::string>& c_flags() const noexcept {
+            return m_c_flags;
+        }
+        inline constexpr auto& c_flags(std::vector<std::string> flags) {
+            m_c_flags = std::move(flags);
+            return *this;
+        }
+        inline constexpr auto& c_flags(std::initializer_list<std::string_view> flags) {
+            m_c_flags.clear();
+
+            for (std::string_view flag : flags) {
+                m_c_flags.emplace_back(flag);
+            }
+
+            return *this;
+        }
+        inline constexpr auto& add_c_flag(std::string_view flag) {
+            m_c_flags.emplace_back(flag);
+            return *this;
+        }
+        inline constexpr auto& clear_c_flags() noexcept {
+            m_c_flags.clear();
+            return *this;
+        }
+
+        // cxx_flags
+        [[nodiscard]] inline constexpr const std::vector<std::string>& cxx_flags() const noexcept {
+            return m_cxx_flags;
+        }
+        inline constexpr auto& cxx_flags(std::vector<std::string> flags) {
+            m_cxx_flags = std::move(flags);
+            return *this;
+        }
+        inline constexpr auto& cxx_flags(std::initializer_list<std::string_view> flags) {
+            m_cxx_flags.clear();
+
+            for (std::string_view flag : flags) {
+                m_cxx_flags.emplace_back(flag);
+            }
+
+            return *this;
+        }
+        inline constexpr auto& add_cxx_flag(std::string_view flag) {
+            m_cxx_flags.emplace_back(flag);
+            return *this;
+        }
+        inline constexpr auto& clear_cxx_flags() noexcept {
+            m_cxx_flags.clear();
+            return *this;
+        }
+
+        // archive_flags
+        [[nodiscard]] inline constexpr const std::vector<std::string>& archive_flags() const noexcept {
+            return m_archive_flags;
+        }
+        inline constexpr auto& archive_flags(std::vector<std::string> flags) {
+            m_archive_flags = std::move(flags);
+            return *this;
+        }
+        inline constexpr auto& archive_flags(std::initializer_list<std::string_view> flags) {
+            m_archive_flags.clear();
+
+            for (std::string_view flag : flags) {
+                m_archive_flags.emplace_back(flag);
+            }
+
+            return *this;
+        }
+        inline constexpr auto& add_archive_flag(std::string_view flag) {
+            m_archive_flags.emplace_back(flag);
+            return *this;
+        }
+        inline constexpr auto& clear_archive_flags() noexcept {
+            m_archive_flags.clear();
+            return *this;
+        }
+
+        // link_flags
+        [[nodiscard]] inline constexpr const std::vector<std::string>& link_flags() const noexcept {
+            return m_link_flags;
+        }
+        inline constexpr auto& link_flags(std::vector<std::string> flags) {
+            m_link_flags = std::move(flags);
+            return *this;
+        }
+        inline constexpr auto& link_flags(std::initializer_list<std::string_view> flags) {
+            m_link_flags.clear();
+
+            for (std::string_view flag : flags) {
+                m_link_flags.emplace_back(flag);
+            }
+
+            return *this;
+        }
+        inline constexpr auto& add_link_flag(std::string_view flag) {
+            m_link_flags.emplace_back(flag);
+            return *this;
+        }
+        inline constexpr auto& clear_link_flags() noexcept {
+            m_link_flags.clear();
+            return *this;
+        }
+
+        // arch_triple
+        [[nodiscard]] inline constexpr const std::optional<std::string>& arch_triple() const noexcept {
+            return m_arch_triple;
+        }
+        inline constexpr auto& arch_triple(std::string_view triple) {
+            m_arch_triple = std::string { triple };
+            return *this;
+        }
+        inline constexpr auto& arch_triple(std::optional<std::string> triple) {
+            m_arch_triple = std::move(triple);
+            return *this;
+        }
+        inline constexpr auto& clear_arch_triple() noexcept {
+            m_arch_triple.reset();
+            return *this;
+        }
+
+        // sysroot
+        [[nodiscard]] inline constexpr const std::optional<std::string>& sysroot() const noexcept {
+            return m_sysroot;
+        }
+        inline constexpr auto& sysroot(std::string path) {
+            m_sysroot = std::move(path);
+            return *this;
+        }
+        inline constexpr auto& sysroot(std::optional<std::string> path) {
+            m_sysroot = std::move(path);
+            return *this;
+        }
+        inline constexpr auto& clear_sysroot() noexcept {
+            m_sysroot.reset();
+            return *this;
+        }
+    };
+
+    static constexpr auto tc_clang_mg = build::toolchain{"clang-mg"}
+        .dialect(build::toolchain::dialect::gcc)
+        .cc("clang-mg")
+        .cxx("clang-mg++")
+        .ar("llvm-ar")
+        .linker("clang-mg++");
+
+    static constexpr auto tc_clang = build::toolchain{"clang"}
+        .dialect(build::toolchain::dialect::gcc)
+        .cc("clang")
+        .cxx("clang++")
+        .ar("llvm-ar")
+        .linker("clang++");
+
+    static constexpr auto tc_gcc = build::toolchain{"gcc"}
+        .dialect(build::toolchain::dialect::gcc)
+        .cc("gcc")
+        .cxx("g++")
+        .ar("ar")
+        .linker("g++");
+    
+    static constexpr auto tc_msvc = build::toolchain{"msvc"}
+        .dialect(build::toolchain::dialect::msvc)
+        .cc("cl")
+        .cxx("cl")
+        .ar("lib")
+        .linker("link");
+}
+
+#endif// ===== end include\mgmake\build\toolchain.hxx =====
+
+
+// ===== begin include\mgmake\cli\action.hxx =====
 #pragma once
 
 #ifndef MGMAKE_CLI_ACTION_HXX
@@ -966,10 +1269,10 @@ namespace mgmake::cli {
 	}
 }
 
-#endif// ===== end include/mgmake/cli/action.hxx =====
+#endif// ===== end include\mgmake\cli\action.hxx =====
 
 
-// ===== begin include/mgmake/cli/backend.hxx =====
+// ===== begin include\mgmake\cli\backend.hxx =====
 #pragma once
 
 #ifndef MGMAKE_CLI_BACKEND_HXX
@@ -1033,17 +1336,17 @@ namespace mgmake::cli {
 	}
 }
 
-#endif// ===== end include/mgmake/cli/backend.hxx =====
+#endif// ===== end include\mgmake\cli\backend.hxx =====
 
 
-// ===== begin include/mgmake/cli/options.hxx =====
+// ===== begin include\mgmake\cli\options.hxx =====
 #pragma once
 
 #ifndef MGMAKE_CLI_OPTIONS_HXX
 #define MGMAKE_CLI_OPTIONS_HXX
 
-// skipped duplicate include: include/mgmake/cli/action.hxx
-// skipped duplicate include: include/mgmake/cli/backend.hxx
+// skipped duplicate include: include\mgmake\cli\action.hxx
+// skipped duplicate include: include\mgmake\cli\backend.hxx
 
 #include <string>
 #include <vector>
@@ -1067,18 +1370,18 @@ namespace mgmake::cli {
 	};
 }
 
-#endif// ===== end include/mgmake/cli/options.hxx =====
+#endif// ===== end include\mgmake\cli\options.hxx =====
 
 
-// ===== begin include/mgmake/cli/parse.hxx =====
+// ===== begin include\mgmake\cli\parse.hxx =====
 #pragma once
 
 #ifndef MGMAKE_CLI_PARSE_HXX
 #define MGMAKE_CLI_PARSE_HXX
 
-// skipped duplicate include: include/mgmake/cli/options.hxx
+// skipped duplicate include: include\mgmake\cli\options.hxx
 
-// ===== begin include/mgmake/cli/util.hxx =====
+// ===== begin include\mgmake\cli\util.hxx =====
 #pragma once
 
 #ifndef MGMAKE_CLI_UTIL_HXX
@@ -1162,7 +1465,7 @@ namespace mgmake::cli {
 	}
 }
 
-#endif// ===== end include/mgmake/cli/util.hxx =====
+#endif// ===== end include\mgmake\cli\util.hxx =====
 
 
 #include <format>
@@ -1398,22 +1701,22 @@ namespace mgmake::cli {
 	}
 }
 
-#endif// ===== end include/mgmake/cli/parse.hxx =====
+#endif// ===== end include\mgmake\cli\parse.hxx =====
 
-// skipped duplicate include: include/mgmake/cli/util.hxx
-// skipped duplicate include: include/mgmake/dag/action.hxx
-// skipped duplicate include: include/mgmake/dag/artifact.hxx
-// skipped duplicate include: include/mgmake/dag/graph.hxx
-// skipped duplicate include: include/mgmake/dag/target.hxx
+// skipped duplicate include: include\mgmake\cli\util.hxx
+// skipped duplicate include: include\mgmake\dag\action.hxx
+// skipped duplicate include: include\mgmake\dag\artifact.hxx
+// skipped duplicate include: include\mgmake\dag\graph.hxx
+// skipped duplicate include: include\mgmake\dag\target.hxx
 
-// ===== begin include/mgmake/detail/convert.hxx =====
+// ===== begin include\mgmake\detail\convert.hxx =====
 #pragma once
 
 #ifndef MGMAKE_DETAIL_CONVERT_HXX
 #define MGMAKE_DETAIL_CONVERT_HXX
 
 
-// ===== begin include/mgmake/sys/platform.hxx =====
+// ===== begin include\mgmake\sys\platform.hxx =====
 #pragma once
 
 #ifndef MGMAKE_SYS_PLATFORM_HXX
@@ -1462,7 +1765,7 @@ namespace mgmake::sys {
 	}();
 }
 
-#endif// ===== end include/mgmake/sys/platform.hxx =====
+#endif// ===== end include\mgmake\sys\platform.hxx =====
 
 
 namespace mgmake::detail {
@@ -1510,10 +1813,10 @@ namespace mgmake::detail {
 #endif
 }
 
-#endif// ===== end include/mgmake/detail/convert.hxx =====
+#endif// ===== end include\mgmake\detail\convert.hxx =====
 
 
-// ===== begin include/mgmake/detail/static_string.hxx =====
+// ===== begin include\mgmake\detail\static_string.hxx =====
 #pragma once
 
 #ifndef MGMAKE_DETAIL_STATIC_STRING_HXX
@@ -1558,25 +1861,25 @@ namespace mgmake::detail {
 	}
 }
 
-#endif// ===== end include/mgmake/detail/static_string.hxx =====
+#endif// ===== end include\mgmake\detail\static_string.hxx =====
 
 
-// ===== begin include/mgmake/spec/executable.hxx =====
+// ===== begin include\mgmake\spec\executable.hxx =====
 #pragma once
 
 #ifndef MGMK_SPEC_EXECUTABLE_HXX
 #define MGMK_SPEC_EXECUTABLE_HXX
 
-// skipped duplicate include: include/mgmake/dag/target.hxx
+// skipped duplicate include: include\mgmake\dag\target.hxx
 
-// ===== begin include/mgmake/spec/target.hxx =====
+// ===== begin include\mgmake\spec\target.hxx =====
 #pragma once
 
 #ifndef MGMK_SPEC_TARGET_HXX
 #define MGMK_SPEC_TARGET_HXX
 
-// skipped duplicate include: include/mgmake/dag/artifact.hxx
-// skipped duplicate include: include/mgmake/dag/target.hxx
+// skipped duplicate include: include\mgmake\dag\artifact.hxx
+// skipped duplicate include: include\mgmake\dag\target.hxx
 
 #include <filesystem>
 
@@ -1598,7 +1901,7 @@ namespace mgmake::spec {
 	};
 }
 
-#endif// ===== end include/mgmake/spec/target.hxx =====
+#endif// ===== end include\mgmake\spec\target.hxx =====
 
 
 #include <string_view>
@@ -1607,18 +1910,18 @@ namespace mgmake::spec {
 	struct executable : public target<executable> {};
 }
 
-#endif// ===== end include/mgmake/spec/executable.hxx =====
+#endif// ===== end include\mgmake\spec\executable.hxx =====
 
 
-// ===== begin include/mgmake/spec/library.hxx =====
+// ===== begin include\mgmake\spec\library.hxx =====
 #pragma once
 
 #ifndef MGMK_SPEC_LIBRARY_HXX
 #define MGMK_SPEC_LIBRARY_HXX
 
-// skipped duplicate include: include/mgmake/dag/graph.hxx
-// skipped duplicate include: include/mgmake/dag/target.hxx
-// skipped duplicate include: include/mgmake/spec/target.hxx
+// skipped duplicate include: include\mgmake\dag\graph.hxx
+// skipped duplicate include: include\mgmake\dag\target.hxx
+// skipped duplicate include: include\mgmake\spec\target.hxx
 
 namespace mgmake::spec {
 	struct library : public target<library> {
@@ -1630,19 +1933,19 @@ namespace mgmake::spec {
 	};
 }
 
-#endif// ===== end include/mgmake/spec/library.hxx =====
+#endif// ===== end include\mgmake\spec\library.hxx =====
 
 
-// ===== begin include/mgmake/spec/project.hxx =====
+// ===== begin include\mgmake\spec\project.hxx =====
 #pragma once
 
 #ifndef MGMK_SPEC_PROJECT_HXX
 #define MGMK_SPEC_PROJECT_HXX
 
-// skipped duplicate include: include/mgmake/backend/traits.hxx
-// skipped duplicate include: include/mgmake/dag/graph.hxx
-// skipped duplicate include: include/mgmake/spec/executable.hxx
-// skipped duplicate include: include/mgmake/spec/library.hxx
+// skipped duplicate include: include\mgmake\backend\traits.hxx
+// skipped duplicate include: include\mgmake\dag\graph.hxx
+// skipped duplicate include: include\mgmake\spec\executable.hxx
+// skipped duplicate include: include\mgmake\spec\library.hxx
 
 #include <string>
 #include <string_view>
@@ -1724,11 +2027,11 @@ namespace mgmake::spec {
 	};
 }
 
-#endif// ===== end include/mgmake/spec/project.hxx =====
+#endif// ===== end include\mgmake\spec\project.hxx =====
 
-// skipped duplicate include: include/mgmake/sys/command_line.hxx
-// skipped duplicate include: include/mgmake/sys/platform.hxx
-// skipped duplicate include: include/mgmake/sys/util.hxx
+// skipped duplicate include: include\mgmake\sys\command_line.hxx
+// skipped duplicate include: include\mgmake\sys\platform.hxx
+// skipped duplicate include: include\mgmake\sys\util.hxx
 
 namespace mgmake {
 	template<typename ProjectType>
@@ -1779,7 +2082,7 @@ int main(int argc, char** argv) { \
 #define MGMK_BUILD_ENTRY MGMAKE_BUILD_ENTRY
 #define MGMK_ENTRY MGMK_BUILD_ENTRY
 
-#endif// ===== end include/mgmake/mgmake.hxx =====
+#endif// ===== end include\mgmake\mgmake.hxx =====
 
 
 #endif // MGMAKE_SINGLE_HEADER_HXX

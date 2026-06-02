@@ -42,7 +42,7 @@
 /.idea
 /.mgmake
 /cmake-build-debug
-build
+/build
 *.dot
 *.ninja
 .ninja_log
