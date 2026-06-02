@@ -1939,7 +1939,7 @@ namespace mgmake::spec {
 		std::string m_name;
 		std::vector<std::filesystem::path> m_sources;
 		std::vector<std::filesystem::path> m_include_dirs;
-		std::vector<std::string_view> m_linked_libraries;
+		std::vector<std::string> m_linked_libraries;
 
 		inline constexpr auto& add_source(const std::filesystem::path& file) {
 			m_sources.emplace_back(file);
@@ -1954,6 +1954,9 @@ namespace mgmake::spec {
 		inline constexpr auto& link(std::string_view lib) {
 			m_linked_libraries.emplace_back(lib);
 			return self();
+		}
+		inline constexpr auto& link(const std::string& lib) {
+			return link(std::string_view{ lib });
 		}
 
 		// Implicit cast to std::string_view for when the target needs to be identified by name
