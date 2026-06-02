@@ -3,6 +3,7 @@
 #ifndef MGMAKE_BACKEND_GRAPHVIZ_HXX
 #define MGMAKE_BACKEND_GRAPHVIZ_HXX
 
+#include "../build/request.hxx"
 #include "../dag/artifact.hxx"
 #include "../dag/graph.hxx"
 
@@ -77,14 +78,14 @@ namespace mgmake::backend {
 
     template<bool show_commands = true, bool show_action_ids = true, bool show_artifact_ids = true, bool show_targets = true>
     struct graphviz {
-        std::filesystem::path m_output_path = std::filesystem::current_path() / "graph.dot";
+        std::filesystem::path m_output_file = "graph.dot";
 
-        void generate(const dag::graph& graph) const {
-            if (m_output_path.has_parent_path()) {
-                std::filesystem::create_directories(m_output_path.parent_path());
+        void generate(const dag::graph& graph, const build::request& req) const {
+            auto output_path = req.build_dir() / m_output_file;
+            if (output_path.has_parent_path()) {
+                std::filesystem::create_directories(output_path.parent_path());
             }
-
-            std::ofstream out(m_output_path);
+            std::ofstream out(output_path);
 
             out << "digraph mgmake {\n";
             out << "    rankdir=LR;\n";
@@ -92,8 +93,8 @@ namespace mgmake::backend {
             out << "    node [fontname=\"monospace\"];\n";
             out << "    edge [fontname=\"monospace\"];\n\n";
 
-            for (std::size_t i = 0; i < graph.m_artifacts.size(); ++i) {
-                const auto& artifact = graph.m_artifacts[i];
+            for (auto i = 0; i < graph.m_artifacts.size(); ++i) {
+                const auto& artifact = graph.artifact(i);
 
                 std::string label;
 
@@ -114,8 +115,8 @@ namespace mgmake::backend {
 
             out << "\n";
 
-            for (std::size_t i = 0; i < graph.m_actions.size(); ++i) {
-                const auto& action = graph.m_actions[i];
+            for (auto i = 0; i < graph.m_actions.size(); ++i) {
+                const auto& action = graph.action(i);
 
                 std::string label;
 
@@ -155,8 +156,8 @@ namespace mgmake::backend {
             out << "\n";
 
             if constexpr (show_targets) {
-                for (std::size_t i = 0; i < graph.m_targets.size(); ++i) {
-                    const auto& target = graph.m_targets[i];
+                for (auto i = 0; i < graph.m_targets.size(); ++i) {
+                    const auto& target = graph.target(i);
 
                     std::string label = "target";
                     label += "\\n";
@@ -169,8 +170,8 @@ namespace mgmake::backend {
                 out << "\n";
             }
 
-            for (std::size_t i = 0; i < graph.m_actions.size(); ++i) {
-                const auto& action = graph.m_actions[i];
+            for (auto i = 0; i < graph.m_actions.size(); ++i) {
+                const auto& action = graph.action(i);
 
                 for (const auto input : action.m_inputs) {
                     out << "    artifact_" << input << " -> action_" << i << ";\n";
@@ -184,8 +185,8 @@ namespace mgmake::backend {
             if constexpr (show_targets) {
                 out << "\n";
 
-                for (std::size_t i = 0; i < graph.m_targets.size(); ++i) {
-                    const auto& target = graph.m_targets[i];
+                for (auto i = 0; i < graph.m_targets.size(); ++i) {
+                    const auto& target = graph.target(i);
 
                     for (const auto output : target.m_outputs) {
                         out << "    target_" << i << " -> artifact_" << output << ";\n";

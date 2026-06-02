@@ -1,3 +1,4 @@
+#include <iostream>
 #include "mgmake.hxx"
 
 using namespace mgmk;
@@ -34,14 +35,22 @@ int main() {
 }
 */
 
+#include <iostream>
+
 int main(int argc, const char** argv) {
+	build::request req{ build::tc_clang_mg, ".build", { "build" } };
 	auto builder = spec::executable{"build"}.add_source("build.cxx");
 	auto proj = spec::project{"mkmake"}.add_target(builder);
-	auto graph = proj.graph();
+	auto graph = proj.graph(req);
+
 	backend::graphviz viz;
-	viz.generate(graph);
-	//backend::ninja be;
-	//be.build(graph);
+	viz.generate(graph, req);
+	
+	backend::ninja nigga;
+	auto result = nigga.build(graph, req);
+	if (!result) {
+		std::cerr << result.error() << std::endl;
+	}
 
 	return 0;
 }

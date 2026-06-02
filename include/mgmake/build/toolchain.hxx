@@ -3,7 +3,11 @@
 #ifndef MGMAKE_BUILD_TOOLCHAIN_HXX
 #define MGMAKE_BUILD_TOOLCHAIN_HXX
 
+#include <initializer_list>
+#include <optional>
 #include <string>
+#include <string_view>
+#include <vector>
 
 namespace mgmake::build {
     struct toolchain {

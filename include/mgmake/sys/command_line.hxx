@@ -3,6 +3,7 @@
 #ifndef MGMAKE_SYS_COMMAND_LINE_HXX
 #define MGMAKE_SYS_COMMAND_LINE_HXX
 
+#include "../detail/convert.hxx"
 #include "util.hxx"
 
 #include <cstdlib>

@@ -8,11 +8,11 @@
 namespace mgmake::backend {
     // Generates graph output (graph.dot, build.ninja)
     trait generator {
-        void generate(const dag::graph& graph) const;
+        void generate(const dag::graph& graph, const build::request& req) const;
     };
     // Actually builds the program from the graph (invokes compiler, runs ninja)
     trait builder {
-        void build(const dag::graph& graph) const;
+        void build(const dag::graph& graph, const build::request& req) const;
     };
 }
 

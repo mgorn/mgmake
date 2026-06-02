@@ -4,6 +4,7 @@
 #define MGMK_SPEC_PROJECT_HXX
 
 #include "../backend/traits.hxx"
+#include "../build/request.hxx"
 #include "../dag/graph.hxx"
 #include "executable.hxx"
 #include "library.hxx"
@@ -28,7 +29,9 @@ namespace mgmake::spec {
 		}
 
 		// Generate the graph from all project info
-		inline dag::graph graph() const {
+		inline dag::graph graph(const build::request& req) const {
+			auto& tc = req.toolchain();
+
 			dag::graph result{};
 
 			for (const auto& exe : m_executables) {
@@ -45,7 +48,7 @@ namespace mgmake::spec {
 					));
 				}
 
-				std::filesystem::path output = std::filesystem::path{".build"} / exe.m_name;
+				std::filesystem::path output = req.build_dir() / exe.m_name;
 		#if defined(MGMK_PLATFORM_WINDOWS)
 				output += ".exe";
 		#endif
@@ -54,9 +57,9 @@ namespace mgmake::spec {
 					dag::artifact::kind::generated,
 					output
 				);
-
+				
 				sys::command_line command{};
-				command.m_args.emplace_back("clang-mg++");
+				command.m_args.emplace_back(tc.cxx());
 
 				for (const auto& source : exe.m_sources) {
 					command.m_args.emplace_back(source.string());

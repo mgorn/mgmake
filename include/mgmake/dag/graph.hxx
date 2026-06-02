@@ -32,32 +32,32 @@ namespace mgmake::dag {
 
 		inline constexpr struct artifact& artifact(const artifact::id id) {
 			mgmkassert(not m_artifacts.empty(), "Invalid artifact ID: there are no artifacts.");
-			mgmkassert(id >= m_artifacts.size(), "Invalid artifact ID");
+			mgmkassert(id < m_artifacts.size(), "Invalid artifact ID");
 			return m_artifacts.at(id);
 		}
 		inline constexpr const struct artifact& artifact(const artifact::id id) const {
 			mgmkassert(not m_artifacts.empty(), "Invalid artifact ID: there are no artifacts.");
-			mgmkassert(id >= m_artifacts.size(), "Invalid artifact ID");
+			mgmkassert(id < m_artifacts.size(), "Invalid artifact ID");
 			return m_artifacts.at(id);
 		}
 		inline constexpr struct action& action(const action::id id) {
 			mgmkassert(not m_actions.empty(), "Invalid action ID: there are no actions.");
-			mgmkassert(id >= m_actions.size(), "Invalid action ID");
+			mgmkassert(id < m_actions.size(), "Invalid action ID");
 			return m_actions.at(id);
 		}
 		inline constexpr const struct action& action(const action::id id) const {
 			mgmkassert(not m_actions.empty(), "Invalid action ID: there are no actions.");
-			mgmkassert(id >= m_actions.size(), "Invalid action ID");
+			mgmkassert(id < m_actions.size(), "Invalid action ID");
 			return m_actions.at(id);
 		}
 		inline constexpr struct target& target(const target::id id) {
 			mgmkassert(not m_targets.empty(), "Invalid target ID: there are no targets.");
-			mgmkassert(id >= m_targets.size(), "Invalid target ID");
+			mgmkassert(id < m_targets.size(), "Invalid target ID");
 			return m_targets.at(id);
 		}
 		inline constexpr const struct target& target(const target::id id) const {
 			mgmkassert(not m_targets.empty(), "Invalid target ID: there are no targets.");
-			mgmkassert(id >= m_targets.size(), "Invalid target ID");
+			mgmkassert(id < m_targets.size(), "Invalid target ID");
 			return m_targets.at(id);
 		}
     };
