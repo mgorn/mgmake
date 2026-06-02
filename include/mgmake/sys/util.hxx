@@ -5,10 +5,12 @@
 
 #include "platform.hxx"
 
+#include <string>
+#include <string_view>
+
 namespace mgmake::sys {
 #ifdef MGMK_PLATFORM_WINDOWS
 	inline constexpr std::string shell_escape(std::string_view arg) {
-		std::cout << "WINDOWS shell_escape" << std::endl;
 		if (arg.empty()) {
 			return "\"\"";
 		}
@@ -61,7 +63,6 @@ namespace mgmake::sys {
 	}
 #else
 	inline constexpr std::string shell_escape(std::string_view arg) {
-		std::cout << "POSIX shell_escape" << std::endl;
 		if (arg.empty()) {
 			return "''";
 		}

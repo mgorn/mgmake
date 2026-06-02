@@ -1,4 +1,3 @@
-#include <iostream>
 #include "mgmake.hxx"
 
 using namespace mgmk;
@@ -46,8 +45,8 @@ int main(int argc, const char** argv) {
 	backend::graphviz viz;
 	viz.generate(graph, req);
 	
-	backend::ninja nigga;
-	auto result = nigga.build(graph, req);
+	backend::ninja be;
+	auto result = be.build(graph, req);
 	if (!result) {
 		std::cerr << result.error() << std::endl;
 	}
