@@ -38,8 +38,9 @@ int main() {
 
 int main(int argc, const char** argv) {
 	build::request req{ build::tc_clang_mg, ".build", { "build" } };
-	auto builder = spec::executable{"build"}.add_source("build.cxx");
-	auto proj = spec::project{"mkmake"}.add_target(builder);
+	auto testlib = spec::library{"testlib", spec::library::kind::interface}.add_include_dir("test");
+	auto builder = spec::executable{"build"}.add_source("build.cxx").link(testlib);
+	auto proj = spec::project{"mkmake"}.add_target(builder).add_target(testlib);
 	auto graph = proj.graph(req);
 
 	backend::graphviz viz;

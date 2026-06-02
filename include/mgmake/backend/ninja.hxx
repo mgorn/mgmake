@@ -202,10 +202,15 @@ namespace mgmake::backend {
             }
 
             for (const auto& target : graph.m_targets) {
-                mgmkassert(not target.m_outputs.empty(), "ninja backend: target '" + target.m_name + "' has no outputs");
-
                 out << "build " << detail::ninja_escape_build_text(target.m_name) << ": phony ";
-                detail::write_artifact_list(out, graph, target.m_outputs);
+                if (not target.m_outputs.empty()) {
+                    out << ' ';
+                    detail::write_artifact_list(out, graph, target.m_outputs);
+                }
+                for (const auto dep_id : target.m_dependencies) {
+                    const auto& dep = graph.target(dep_id);
+                    out << ' ' << detail::ninja_escape_build_text(dep.m_name);
+                }
                 out << "\n";
             }
 
