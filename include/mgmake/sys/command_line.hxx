@@ -46,7 +46,7 @@ namespace mgmake::sys {
 		}
 	};
 
-	inline constexpr command_line args_from_utf8(int argc, char** argv) {
+	inline constexpr command_line args_from_utf8(int argc, const char** argv) {
 		command_line result;
 
 		for (int i = 0; i < argc; ++i) {
@@ -57,7 +57,7 @@ namespace mgmake::sys {
 	}
 
 #ifdef MGMK_INCLUDED_WINDOWS
-	inline constexpr command_line args_from_wide(int argc, wchar_t** argv) {
+	inline constexpr command_line args_from_wide(int argc, const wchar_t** argv) {
 		command_line result;
 		if (argc <= 0 || argv == nullptr) {
 			return result;

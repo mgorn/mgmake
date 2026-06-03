@@ -18,8 +18,11 @@ namespace mgmake::cli {
 		options m_value{};
 		std::string m_error{};
 
-		[[nodiscard]] explicit operator bool() const {
+		[[nodiscard]] operator bool() const {
 			return m_ok;
+		}
+		[[nodiscard]] operator options() const {
+			return m_value;
 		}
 
 		static parse_result success(options opts) {
@@ -236,6 +239,10 @@ namespace mgmake::cli {
 		}
 
 		return parse_result::success(std::move(opts));
+	}
+
+	inline constexpr auto parse(const sys::command_line& cmd) {
+		return parse(cmd.m_args);
 	}
 }
 

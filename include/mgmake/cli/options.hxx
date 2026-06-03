@@ -14,7 +14,7 @@ namespace mgmake::cli {
 		action_kind m_action = action_kind::build;
 		backend_kind m_backend = backend_kind::automatic;
 
-		std::string m_build_dir = "build";
+		std::string m_build_dir = ".build";
 
 		std::vector<std::string> m_targets;
 		std::vector<std::string> m_passthrough_args;

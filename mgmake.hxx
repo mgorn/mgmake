@@ -742,7 +742,7 @@ namespace mgmake::sys {
 		}
 	};
 
-	inline constexpr command_line args_from_utf8(int argc, char** argv) {
+	inline constexpr command_line args_from_utf8(int argc, const char** argv) {
 		command_line result;
 
 		for (int i = 0; i < argc; ++i) {
@@ -753,7 +753,7 @@ namespace mgmake::sys {
 	}
 
 #ifdef MGMK_INCLUDED_WINDOWS
-	inline constexpr command_line args_from_wide(int argc, wchar_t** argv) {
+	inline constexpr command_line args_from_wide(int argc, const wchar_t** argv) {
 		command_line result;
 		if (argc <= 0 || argv == nullptr) {
 			return result;
@@ -1512,7 +1512,7 @@ namespace mgmake::cli {
 		action_kind m_action = action_kind::build;
 		backend_kind m_backend = backend_kind::automatic;
 
-		std::string m_build_dir = "build";
+		std::string m_build_dir = ".build";
 
 		std::vector<std::string> m_targets;
 		std::vector<std::string> m_passthrough_args;
@@ -1636,8 +1636,11 @@ namespace mgmake::cli {
 		options m_value{};
 		std::string m_error{};
 
-		[[nodiscard]] explicit operator bool() const {
+		[[nodiscard]] operator bool() const {
 			return m_ok;
+		}
+		[[nodiscard]] operator options() const {
+			return m_value;
 		}
 
 		static parse_result success(options opts) {
@@ -1854,6 +1857,10 @@ namespace mgmake::cli {
 		}
 
 		return parse_result::success(std::move(opts));
+	}
+
+	inline constexpr auto parse(const sys::command_line& cmd) {
+		return parse(cmd.m_args);
 	}
 }
 
