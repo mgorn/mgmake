@@ -5,6 +5,7 @@
 
 #include "artifact.hxx"
 
+#include <set>
 #include <string>
 #include <vector>
 
@@ -15,11 +16,15 @@ namespace mgmake::dag {
         std::string m_name;
 
         // Empty is valid for interface/no-op/metadata targets
-        std::vector<artifact::id> m_outputs;
+        std::set<artifact::id> m_outputs;
 
         // Other DAG targets this target conceptually depends on.
         // For now this mostly exists so graphviz/ninja can show target-level deps.
-        std::vector<target::id> m_dependencies;
+        std::set<target::id> m_dependencies;
+
+		void add_dependency(const target::id dep) {
+			m_dependencies.emplace(dep);
+		}
     };
 }
 

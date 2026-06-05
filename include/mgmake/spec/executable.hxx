@@ -7,9 +7,12 @@
 #include "target.hxx"
 
 #include <string_view>
+#include <vector>
 
 namespace mgmake::spec {
-	struct executable : public target<executable> {};
+	struct executable : public target<executable> {
+		using id = std::vector<executable>::size_type;
+	};
 }
 
 #endif

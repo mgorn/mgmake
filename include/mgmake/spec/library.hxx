@@ -9,9 +9,12 @@
 
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace mgmake::spec {
 	struct library : public target<library> {
+		using id = std::vector<library>::size_type;
+
 		enum struct kind {
 			kstatic, // k prefix bc static is a keyword
 			dynamic,

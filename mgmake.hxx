@@ -5,28 +5,28 @@
 #define MGMAKE_SINGLE_HEADER_HXX
 
 
-// ===== begin include\mgmake\mgmake.hxx =====
+// ===== begin include/mgmake/mgmake.hxx =====
 #pragma once
 
 #ifndef MGMAKE_MGMAKE_HXX
 #define MGMAKE_MGMAKE_HXX
 
 
-// ===== begin include\mgmake\backend\graphviz.hxx =====
+// ===== begin include/mgmake/backend/graphviz.hxx =====
 #pragma once
 
 #ifndef MGMAKE_BACKEND_GRAPHVIZ_HXX
 #define MGMAKE_BACKEND_GRAPHVIZ_HXX
 
 
-// ===== begin include\mgmake\build\request.hxx =====
+// ===== begin include/mgmake/build/request.hxx =====
 #pragma once
 
 #ifndef MGMAKE_BUILD_REQUEST_HXX
 #define MGMAKE_BUILD_REQUEST_HXX
 
 
-// ===== begin include\mgmake\build\toolchain.hxx =====
+// ===== begin include/mgmake/build/toolchain.hxx =====
 #pragma once
 
 #ifndef MGMAKE_BUILD_TOOLCHAIN_HXX
@@ -315,7 +315,7 @@ namespace mgmake::build {
         .linker("link");
 }
 
-#endif// ===== end include\mgmake\build\toolchain.hxx =====
+#endif// ===== end include/mgmake/build/toolchain.hxx =====
 
 
 #include <filesystem>
@@ -345,10 +345,10 @@ namespace mgmake::build {
     };
 }
 
-#endif// ===== end include\mgmake\build\request.hxx =====
+#endif// ===== end include/mgmake/build/request.hxx =====
 
 
-// ===== begin include\mgmake\dag\artifact.hxx =====
+// ===== begin include/mgmake/dag/artifact.hxx =====
 #pragma once
 
 #ifndef MGMAKE_DAG_ARTIFACT_HXX
@@ -370,17 +370,17 @@ namespace mgmake::dag {
     };
 }
 
-#endif// ===== end include\mgmake\dag\artifact.hxx =====
+#endif// ===== end include/mgmake/dag/artifact.hxx =====
 
 
-// ===== begin include\mgmake\dag\graph.hxx =====
+// ===== begin include/mgmake/dag/graph.hxx =====
 #pragma once
 
 #ifndef MGMAKE_DAG_GRAPH_HXX
 #define MGMAKE_DAG_GRAPH_HXX
 
 
-// ===== begin include\mgmake\detail\assert.hxx =====
+// ===== begin include/mgmake/detail/assert.hxx =====
 #pragma once
 
 #ifndef MGMAKE_DETAIL_ASSERT_HXX
@@ -473,33 +473,33 @@ inline void mgmk_assert_impl(
         } while (false)
 #endif
 
-#endif// ===== end include\mgmake\detail\assert.hxx =====
+#endif// ===== end include/mgmake/detail/assert.hxx =====
 
 
-// ===== begin include\mgmake\dag\action.hxx =====
+// ===== begin include/mgmake/dag/action.hxx =====
 #pragma once
 
 #ifndef MGMAKE_DAG_ACTION_HXX
 #define MGMAKE_DAG_ACTION_HXX
 
-// skipped duplicate include: include\mgmake\dag\artifact.hxx
+// skipped duplicate include: include/mgmake/dag/artifact.hxx
 
 
-// ===== begin include\mgmake\sys\command_line.hxx =====
+// ===== begin include/mgmake/sys/command_line.hxx =====
 #pragma once
 
 #ifndef MGMAKE_SYS_COMMAND_LINE_HXX
 #define MGMAKE_SYS_COMMAND_LINE_HXX
 
 
-// ===== begin include\mgmake\detail\convert.hxx =====
+// ===== begin include/mgmake/detail/convert.hxx =====
 #pragma once
 
 #ifndef MGMAKE_DETAIL_CONVERT_HXX
 #define MGMAKE_DETAIL_CONVERT_HXX
 
 
-// ===== begin include\mgmake\sys\platform.hxx =====
+// ===== begin include/mgmake/sys/platform.hxx =====
 #pragma once
 
 #ifndef MGMAKE_SYS_PLATFORM_HXX
@@ -548,7 +548,7 @@ namespace mgmake::sys {
 	}();
 }
 
-#endif// ===== end include\mgmake\sys\platform.hxx =====
+#endif// ===== end include/mgmake/sys/platform.hxx =====
 
 
 namespace mgmake::detail {
@@ -596,16 +596,16 @@ namespace mgmake::detail {
 #endif
 }
 
-#endif// ===== end include\mgmake\detail\convert.hxx =====
+#endif// ===== end include/mgmake/detail/convert.hxx =====
 
 
-// ===== begin include\mgmake\sys\util.hxx =====
+// ===== begin include/mgmake/sys/util.hxx =====
 #pragma once
 
 #ifndef MGMAKE_SYS_UTIL_HXX
 #define MGMAKE_SYS_UTIL_HXX
 
-// skipped duplicate include: include\mgmake\sys\platform.hxx
+// skipped duplicate include: include/mgmake/sys/platform.hxx
 
 #include <string>
 #include <string_view>
@@ -699,7 +699,7 @@ namespace mgmake::sys {
 #endif
 }
 
-#endif// ===== end include\mgmake\sys\util.hxx =====
+#endif// ===== end include/mgmake/sys/util.hxx =====
 
 
 #include <cstdlib>
@@ -771,7 +771,7 @@ namespace mgmake::sys {
 #endif
 }
 
-#endif// ===== end include\mgmake\sys\command_line.hxx =====
+#endif// ===== end include/mgmake/sys/command_line.hxx =====
 
 
 #include <filesystem>
@@ -795,18 +795,19 @@ namespace mgmake::dag {
     };
 }
 
-#endif// ===== end include\mgmake\dag\action.hxx =====
+#endif// ===== end include/mgmake/dag/action.hxx =====
 
-// skipped duplicate include: include\mgmake\dag\artifact.hxx
+// skipped duplicate include: include/mgmake/dag/artifact.hxx
 
-// ===== begin include\mgmake\dag\target.hxx =====
+// ===== begin include/mgmake/dag/target.hxx =====
 #pragma once
 
 #ifndef MGMAKE_DAG_TARGET_HXX
 #define MGMAKE_DAG_TARGET_HXX
 
-// skipped duplicate include: include\mgmake\dag\artifact.hxx
+// skipped duplicate include: include/mgmake/dag/artifact.hxx
 
+#include <set>
 #include <string>
 #include <vector>
 
@@ -817,15 +818,19 @@ namespace mgmake::dag {
         std::string m_name;
 
         // Empty is valid for interface/no-op/metadata targets
-        std::vector<artifact::id> m_outputs;
+        std::set<artifact::id> m_outputs;
 
         // Other DAG targets this target conceptually depends on.
         // For now this mostly exists so graphviz/ninja can show target-level deps.
-        std::vector<target::id> m_dependencies;
+        std::set<target::id> m_dependencies;
+
+		void add_dependency(const target::id dep) {
+			m_dependencies.emplace(dep);
+		}
     };
 }
 
-#endif// ===== end include\mgmake\dag\target.hxx =====
+#endif// ===== end include/mgmake/dag/target.hxx =====
 
 
 #include <utility>
@@ -883,7 +888,7 @@ namespace mgmake::dag {
     };
 }
 
-#endif// ===== end include\mgmake\dag\graph.hxx =====
+#endif// ===== end include/mgmake/dag/graph.hxx =====
 
 
 #include <filesystem>
@@ -1078,23 +1083,25 @@ namespace mgmake::backend {
     };
 }
 
-#endif// ===== end include\mgmake\backend\graphviz.hxx =====
+#endif// ===== end include/mgmake/backend/graphviz.hxx =====
 
 
-// ===== begin include\mgmake\backend\ninja.hxx =====
+// ===== begin include/mgmake/backend/ninja.hxx =====
 #pragma once
 
 #ifndef MGMAKE_BACKEND_NINJA_HXX
 #define MGMAKE_BACKEND_NINJA_HXX
 
-// skipped duplicate include: include\mgmake\build\request.hxx
-// skipped duplicate include: include\mgmake\dag\graph.hxx
-// skipped duplicate include: include\mgmake\sys\util.hxx
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/dag/graph.hxx
+// skipped duplicate include: include/mgmake/sys/util.hxx
 
 #include <cstdlib>
 #include <expected>
 #include <filesystem>
 #include <fstream>
+#include <ranges>
+#include <set>
 #include <string>
 #include <string_view>
 
@@ -1174,6 +1181,9 @@ namespace mgmake::backend {
                 first = false;
             }
         }
+		inline void write_artifact_list(std::ofstream& out, const dag::graph& graph, const std::set<dag::artifact::id>& artifacts) {
+			return write_artifact_list(out, graph, artifacts | std::ranges::to<std::vector<dag::artifact::id>>());
+		}
 
         inline void create_output_directories(const dag::graph& graph) {
             for (const auto& action : graph.m_actions) {
@@ -1326,16 +1336,16 @@ namespace mgmake::backend {
     };
 }
 
-#endif// ===== end include\mgmake\backend\ninja.hxx =====
+#endif// ===== end include/mgmake/backend/ninja.hxx =====
 
 
-// ===== begin include\mgmake\backend\traits.hxx =====
+// ===== begin include/mgmake/backend/traits.hxx =====
 #pragma once
 
 #ifndef MGMAKE_BACKEND_TRAITS_HXX
 #define MGMAKE_BACKEND_TRAITS_HXX
 
-// skipped duplicate include: include\mgmake\dag\graph.hxx
+// skipped duplicate include: include/mgmake/dag/graph.hxx
 
 namespace mgmake::backend {
     // Generates graph output (graph.dot, build.ninja)
@@ -1348,12 +1358,12 @@ namespace mgmake::backend {
     };
 }
 
-#endif// ===== end include\mgmake\backend\traits.hxx =====
+#endif// ===== end include/mgmake/backend/traits.hxx =====
 
-// skipped duplicate include: include\mgmake\build\request.hxx
-// skipped duplicate include: include\mgmake\build\toolchain.hxx
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/build/toolchain.hxx
 
-// ===== begin include\mgmake\cli\action.hxx =====
+// ===== begin include/mgmake/cli/action.hxx =====
 #pragma once
 
 #ifndef MGMAKE_CLI_ACTION_HXX
@@ -1425,10 +1435,10 @@ namespace mgmake::cli {
 	}
 }
 
-#endif// ===== end include\mgmake\cli\action.hxx =====
+#endif// ===== end include/mgmake/cli/action.hxx =====
 
 
-// ===== begin include\mgmake\cli\backend.hxx =====
+// ===== begin include/mgmake/cli/backend.hxx =====
 #pragma once
 
 #ifndef MGMAKE_CLI_BACKEND_HXX
@@ -1492,17 +1502,17 @@ namespace mgmake::cli {
 	}
 }
 
-#endif// ===== end include\mgmake\cli\backend.hxx =====
+#endif// ===== end include/mgmake/cli/backend.hxx =====
 
 
-// ===== begin include\mgmake\cli\options.hxx =====
+// ===== begin include/mgmake/cli/options.hxx =====
 #pragma once
 
 #ifndef MGMAKE_CLI_OPTIONS_HXX
 #define MGMAKE_CLI_OPTIONS_HXX
 
-// skipped duplicate include: include\mgmake\cli\action.hxx
-// skipped duplicate include: include\mgmake\cli\backend.hxx
+// skipped duplicate include: include/mgmake/cli/action.hxx
+// skipped duplicate include: include/mgmake/cli/backend.hxx
 
 #include <string>
 #include <vector>
@@ -1526,18 +1536,18 @@ namespace mgmake::cli {
 	};
 }
 
-#endif// ===== end include\mgmake\cli\options.hxx =====
+#endif// ===== end include/mgmake/cli/options.hxx =====
 
 
-// ===== begin include\mgmake\cli\parse.hxx =====
+// ===== begin include/mgmake/cli/parse.hxx =====
 #pragma once
 
 #ifndef MGMAKE_CLI_PARSE_HXX
 #define MGMAKE_CLI_PARSE_HXX
 
-// skipped duplicate include: include\mgmake\cli\options.hxx
+// skipped duplicate include: include/mgmake/cli/options.hxx
 
-// ===== begin include\mgmake\cli\util.hxx =====
+// ===== begin include/mgmake/cli/util.hxx =====
 #pragma once
 
 #ifndef MGMAKE_CLI_UTIL_HXX
@@ -1621,7 +1631,7 @@ namespace mgmake::cli {
 	}
 }
 
-#endif// ===== end include\mgmake\cli\util.hxx =====
+#endif// ===== end include/mgmake/cli/util.hxx =====
 
 
 #include <format>
@@ -1864,16 +1874,16 @@ namespace mgmake::cli {
 	}
 }
 
-#endif// ===== end include\mgmake\cli\parse.hxx =====
+#endif// ===== end include/mgmake/cli/parse.hxx =====
 
-// skipped duplicate include: include\mgmake\cli\util.hxx
-// skipped duplicate include: include\mgmake\dag\action.hxx
-// skipped duplicate include: include\mgmake\dag\artifact.hxx
-// skipped duplicate include: include\mgmake\dag\graph.hxx
-// skipped duplicate include: include\mgmake\dag\target.hxx
-// skipped duplicate include: include\mgmake\detail\convert.hxx
+// skipped duplicate include: include/mgmake/cli/util.hxx
+// skipped duplicate include: include/mgmake/dag/action.hxx
+// skipped duplicate include: include/mgmake/dag/artifact.hxx
+// skipped duplicate include: include/mgmake/dag/graph.hxx
+// skipped duplicate include: include/mgmake/dag/target.hxx
+// skipped duplicate include: include/mgmake/detail/convert.hxx
 
-// ===== begin include\mgmake\detail\static_string.hxx =====
+// ===== begin include/mgmake/detail/static_string.hxx =====
 #pragma once
 
 #ifndef MGMAKE_DETAIL_STATIC_STRING_HXX
@@ -1918,25 +1928,25 @@ namespace mgmake::detail {
 	}
 }
 
-#endif// ===== end include\mgmake\detail\static_string.hxx =====
+#endif// ===== end include/mgmake/detail/static_string.hxx =====
 
 
-// ===== begin include\mgmake\spec\executable.hxx =====
+// ===== begin include/mgmake/spec/executable.hxx =====
 #pragma once
 
 #ifndef MGMK_SPEC_EXECUTABLE_HXX
 #define MGMK_SPEC_EXECUTABLE_HXX
 
-// skipped duplicate include: include\mgmake\dag\target.hxx
+// skipped duplicate include: include/mgmake/dag/target.hxx
 
-// ===== begin include\mgmake\spec\target.hxx =====
+// ===== begin include/mgmake/spec/target.hxx =====
 #pragma once
 
 #ifndef MGMK_SPEC_TARGET_HXX
 #define MGMK_SPEC_TARGET_HXX
 
-// skipped duplicate include: include\mgmake\dag\artifact.hxx
-// skipped duplicate include: include\mgmake\dag\target.hxx
+// skipped duplicate include: include/mgmake/dag/artifact.hxx
+// skipped duplicate include: include/mgmake/dag/target.hxx
 
 #include <filesystem>
 
@@ -1944,26 +1954,32 @@ namespace mgmake::spec {
 	template<typename target_t>
 	struct target {
 		std::string m_name;
-		std::vector<std::filesystem::path> m_sources;
-		std::vector<std::filesystem::path> m_include_dirs;
-		std::vector<std::string> m_linked_libraries;
+		std::set<std::filesystem::path> m_sources;
+		std::set<std::filesystem::path> m_include_dirs;
+		std::set<std::string> m_linked_libraries;
 
 		inline constexpr auto& add_source(const std::filesystem::path& file) {
-			m_sources.emplace_back(file);
+			m_sources.emplace(file);
 			return self();
 		}
 
 		inline constexpr auto& add_include_dir(const std::filesystem::path& file) {
-			m_include_dirs.emplace_back(file);
+			m_include_dirs.emplace(file);
 			return self();
+		}
+		inline constexpr auto& include_dirs() const {
+			return m_include_dirs;
 		}
 
 		inline constexpr auto& link(std::string_view lib) {
-			m_linked_libraries.emplace_back(lib);
+			m_linked_libraries.emplace(lib);
 			return self();
 		}
 		inline constexpr auto& link(const std::string& lib) {
 			return link(std::string_view{ lib });
+		}
+		inline constexpr auto& linked_libraries() const {
+			return m_linked_libraries;
 		}
 
 		// Implicit cast to std::string_view for when the target needs to be identified by name
@@ -1977,33 +1993,39 @@ namespace mgmake::spec {
 	};
 }
 
-#endif// ===== end include\mgmake\spec\target.hxx =====
+#endif// ===== end include/mgmake/spec/target.hxx =====
 
 
 #include <string_view>
+#include <vector>
 
 namespace mgmake::spec {
-	struct executable : public target<executable> {};
+	struct executable : public target<executable> {
+		using id = std::vector<executable>::size_type;
+	};
 }
 
-#endif// ===== end include\mgmake\spec\executable.hxx =====
+#endif// ===== end include/mgmake/spec/executable.hxx =====
 
 
-// ===== begin include\mgmake\spec\library.hxx =====
+// ===== begin include/mgmake/spec/library.hxx =====
 #pragma once
 
 #ifndef MGMK_SPEC_LIBRARY_HXX
 #define MGMK_SPEC_LIBRARY_HXX
 
-// skipped duplicate include: include\mgmake\dag\graph.hxx
-// skipped duplicate include: include\mgmake\dag\target.hxx
-// skipped duplicate include: include\mgmake\spec\target.hxx
+// skipped duplicate include: include/mgmake/dag/graph.hxx
+// skipped duplicate include: include/mgmake/dag/target.hxx
+// skipped duplicate include: include/mgmake/spec/target.hxx
 
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace mgmake::spec {
 	struct library : public target<library> {
+		using id = std::vector<library>::size_type;
+
 		enum struct kind {
 			kstatic, // k prefix bc static is a keyword
 			dynamic,
@@ -2014,21 +2036,22 @@ namespace mgmake::spec {
 	};
 }
 
-#endif// ===== end include\mgmake\spec\library.hxx =====
+#endif// ===== end include/mgmake/spec/library.hxx =====
 
 
-// ===== begin include\mgmake\spec\project.hxx =====
+// ===== begin include/mgmake/spec/project.hxx =====
 #pragma once
 
 #ifndef MGMK_SPEC_PROJECT_HXX
 #define MGMK_SPEC_PROJECT_HXX
 
-// skipped duplicate include: include\mgmake\backend\traits.hxx
-// skipped duplicate include: include\mgmake\build\request.hxx
-// skipped duplicate include: include\mgmake\dag\graph.hxx
-// skipped duplicate include: include\mgmake\spec\executable.hxx
-// skipped duplicate include: include\mgmake\spec\library.hxx
+// skipped duplicate include: include/mgmake/backend/traits.hxx
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/dag/graph.hxx
+// skipped duplicate include: include/mgmake/spec/executable.hxx
+// skipped duplicate include: include/mgmake/spec/library.hxx
 
+#include <set>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -2041,17 +2064,17 @@ namespace mgmake::spec {
 
 		inline constexpr project& add_target(const spec::executable& exe) {
 			mgmkassert(not exe.m_name.empty(), "mgmake spec: executable target has no name");
-            mgmkassert(find_library(exe.m_name) == nullptr, "mgmake spec: target name conflict '" + exe.m_name + "'");
+            mgmkassert(not find_library(exe.m_name).has_value(), "mgmake spec: target name conflict '" + exe.m_name + "'");
 
 			m_executables.emplace_back(exe);
 			return *this;
 		}
 		inline constexpr project& add_target(const spec::library& lib) {
 			mgmkassert(not lib.m_name.empty(), "mgmake spec: library target has no name");
-            mgmkassert(find_executable(lib.m_name) == nullptr, "mgmake spec: target name conflict '" + lib.m_name + "'");
+            mgmkassert(not find_executable(lib.m_name).has_value(), "mgmake spec: target name conflict '" + lib.m_name + "'");
 
 			// Skip if the library was already added
-			if (find_library(lib.m_name) != nullptr) {
+			if (not find_library(lib.m_name).has_value()) {
                 return *this;
             }
 
@@ -2059,101 +2082,70 @@ namespace mgmake::spec {
 			return *this;
 		}
 
-		const spec::library* find_library(std::string_view name) const {
-            for (const auto& lib : m_libraries) {
+		const std::optional<spec::library::id> find_library(std::string_view name) const {
+            for (spec::library::id idx = 0; idx < m_libraries.size(); idx++) {
+				const auto& lib = m_libraries.at(idx);
                 if (lib.m_name == name) {
-                    return &lib;
+                    return idx;
                 }
             }
-
-            return nullptr;
+            return std::nullopt;
         }
+		const spec::library* get_library(const spec::library::id idx) const {
+			if (idx > m_libraries.size())
+				return nullptr;
+			return &m_libraries.at(idx);
+		}
 
-		const spec::executable* find_executable(std::string_view name) const {
-            for (const auto& exe : m_executables) {
+		const std::optional<spec::executable::id> find_executable(std::string_view name) const {
+            for (spec::library::id idx = 0; idx < m_executables.size(); idx++) {
+				const auto& exe = m_executables.at(idx);
                 if (exe.m_name == name) {
-                    return &exe;
+                    return idx;
                 }
             }
-
-            return nullptr;
+            return std::nullopt;
         }
+		const spec::executable* get_executable(const spec::executable::id idx) const {
+			if (idx > m_executables.size())
+				return nullptr;
+			return &m_executables.at(idx);
+		}
+
+		const std::set<std::filesystem::path> collect_includes(const spec::library::id idx) const {
+			const auto& lib = m_libraries.at(idx);
+			std::set<std::filesystem::path> result;
+			for (const auto linked_library : lib.m_linked_libraries) {
+				const auto linked_index = find_library(linked_library);
+				if (linked_index.has_value())
+					result.insert_range(collect_includes(linked_index.value()));
+			}
+
+			result.insert_range(lib.include_dirs());
+
+			return result;
+		}
+		const std::set<std::filesystem::path> collect_includes(const spec::library& lib) const {
+			auto lib_idx = find_library(lib);
+			if (lib_idx.has_value())
+				return collect_includes(lib_idx.value());
+			return {};
+		}
+		const std::set<std::filesystem::path> collect_includes(const spec::executable& exe) const {
+			std::set<std::filesystem::path> include_dirs = exe.m_include_dirs;
+			for (auto& lib_name : exe.linked_libraries()) {
+				auto lib_idx = find_library(lib_name);
+				if (lib_idx.has_value())
+					include_dirs.insert_range(collect_includes(lib_idx.value()));
+			}
+			return include_dirs;
+		}
 
 		// Generate the graph from all project info
 		inline dag::graph graph(const build::request& req) const {
 			const auto& tc = req.toolchain();
 
 			dag::graph result{};
-
-			auto append_unique_include_dir = [](
-				std::vector<std::filesystem::path>& dirs,
-				const std::filesystem::path& dir
-			) {
-				for (const auto& existing : dirs) {
-					if (existing == dir) {
-						return;
-					}
-				}
-
-				dirs.emplace_back(dir);
-			};
-
-			auto append_unique_target_dep = [](
-				std::vector<dag::target::id>& deps,
-				dag::target::id dep
-			) {
-				for (const auto existing : deps) {
-					if (existing == dep) {
-						return;
-					}
-				}
-
-				deps.emplace_back(dep);
-			};
-
-			auto find_library_index = [&](std::string_view name) -> std::vector<spec::library>::size_type {
-				for (std::vector<spec::library>::size_type i = 0; i < m_libraries.size(); ++i) {
-					if (m_libraries[i].m_name == name) {
-						return i;
-					}
-				}
-
-				mgmkassert(
-					false,
-					std::string{"mgmake spec: unknown linked library '"} + std::string{name} + "'"
-				);
-
-				return 0;
-			};
-
-			auto collect_library_usage = [&](
-				auto& self,
-				const spec::library& lib,
-				std::vector<std::filesystem::path>& include_dirs,
-				std::vector<std::string_view>& seen
-			) -> void {
-				for (const auto seen_name : seen) {
-					if (seen_name == lib.m_name) {
-						return;
-					}
-				}
-
-				seen.emplace_back(lib.m_name);
-
-				mgmkassert(
-					lib.m_kind == spec::library::kind::interface,
-					std::string{"mgmake spec: lowering non-interface library '"} + lib.m_name + "' is not implemented yet"
-				);
-
-				for (const auto& include_dir : lib.m_include_dirs) {
-					append_unique_include_dir(include_dirs, include_dir);
-				}
-
-				for (const auto linked_library : lib.m_linked_libraries) {
-					const auto linked_index = find_library_index(linked_library);
-					self(self, m_libraries[linked_index], include_dirs, seen);
-				}
-			};
 
 			// Create all library DAG targets first. Interface libraries produce no artifact,
 			// but they should still exist as named build targets.
@@ -2168,24 +2160,19 @@ namespace mgmake::spec {
 					std::string{"mgmake spec: lowering non-interface library '"} + lib.m_name + "' is not implemented yet"
 				);
 
-				library_target_ids.emplace_back(result.create_target(
-					lib.m_name,
-					std::vector<dag::artifact::id>{},
-					std::vector<dag::target::id>{}
-				));
+				library_target_ids.emplace_back(result.create_target(dag::target{ lib.m_name }));
 			}
 
 			// Add library-to-library DAG target dependencies.
-			for (std::vector<spec::library>::size_type i = 0; i < m_libraries.size(); ++i) {
-				const auto& lib = m_libraries[i];
-				auto& dag_target = result.target(library_target_ids[i]);
+			for (spec::library::id i = 0; i < m_libraries.size(); ++i) {
+				const auto& lib = m_libraries.at(i);
+				auto& dag_target = result.target(library_target_ids.at(i));
 
 				for (const auto linked_library : lib.m_linked_libraries) {
-					const auto linked_index = find_library_index(linked_library);
-					append_unique_target_dep(
-						dag_target.m_dependencies,
-						library_target_ids[linked_index]
-					);
+					const auto linked_index = find_library(linked_library);
+					if (linked_index.has_value()) {
+						dag_target.add_dependency(library_target_ids.at(linked_index.value()));
+					}
 				}
 			}
 
@@ -2215,23 +2202,7 @@ namespace mgmake::spec {
 					output
 				);
 
-				std::vector<std::filesystem::path> include_dirs{};
-
-				for (const auto& include_dir : exe.m_include_dirs) {
-					append_unique_include_dir(include_dirs, include_dir);
-				}
-
-				std::vector<std::string_view> seen_libraries{};
-
-				for (const auto linked_library : exe.m_linked_libraries) {
-					const auto linked_index = find_library_index(linked_library);
-					collect_library_usage(
-						collect_library_usage,
-						m_libraries[linked_index],
-						include_dirs,
-						seen_libraries
-					);
-				}
+				std::set<std::filesystem::path> include_dirs = collect_includes(exe);
 
 				sys::command_line command{};
 				command.m_args.emplace_back(tc.cxx());
@@ -2265,21 +2236,20 @@ namespace mgmake::spec {
 					std::filesystem::path{}
 				);
 
-				std::vector<dag::target::id> executable_dependencies{};
+				std::set<dag::target::id> executable_dependencies{};
 
 				for (const auto linked_library : exe.m_linked_libraries) {
-					const auto linked_index = find_library_index(linked_library);
-					append_unique_target_dep(
-						executable_dependencies,
-						library_target_ids[linked_index]
-					);
+					const auto linked_index = find_library(linked_library);
+					if (linked_index.has_value()) {
+						executable_dependencies.emplace(library_target_ids.at(linked_index.value()));
+					}
 				}
 
-				result.create_target(
+				result.create_target(dag::target{
 					exe.m_name,
-					std::vector<dag::artifact::id>{output_id},
+					{ output_id },
 					std::move(executable_dependencies)
-				);
+				});
 			}
 
 			return result;
@@ -2287,11 +2257,11 @@ namespace mgmake::spec {
 	};
 }
 
-#endif// ===== end include\mgmake\spec\project.hxx =====
+#endif// ===== end include/mgmake/spec/project.hxx =====
 
-// skipped duplicate include: include\mgmake\sys\command_line.hxx
-// skipped duplicate include: include\mgmake\sys\platform.hxx
-// skipped duplicate include: include\mgmake\sys\util.hxx
+// skipped duplicate include: include/mgmake/sys/command_line.hxx
+// skipped duplicate include: include/mgmake/sys/platform.hxx
+// skipped duplicate include: include/mgmake/sys/util.hxx
 
 namespace mgmake {
 	template<typename ProjectType>
@@ -2342,7 +2312,7 @@ int main(int argc, char** argv) { \
 #define MGMK_BUILD_ENTRY MGMAKE_BUILD_ENTRY
 #define MGMK_ENTRY MGMK_BUILD_ENTRY
 
-#endif// ===== end include\mgmake\mgmake.hxx =====
+#endif// ===== end include/mgmake/mgmake.hxx =====
 
 
 #endif // MGMAKE_SINGLE_HEADER_HXX

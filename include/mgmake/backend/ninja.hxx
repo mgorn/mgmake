@@ -11,6 +11,8 @@
 #include <expected>
 #include <filesystem>
 #include <fstream>
+#include <ranges>
+#include <set>
 #include <string>
 #include <string_view>
 
@@ -90,6 +92,9 @@ namespace mgmake::backend {
                 first = false;
             }
         }
+		inline void write_artifact_list(std::ofstream& out, const dag::graph& graph, const std::set<dag::artifact::id>& artifacts) {
+			return write_artifact_list(out, graph, artifacts | std::ranges::to<std::vector<dag::artifact::id>>());
+		}
 
         inline void create_output_directories(const dag::graph& graph) {
             for (const auto& action : graph.m_actions) {
