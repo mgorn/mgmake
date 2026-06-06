@@ -32,7 +32,7 @@ namespace mgmake::spec {
             mgmkassert(not find_executable(lib.m_name).has_value(), "mgmake spec: target name conflict '" + lib.m_name + "'");
 
 			// Skip if the library was already added
-			if (not find_library(lib.m_name).has_value()) {
+			if (find_library(lib.m_name).has_value()) {
                 return *this;
             }
 

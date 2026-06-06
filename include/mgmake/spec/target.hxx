@@ -16,9 +16,16 @@ namespace mgmake::spec {
 		std::set<std::filesystem::path> m_include_dirs;
 		std::set<std::string> m_linked_libraries;
 
+		inline constexpr auto& name() const {
+			return m_name;
+		}
+
 		inline constexpr auto& add_source(const std::filesystem::path& file) {
 			m_sources.emplace(file);
 			return self();
+		}
+		inline constexpr auto& sources() const {
+			return m_sources;
 		}
 
 		inline constexpr auto& add_include_dir(const std::filesystem::path& file) {
