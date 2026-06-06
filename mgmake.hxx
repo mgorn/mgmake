@@ -2034,8 +2034,8 @@ namespace mgmake::spec {
 		using id = std::vector<library>::size_type;
 
 		enum struct kind {
-			kstatic, // k prefix bc static is a keyword
-			dynamic,
+			static_lib, // k prefix bc static is a keyword
+			shared_lib,
 			interface
 		} m_kind;
 
