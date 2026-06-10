@@ -22,6 +22,7 @@ namespace mgmake::spec {
 			dag::graph& result,
 			const build::request& req,
 			const spec::project& proj,
+			const std::vector<dag::artifact::id>& link_inputs,
 			std::set<dag::target::id> target_dependencies
 		) const;
 	};

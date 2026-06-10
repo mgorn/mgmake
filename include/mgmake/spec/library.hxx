@@ -8,6 +8,7 @@
 #include "../dag/target.hxx"
 #include "target.hxx"
 
+#include <optional>
 #include <set>
 #include <string>
 #include <string_view>
@@ -31,7 +32,17 @@ namespace mgmake::spec {
 			dag::graph& result,
 			const build::request& req,
 			const spec::project& proj,
+			const std::vector<dag::artifact::id>& link_inputs,
 			std::set<dag::target::id> target_dependencies
+		) const;
+
+		dag::target::id lower(
+			dag::graph& result,
+			const build::request& req,
+			const spec::project& proj,
+			std::vector<std::optional<dag::target::id>>& library_target_ids,
+			std::vector<std::vector<dag::artifact::id>>& library_link_outputs,
+			std::vector<unsigned char>& library_states
 		) const;
 	};
 }
