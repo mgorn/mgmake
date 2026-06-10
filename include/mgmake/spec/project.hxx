@@ -6,9 +6,13 @@
 #include "../backend/traits.hxx"
 #include "../build/request.hxx"
 #include "../dag/graph.hxx"
+#include "../sys/command_line.hxx"
+#include "../sys/platform.hxx"
 #include "executable.hxx"
 #include "library.hxx"
 
+#include <filesystem>
+#include <optional>
 #include <set>
 #include <string>
 #include <string_view>
@@ -101,8 +105,6 @@ namespace mgmake::spec {
 
 		// Generate the graph from all project info
 		inline dag::graph graph(const build::request& req) const {
-			const auto& tc = req.toolchain();
-
 			dag::graph result{};
 
 			// Create all library DAG targets first. Interface libraries produce no artifact,
@@ -111,14 +113,14 @@ namespace mgmake::spec {
 			library_target_ids.reserve(m_libraries.size());
 
 			for (const auto& lib : m_libraries) {
-				mgmkassert(not lib.m_name.empty(), "mgmake spec: library target has no name");
-
-				mgmkassert(
-					lib.m_kind == spec::library::kind::interface,
-					std::string{"mgmake spec: lowering non-interface library '"} + lib.m_name + "' is not implemented yet"
+				auto target = lib.graph(
+					result,
+					req,
+					*this,
+					{}
 				);
 
-				library_target_ids.emplace_back(result.create_target(dag::target{ lib.m_name }));
+				library_target_ids.emplace_back(result.create_target(std::move(target)));
 			}
 
 			// Add library-to-library DAG target dependencies.
@@ -136,64 +138,6 @@ namespace mgmake::spec {
 
 			// Lower executables.
 			for (const auto& exe : m_executables) {
-				mgmkassert(not exe.m_name.empty(), "mgmake spec: executable target has no name");
-				mgmkassert(not exe.m_sources.empty(), "mgmake spec: executable target '" + exe.m_name + "' has no sources");
-
-				std::vector<dag::artifact::id> inputs{};
-				inputs.reserve(exe.m_sources.size());
-
-				for (const auto& source : exe.m_sources) {
-					inputs.emplace_back(result.create_artifact(
-						dag::artifact::kind::source,
-						source
-					));
-				}
-
-				std::filesystem::path output = req.build_dir() / exe.m_name;
-
-		#if defined(MGMK_PLATFORM_WINDOWS)
-				output += ".exe";
-		#endif
-
-				auto output_id = result.create_artifact(
-					dag::artifact::kind::generated,
-					output
-				);
-
-				std::set<std::filesystem::path> include_dirs = collect_includes(exe);
-
-				sys::command_line command{};
-				command.m_args.emplace_back(tc.cxx());
-
-				for (const auto& include_dir : include_dirs) {
-					switch (tc.dialect()) {
-						case build::toolchain::dialect::gcc:
-							command.m_args.emplace_back(std::string{"-I"} + include_dir.string());
-							break;
-
-						case build::toolchain::dialect::msvc:
-							command.m_args.emplace_back(std::string{"/I"} + include_dir.string());
-							break;
-					}
-				}
-
-				for (const auto& source : exe.m_sources) {
-					command.m_args.emplace_back(source.string());
-				}
-
-				command.m_args.emplace_back("-o");
-				command.m_args.emplace_back(output.string());
-
-				result.create_action(
-					std::string{"Build executable "} + exe.m_name,
-					std::string{"Builds executable target '"} + exe.m_name + "'.",
-					std::move(inputs),
-					std::vector<dag::artifact::id>{output_id},
-					false,
-					std::move(command),
-					std::filesystem::path{}
-				);
-
 				std::set<dag::target::id> executable_dependencies{};
 
 				for (const auto linked_library : exe.m_linked_libraries) {
@@ -203,11 +147,14 @@ namespace mgmake::spec {
 					}
 				}
 
-				result.create_target(dag::target{
-					exe.m_name,
-					{ output_id },
+				auto target = exe.graph(
+					result,
+					req,
+					*this,
 					std::move(executable_dependencies)
-				});
+				);
+
+				result.create_target(std::move(target));
 			}
 
 			return result;

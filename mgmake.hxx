@@ -1937,6 +1937,8 @@ namespace mgmake::detail {
 #ifndef MGMK_SPEC_EXECUTABLE_HXX
 #define MGMK_SPEC_EXECUTABLE_HXX
 
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/dag/graph.hxx
 // skipped duplicate include: include/mgmake/dag/target.hxx
 
 // ===== begin include/mgmake/spec/target.hxx =====
@@ -2003,48 +2005,36 @@ namespace mgmake::spec {
 #endif// ===== end include/mgmake/spec/target.hxx =====
 
 
+#include <set>
 #include <string_view>
 #include <vector>
 
 namespace mgmake::spec {
+	struct project;
+
 	struct executable : public target<executable> {
 		using id = std::vector<executable>::size_type;
+
+		dag::target graph(
+			dag::graph& result,
+			const build::request& req,
+			const spec::project& proj,
+			std::set<dag::target::id> target_dependencies
+		) const;
 	};
 }
 
-#endif// ===== end include/mgmake/spec/executable.hxx =====
+#endif
+// ===== end include/mgmake/spec/executable.hxx =====
 
 
-// ===== begin include/mgmake/spec/library.hxx =====
+// ===== begin include/mgmake/spec/executable_impl.hxx =====
 #pragma once
 
-#ifndef MGMK_SPEC_LIBRARY_HXX
-#define MGMK_SPEC_LIBRARY_HXX
+#ifndef MGMK_SPEC_EXECUTABLE_IMPL_HXX
+#define MGMK_SPEC_EXECUTABLE_IMPL_HXX
 
-// skipped duplicate include: include/mgmake/dag/graph.hxx
-// skipped duplicate include: include/mgmake/dag/target.hxx
-// skipped duplicate include: include/mgmake/spec/target.hxx
-
-#include <string>
-#include <string_view>
-#include <vector>
-
-namespace mgmake::spec {
-	struct library : public target<library> {
-		using id = std::vector<library>::size_type;
-
-		enum struct kind {
-			static_lib, // k prefix bc static is a keyword
-			shared_lib,
-			interface
-		} m_kind;
-
-		library(std::string_view name, kind k) : target<library>{ std::string{ name } }, m_kind{k} {}
-	};
-}
-
-#endif// ===== end include/mgmake/spec/library.hxx =====
-
+// skipped duplicate include: include/mgmake/spec/executable.hxx
 
 // ===== begin include/mgmake/spec/project.hxx =====
 #pragma once
@@ -2055,9 +2045,55 @@ namespace mgmake::spec {
 // skipped duplicate include: include/mgmake/backend/traits.hxx
 // skipped duplicate include: include/mgmake/build/request.hxx
 // skipped duplicate include: include/mgmake/dag/graph.hxx
+// skipped duplicate include: include/mgmake/sys/command_line.hxx
+// skipped duplicate include: include/mgmake/sys/platform.hxx
 // skipped duplicate include: include/mgmake/spec/executable.hxx
-// skipped duplicate include: include/mgmake/spec/library.hxx
 
+// ===== begin include/mgmake/spec/library.hxx =====
+#pragma once
+
+#ifndef MGMK_SPEC_LIBRARY_HXX
+#define MGMK_SPEC_LIBRARY_HXX
+
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/dag/graph.hxx
+// skipped duplicate include: include/mgmake/dag/target.hxx
+// skipped duplicate include: include/mgmake/spec/target.hxx
+
+#include <set>
+#include <string>
+#include <string_view>
+#include <vector>
+
+namespace mgmake::spec {
+	struct project;
+
+	struct library : public target<library> {
+		using id = std::vector<library>::size_type;
+
+		enum struct kind {
+			static_lib, // k prefix bc static is a keyword
+			shared_lib,
+			interface
+		} m_kind;
+
+		library(std::string_view name, kind k) : target<library>{ std::string{ name } }, m_kind{k} {}
+
+		dag::target graph(
+			dag::graph& result,
+			const build::request& req,
+			const spec::project& proj,
+			std::set<dag::target::id> target_dependencies
+		) const;
+	};
+}
+
+#endif
+// ===== end include/mgmake/spec/library.hxx =====
+
+
+#include <filesystem>
+#include <optional>
 #include <set>
 #include <string>
 #include <string_view>
@@ -2150,8 +2186,6 @@ namespace mgmake::spec {
 
 		// Generate the graph from all project info
 		inline dag::graph graph(const build::request& req) const {
-			const auto& tc = req.toolchain();
-
 			dag::graph result{};
 
 			// Create all library DAG targets first. Interface libraries produce no artifact,
@@ -2160,14 +2194,14 @@ namespace mgmake::spec {
 			library_target_ids.reserve(m_libraries.size());
 
 			for (const auto& lib : m_libraries) {
-				mgmkassert(not lib.m_name.empty(), "mgmake spec: library target has no name");
-
-				mgmkassert(
-					lib.m_kind == spec::library::kind::interface,
-					std::string{"mgmake spec: lowering non-interface library '"} + lib.m_name + "' is not implemented yet"
+				auto target = lib.graph(
+					result,
+					req,
+					*this,
+					{}
 				);
 
-				library_target_ids.emplace_back(result.create_target(dag::target{ lib.m_name }));
+				library_target_ids.emplace_back(result.create_target(std::move(target)));
 			}
 
 			// Add library-to-library DAG target dependencies.
@@ -2185,64 +2219,6 @@ namespace mgmake::spec {
 
 			// Lower executables.
 			for (const auto& exe : m_executables) {
-				mgmkassert(not exe.m_name.empty(), "mgmake spec: executable target has no name");
-				mgmkassert(not exe.m_sources.empty(), "mgmake spec: executable target '" + exe.m_name + "' has no sources");
-
-				std::vector<dag::artifact::id> inputs{};
-				inputs.reserve(exe.m_sources.size());
-
-				for (const auto& source : exe.m_sources) {
-					inputs.emplace_back(result.create_artifact(
-						dag::artifact::kind::source,
-						source
-					));
-				}
-
-				std::filesystem::path output = req.build_dir() / exe.m_name;
-
-		#if defined(MGMK_PLATFORM_WINDOWS)
-				output += ".exe";
-		#endif
-
-				auto output_id = result.create_artifact(
-					dag::artifact::kind::generated,
-					output
-				);
-
-				std::set<std::filesystem::path> include_dirs = collect_includes(exe);
-
-				sys::command_line command{};
-				command.m_args.emplace_back(tc.cxx());
-
-				for (const auto& include_dir : include_dirs) {
-					switch (tc.dialect()) {
-						case build::toolchain::dialect::gcc:
-							command.m_args.emplace_back(std::string{"-I"} + include_dir.string());
-							break;
-
-						case build::toolchain::dialect::msvc:
-							command.m_args.emplace_back(std::string{"/I"} + include_dir.string());
-							break;
-					}
-				}
-
-				for (const auto& source : exe.m_sources) {
-					command.m_args.emplace_back(source.string());
-				}
-
-				command.m_args.emplace_back("-o");
-				command.m_args.emplace_back(output.string());
-
-				result.create_action(
-					std::string{"Build executable "} + exe.m_name,
-					std::string{"Builds executable target '"} + exe.m_name + "'.",
-					std::move(inputs),
-					std::vector<dag::artifact::id>{output_id},
-					false,
-					std::move(command),
-					std::filesystem::path{}
-				);
-
 				std::set<dag::target::id> executable_dependencies{};
 
 				for (const auto linked_library : exe.m_linked_libraries) {
@@ -2252,11 +2228,14 @@ namespace mgmake::spec {
 					}
 				}
 
-				result.create_target(dag::target{
-					exe.m_name,
-					{ output_id },
+				auto target = exe.graph(
+					result,
+					req,
+					*this,
 					std::move(executable_dependencies)
-				});
+				);
+
+				result.create_target(std::move(target));
 			}
 
 			return result;
@@ -2264,8 +2243,138 @@ namespace mgmake::spec {
 	};
 }
 
-#endif// ===== end include/mgmake/spec/project.hxx =====
+#endif
+// ===== end include/mgmake/spec/project.hxx =====
 
+
+#include <set>
+#include <string_view>
+#include <vector>
+
+namespace mgmake::spec {
+	inline dag::target spec::executable::graph(
+		dag::graph& result,
+		const build::request& req,
+		const spec::project& proj,
+		std::set<dag::target::id> target_dependencies
+	) const {
+		const auto& tc = req.toolchain();
+
+		mgmkassert(not m_name.empty(), "mgmake spec: executable target has no name");
+		mgmkassert(not m_sources.empty(), "mgmake spec: executable target '" + m_name + "' has no sources");
+
+		std::vector<dag::artifact::id> inputs{};
+		inputs.reserve(m_sources.size());
+
+		for (const auto& source : m_sources) {
+			inputs.emplace_back(result.create_artifact(
+				dag::artifact::kind::source,
+				source
+			));
+		}
+
+		std::filesystem::path output = req.build_dir() / m_name;
+
+#if defined(MGMK_PLATFORM_WINDOWS)
+		output += ".exe";
+#endif
+
+		auto output_id = result.create_artifact(
+			dag::artifact::kind::generated,
+			output
+		);
+
+		std::set<std::filesystem::path> include_dirs = proj.collect_includes(*this);
+
+		sys::command_line command{};
+		command.m_args.emplace_back(tc.cxx());
+
+		for (const auto& include_dir : include_dirs) {
+			switch (tc.dialect()) {
+				case build::toolchain::dialect::gcc:
+					command.m_args.emplace_back(std::string{"-I"} + include_dir.string());
+					break;
+
+				case build::toolchain::dialect::msvc:
+					command.m_args.emplace_back(std::string{"/I"} + include_dir.string());
+					break;
+			}
+		}
+
+		for (const auto& source : m_sources) {
+			command.m_args.emplace_back(source.string());
+		}
+
+		command.m_args.emplace_back("-o");
+		command.m_args.emplace_back(output.string());
+
+		result.create_action(
+			std::string{"Build executable "} + m_name,
+			std::string{"Builds executable target '"} + m_name + "'.",
+			std::move(inputs),
+			std::vector<dag::artifact::id>{ output_id },
+			false,
+			std::move(command),
+			std::filesystem::path{}
+		);
+
+		return dag::target{
+			m_name,
+			{ output_id },
+			std::move(target_dependencies)
+		};
+	}
+}
+
+#endif
+// ===== end include/mgmake/spec/executable_impl.hxx =====
+
+// skipped duplicate include: include/mgmake/spec/library.hxx
+
+// ===== begin include/mgmake/spec/library_impl.hxx =====
+#pragma once
+
+#ifndef MGMK_SPEC_LIBRARY_IMPL_HXX
+#define MGMK_SPEC_LIBRARY_IMPL_HXX
+
+// skipped duplicate include: include/mgmake/spec/library.hxx
+// skipped duplicate include: include/mgmake/spec/project.hxx
+
+#include <set>
+#include <string>
+#include <string_view>
+#include <vector>
+
+namespace mgmake::spec {
+	inline dag::target spec::library::graph(
+		dag::graph& result,
+		const build::request& req,
+		const spec::project& proj,
+		std::set<dag::target::id> target_dependencies
+	) const {
+		(void)result;
+		(void)req;
+		(void)proj;
+
+		mgmkassert(not m_name.empty(), "mgmake spec: library target has no name");
+
+		mgmkassert(
+			m_kind == spec::library::kind::interface,
+			std::string{"mgmake spec: lowering non-interface library '"} + m_name + "' is not implemented yet"
+		);
+
+		return dag::target{
+			m_name,
+			{},
+			std::move(target_dependencies)
+		};
+	}
+}
+
+#endif
+// ===== end include/mgmake/spec/library_impl.hxx =====
+
+// skipped duplicate include: include/mgmake/spec/project.hxx
 // skipped duplicate include: include/mgmake/sys/command_line.hxx
 // skipped duplicate include: include/mgmake/sys/platform.hxx
 // skipped duplicate include: include/mgmake/sys/util.hxx
