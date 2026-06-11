@@ -1373,519 +1373,6 @@ namespace mgmake::backend {
 #ifndef MGMAKE_CLI_ACTION_HXX
 #define MGMAKE_CLI_ACTION_HXX
 
-#include <string_view>
-
-namespace mgmake::cli {
-	enum struct action_kind {
-		build,
-		generate,
-		clean,
-		run,
-		help,
-		version
-	};
-
-	[[nodiscard]] inline constexpr std::string_view action_name(action_kind action) {
-		switch (action) {
-			case action_kind::build:
-				return "build";
-			case action_kind::generate:
-				return "generate";
-			case action_kind::clean:
-				return "clean";
-			case action_kind::run:
-				return "run";
-			case action_kind::help:
-				return "help";
-			case action_kind::version:
-				return "version";
-		}
-
-		return "unknown";
-	}
-
-	[[nodiscard]] inline constexpr bool parse_action(std::string_view text, action_kind& out) {
-		if (text == "build") {
-			out = action_kind::build;
-			return true;
-		}
-
-		if (text == "generate" || text == "gen") {
-			out = action_kind::generate;
-			return true;
-		}
-
-		if (text == "clean") {
-			out = action_kind::clean;
-			return true;
-		}
-
-		if (text == "run") {
-			out = action_kind::run;
-			return true;
-		}
-
-		if (text == "help") {
-			out = action_kind::help;
-			return true;
-		}
-
-		if (text == "version") {
-			out = action_kind::version;
-			return true;
-		}
-
-		return false;
-	}
-}
-
-#endif// ===== end include/mgmake/cli/action.hxx =====
-
-
-// ===== begin include/mgmake/cli/backend.hxx =====
-#pragma once
-
-#ifndef MGMAKE_CLI_BACKEND_HXX
-#define MGMAKE_CLI_BACKEND_HXX
-
-#include <string_view>
-
-namespace mgmake::cli {
-	enum struct backend_kind {
-		automatic,
-		graphviz,
-		ninja,
-		make,
-		direct
-	};
-
-	[[nodiscard]] inline constexpr std::string_view backend_name(backend_kind backend) {
-		switch (backend) {
-			case backend_kind::automatic:
-				return "automatic";
-			case backend_kind::graphviz:
-    			return "graphviz";
-			case backend_kind::ninja:
-				return "ninja";
-			case backend_kind::make:
-				return "make";
-			case backend_kind::direct:
-				return "direct";
-		}
-
-		return "unknown";
-	}
-
-	[[nodiscard]] inline constexpr bool parse_backend(std::string_view text, backend_kind& out) {
-		if (text == "auto" || text == "automatic") {
-			out = backend_kind::automatic;
-			return true;
-		}
-
-		if (text == "graphviz" || text == "dot" || text == "graph") {
-			out = backend_kind::graphviz;
-			return true;
-		}
-
-		if (text == "ninja") {
-			out = backend_kind::ninja;
-			return true;
-		}
-
-		if (text == "make" || text == "makefile" || text == "makefiles") {
-			out = backend_kind::make;
-			return true;
-		}
-
-		if (text == "direct" || text == "compiler") {
-			out = backend_kind::direct;
-			return true;
-		}
-
-		return false;
-	}
-}
-
-#endif// ===== end include/mgmake/cli/backend.hxx =====
-
-
-// ===== begin include/mgmake/cli/options.hxx =====
-#pragma once
-
-#ifndef MGMAKE_CLI_OPTIONS_HXX
-#define MGMAKE_CLI_OPTIONS_HXX
-
-// skipped duplicate include: include/mgmake/cli/action.hxx
-// skipped duplicate include: include/mgmake/cli/backend.hxx
-
-#include <string>
-#include <vector>
-
-namespace mgmake::cli {
-	struct options {
-		action_kind m_action = action_kind::build;
-		backend_kind m_backend = backend_kind::automatic;
-
-		std::string m_build_dir = ".build";
-
-		std::vector<std::string> m_targets;
-		std::vector<std::string> m_passthrough_args;
-
-		int m_jobs = 0;
-
-		bool m_verbose = false;
-		bool m_dry_run = false;
-		bool m_show_help = false;
-		bool m_show_version = false;
-	};
-}
-
-#endif// ===== end include/mgmake/cli/options.hxx =====
-
-
-// ===== begin include/mgmake/cli/parse.hxx =====
-#pragma once
-
-#ifndef MGMAKE_CLI_PARSE_HXX
-#define MGMAKE_CLI_PARSE_HXX
-
-// skipped duplicate include: include/mgmake/cli/options.hxx
-
-// ===== begin include/mgmake/cli/util.hxx =====
-#pragma once
-
-#ifndef MGMAKE_CLI_UTIL_HXX
-#define MGMAKE_CLI_UTIL_HXX
-
-#include <charconv>
-#include <cstdint>
-#include <format>
-#include <print>
-#include <span>
-#include <string>
-#include <string_view>
-
-namespace mgmake::cli {
-	[[nodiscard]] inline constexpr bool parse_positive_int(std::string_view text, int& out) {
-		if (text.empty()) {
-			return false;
-		}
-
-		int value = 0;
-
-		const char* first = text.data();
-		const char* last = text.data() + text.size();
-
-		auto [ptr, ec] = std::from_chars(first, last, value);
-
-		if (ec != std::errc{} || ptr != last || value <= 0) {
-			return false;
-		}
-
-		out = value;
-		return true;
-	}
-
-	[[nodiscard]] inline constexpr bool consume_value(
-		std::span<const std::string> args,
-		std::size_t& index,
-		std::string_view option_name,
-		std::string& out,
-		std::string& error
-	) {
-		if (index + 1 >= args.size()) {
-			error = std::format("missing value after '{}'", option_name);
-			return false;
-		}
-
-		++index;
-		out = args[index];
-		return true;
-	}
-
-	[[nodiscard]] inline constexpr bool is_option(std::string_view arg) {
-		return arg.size() >= 2 && arg[0] == '-';
-	}
-
-	inline void print_help(std::string_view program_name) {
-		if (program_name.empty()) {
-			program_name = "mgmake";
-		}
-
-		std::println("usage:");
-		std::println("  {} [command] [options] [targets...] [-- passthrough...]", program_name);
-		std::println("");
-		std::println("commands:");
-		std::println("  build       Build the project. This is the default command.");
-		std::println("  generate    Generate backend build files.");
-		std::println("  clean       Remove generated build output.");
-		std::println("  run         Build and run a target.");
-		std::println("  help        Show this help text.");
-		std::println("  version     Show version information.");
-		std::println("");
-		std::println("options:");
-		std::println("  --backend <name>       Backend to use: auto, ninja, make, direct.");
-		std::println("  --build-dir <path>     Build directory. Default: build.");
-		std::println("  --target <name>        Target to build. Can be passed multiple times.");
-		std::println("  -j, --jobs <count>     Number of parallel jobs.");
-		std::println("  -v, --verbose          Print more detailed output.");
-		std::println("  --dry-run              Print what would happen without doing it.");
-		std::println("  -h, --help             Show this help text.");
-		std::println("  --version              Show version information.");
-	}
-}
-
-#endif// ===== end include/mgmake/cli/util.hxx =====
-
-
-#include <format>
-#include <vector>
-#include <span>
-#include <string>
-#include <string_view>
-
-namespace mgmake::cli {
-	struct parse_result {
-		bool m_ok = false;
-		options m_value{};
-		std::string m_error{};
-
-		[[nodiscard]] operator bool() const {
-			return m_ok;
-		}
-		[[nodiscard]] operator options() const {
-			return m_value;
-		}
-
-		static parse_result success(options opts) {
-			parse_result result;
-			result.m_ok = true;
-			result.m_value = std::move(opts);
-			return result;
-		}
-
-		static parse_result failure(std::string message) {
-			parse_result result;
-			result.m_ok = false;
-			result.m_error = std::move(message);
-			return result;
-		}
-	};
-
-	[[nodiscard]] inline constexpr parse_result parse(std::span<const std::string> args) {
-		options opts;
-
-		bool saw_first_positional = false;
-
-		for (std::size_t i = 0; i < args.size(); ++i) {
-			std::string_view arg = args[i];
-
-			if (arg == "--") {
-				for (++i; i < args.size(); ++i) {
-					opts.m_passthrough_args.emplace_back(args[i]);
-				}
-
-				break;
-			}
-
-			if (arg == "-h" || arg == "--help") {
-				opts.m_action = action_kind::help;
-				opts.m_show_help = true;
-				continue;
-			}
-
-			if (arg == "--version") {
-				opts.m_action = action_kind::version;
-				opts.m_show_version = true;
-				continue;
-			}
-
-			if (arg == "-v" || arg == "--verbose") {
-				opts.m_verbose = true;
-				continue;
-			}
-
-			if (arg == "--dry-run") {
-				opts.m_dry_run = true;
-				continue;
-			}
-
-			if (arg == "--backend") {
-				std::string value;
-				std::string error;
-
-				if (!consume_value(args, i, arg, value, error)) {
-					return parse_result::failure(std::move(error));
-				}
-
-				backend_kind backend{};
-
-				if (!parse_backend(value, backend)) {
-					return parse_result::failure(
-						std::format("unknown backend '{}'", value)
-					);
-				}
-
-				opts.m_backend = backend;
-				continue;
-			}
-
-			if (arg.starts_with("--backend=")) {
-				std::string_view value = arg.substr(std::string_view("--backend=").size());
-
-				backend_kind backend{};
-
-				if (!parse_backend(value, backend)) {
-					return parse_result::failure(
-						std::format("unknown backend '{}'", value)
-					);
-				}
-
-				opts.m_backend = backend;
-				continue;
-			}
-
-			if (arg == "--build-dir") {
-				std::string value;
-				std::string error;
-
-				if (!consume_value(args, i, arg, value, error)) {
-					return parse_result::failure(std::move(error));
-				}
-
-				opts.m_build_dir = std::move(value);
-				continue;
-			}
-
-			if (arg.starts_with("--build-dir=")) {
-				std::string_view value = arg.substr(std::string_view("--build-dir=").size());
-
-				if (value.empty()) {
-					return parse_result::failure("missing value after '--build-dir='");
-				}
-
-				opts.m_build_dir = std::string(value);
-				continue;
-			}
-
-			if (arg == "--target") {
-				std::string value;
-				std::string error;
-
-				if (!consume_value(args, i, arg, value, error)) {
-					return parse_result::failure(std::move(error));
-				}
-
-				opts.m_targets.emplace_back(std::move(value));
-				continue;
-			}
-
-			if (arg.starts_with("--target=")) {
-				std::string_view value = arg.substr(std::string_view("--target=").size());
-
-				if (value.empty()) {
-					return parse_result::failure("missing value after '--target='");
-				}
-
-				opts.m_targets.emplace_back(value);
-				continue;
-			}
-
-			if (arg == "-j" || arg == "--jobs") {
-				std::string value;
-				std::string error;
-
-				if (!consume_value(args, i, arg, value, error)) {
-					return parse_result::failure(std::move(error));
-				}
-
-				int jobs = 0;
-
-				if (!parse_positive_int(value, jobs)) {
-					return parse_result::failure(
-						std::format("invalid job count '{}'", value)
-					);
-				}
-
-				opts.m_jobs = jobs;
-				continue;
-			}
-
-			if (arg.starts_with("--jobs=")) {
-				std::string_view value = arg.substr(std::string_view("--jobs=").size());
-
-				int jobs = 0;
-
-				if (!parse_positive_int(value, jobs)) {
-					return parse_result::failure(
-						std::format("invalid job count '{}'", value)
-					);
-				}
-
-				opts.m_jobs = jobs;
-				continue;
-			}
-
-			if (arg.starts_with("-j") && arg.size() > 2) {
-				std::string_view value = arg.substr(2);
-
-				int jobs = 0;
-
-				if (!parse_positive_int(value, jobs)) {
-					return parse_result::failure(
-						std::format("invalid job count '{}'", value)
-					);
-				}
-
-				opts.m_jobs = jobs;
-				continue;
-			}
-
-			if (is_option(arg)) {
-				return parse_result::failure(
-					std::format("unknown option '{}'", arg)
-				);
-			}
-
-			if (!saw_first_positional) {
-				saw_first_positional = true;
-
-				action_kind parsed_action{};
-
-				if (parse_action(arg, parsed_action)) {
-					opts.m_action = parsed_action;
-
-					if (parsed_action == action_kind::help) {
-						opts.m_show_help = true;
-					}
-
-					if (parsed_action == action_kind::version) {
-						opts.m_show_version = true;
-					}
-
-					continue;
-				}
-			}
-
-			opts.m_targets.emplace_back(arg);
-		}
-
-		return parse_result::success(std::move(opts));
-	}
-
-	inline constexpr auto parse(const sys::command_line& cmd) {
-		return parse(cmd.m_args);
-	}
-}
-
-#endif// ===== end include/mgmake/cli/parse.hxx =====
-
-// skipped duplicate include: include/mgmake/cli/util.hxx
-// skipped duplicate include: include/mgmake/dag/action.hxx
-// skipped duplicate include: include/mgmake/dag/artifact.hxx
-// skipped duplicate include: include/mgmake/dag/graph.hxx
-// skipped duplicate include: include/mgmake/dag/target.hxx
-// skipped duplicate include: include/mgmake/detail/convert.hxx
 
 // ===== begin include/mgmake/detail/enum_string.hxx =====
 #pragma once
@@ -1899,6 +1386,10 @@ namespace mgmake::cli {
 
 #ifndef MGMAKE_DETAIL_STATIC_STRING_HXX
 #define MGMAKE_DETAIL_STATIC_STRING_HXX
+
+#include <array>
+#include <cstddef>
+#include <string_view>
 
 namespace mgmake::detail {
 	template <std::size_t N>
@@ -1953,7 +1444,8 @@ namespace mgmake::detail {
 	}
 }
 
-#endif// ===== end include/mgmake/detail/static_string.hxx =====
+#endif
+// ===== end include/mgmake/detail/static_string.hxx =====
 
 
 #include <array>
@@ -2058,7 +1550,7 @@ namespace mgmake::detail {
         ) noexcept {
             std::optional<std::string_view> result{};
 
-            ((Entries::value() == value
+            (void)((Entries::value() == value
                 ? (result = Entries::name(), true)
                 : false) || ...);
 
@@ -2083,7 +1575,7 @@ namespace mgmake::detail {
         ) noexcept {
             std::optional<E> result{};
 
-            ((Entries::name() == name
+            (void)((Entries::name() == name
                 ? (result = Entries::value(), true)
                 : false) || ...);
 
@@ -2254,8 +1746,1051 @@ namespace mgmake::detail {
     };
 }
 
-#endif// ===== end include/mgmake/detail/enum_string.hxx =====
+#endif
+// ===== end include/mgmake/detail/enum_string.hxx =====
 
+
+#include <optional>
+#include <string_view>
+
+namespace mgmake::cli {
+	enum struct action_kind {
+		build,
+		generate,
+		clean,
+		run,
+		help,
+		version,
+
+		count
+	};
+
+	using action_kind_names = detail::enum_table<
+		action_kind,
+		detail::enum_entry<action_kind::build, "build">,
+		detail::enum_entry<action_kind::generate, "generate">,
+		detail::enum_entry<action_kind::clean, "clean">,
+		detail::enum_entry<action_kind::run, "run">,
+		detail::enum_entry<action_kind::help, "help">,
+		detail::enum_entry<action_kind::version, "version">
+	>;
+
+	static_assert(
+		action_kind_names::is_zero_based_count_canonical(action_kind::count),
+		"action_kind_names must cover every action_kind value exactly once"
+	);
+
+	using action_kind_parse_names = detail::enum_table<
+		action_kind,
+		detail::enum_entry<action_kind::build, "build">,
+		detail::enum_entry<action_kind::generate, "generate">,
+		detail::enum_entry<action_kind::generate, "gen">,
+		detail::enum_entry<action_kind::clean, "clean">,
+		detail::enum_entry<action_kind::run, "run">,
+		detail::enum_entry<action_kind::help, "help">,
+		detail::enum_entry<action_kind::version, "version">
+	>;
+
+	static_assert(
+		action_kind_parse_names::is_display_aliases(),
+		"action_kind_parse_names must not contain duplicate or empty names"
+	);
+
+	[[nodiscard]] inline constexpr std::string_view action_name(action_kind action) noexcept {
+		return action_kind_names::to_string(action);
+	}
+
+	[[nodiscard]] inline constexpr std::optional<action_kind> action_from_string(
+		std::string_view text
+	) noexcept {
+		return action_kind_parse_names::from_string(text);
+	}
+
+	[[nodiscard]] inline constexpr bool parse_action(
+		std::string_view text,
+		action_kind& out
+	) noexcept {
+		const auto parsed = action_from_string(text);
+
+		if (!parsed.has_value()) {
+			return false;
+		}
+
+		out = *parsed;
+		return true;
+	}
+}
+
+#endif
+// ===== end include/mgmake/cli/action.hxx =====
+
+
+// ===== begin include/mgmake/cli/backend.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CLI_BACKEND_HXX
+#define MGMAKE_CLI_BACKEND_HXX
+
+// skipped duplicate include: include/mgmake/detail/enum_string.hxx
+
+#include <optional>
+#include <string_view>
+
+namespace mgmake::cli {
+	enum struct backend_kind {
+		automatic,
+		graphviz,
+		ninja,
+		make,
+		direct,
+
+		count
+	};
+
+	using backend_kind_names = detail::enum_table<
+		backend_kind,
+		detail::enum_entry<backend_kind::automatic, "auto">,
+		detail::enum_entry<backend_kind::graphviz, "graphviz">,
+		detail::enum_entry<backend_kind::ninja, "ninja">,
+		detail::enum_entry<backend_kind::make, "make">,
+		detail::enum_entry<backend_kind::direct, "direct">
+	>;
+
+	static_assert(
+		backend_kind_names::is_zero_based_count_canonical(backend_kind::count),
+		"backend_kind_names must cover every backend_kind value exactly once"
+	);
+
+	using backend_kind_parse_names = detail::enum_table<
+		backend_kind,
+		detail::enum_entry<backend_kind::automatic, "auto">,
+		detail::enum_entry<backend_kind::automatic, "automatic">,
+		detail::enum_entry<backend_kind::graphviz, "graphviz">,
+		detail::enum_entry<backend_kind::graphviz, "dot">,
+		detail::enum_entry<backend_kind::graphviz, "graph">,
+		detail::enum_entry<backend_kind::ninja, "ninja">,
+		detail::enum_entry<backend_kind::make, "make">,
+		detail::enum_entry<backend_kind::make, "makefile">,
+		detail::enum_entry<backend_kind::make, "makefiles">,
+		detail::enum_entry<backend_kind::direct, "direct">,
+		detail::enum_entry<backend_kind::direct, "compiler">
+	>;
+
+	static_assert(
+		backend_kind_parse_names::is_display_aliases(),
+		"backend_kind_parse_names must not contain duplicate or empty names"
+	);
+
+	[[nodiscard]] inline constexpr std::string_view backend_name(backend_kind backend) noexcept {
+		return backend_kind_names::to_string(backend);
+	}
+
+	[[nodiscard]] inline constexpr std::optional<backend_kind> backend_from_string(
+		std::string_view text
+	) noexcept {
+		return backend_kind_parse_names::from_string(text);
+	}
+
+	[[nodiscard]] inline constexpr bool parse_backend(
+		std::string_view text,
+		backend_kind& out
+	) noexcept {
+		const auto parsed = backend_from_string(text);
+
+		if (!parsed.has_value()) {
+			return false;
+		}
+
+		out = *parsed;
+		return true;
+	}
+}
+
+#endif
+// ===== end include/mgmake/cli/backend.hxx =====
+
+
+// ===== begin include/mgmake/cli/options.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CLI_OPTIONS_HXX
+#define MGMAKE_CLI_OPTIONS_HXX
+
+// skipped duplicate include: include/mgmake/cli/action.hxx
+// skipped duplicate include: include/mgmake/cli/backend.hxx
+
+#include <string>
+#include <vector>
+
+namespace mgmake::cli {
+	struct options {
+		action_kind m_action = action_kind::build;
+		backend_kind m_backend = backend_kind::automatic;
+
+		std::string m_build_dir = ".build";
+
+		std::vector<std::string> m_targets;
+		std::vector<std::string> m_passthrough_args;
+
+		int m_jobs = 0;
+
+		bool m_verbose = false;
+		bool m_dry_run = false;
+		bool m_show_help = false;
+		bool m_show_version = false;
+	};
+}
+
+#endif// ===== end include/mgmake/cli/options.hxx =====
+
+
+// ===== begin include/mgmake/cli/parse_result.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CLI_PARSE_RESULT_HXX
+#define MGMAKE_CLI_PARSE_RESULT_HXX
+
+// skipped duplicate include: include/mgmake/cli/options.hxx
+
+#include <string>
+#include <utility>
+
+namespace mgmake::cli {
+	struct parse_result {
+		bool m_ok = false;
+		options m_value{};
+		std::string m_error{};
+
+		[[nodiscard]] operator bool() const {
+			return m_ok;
+		}
+
+		[[nodiscard]] operator options() const {
+			return m_value;
+		}
+
+		static parse_result success(options opts) {
+			parse_result result;
+			result.m_ok = true;
+			result.m_value = std::move(opts);
+			return result;
+		}
+
+		static parse_result failure(std::string message) {
+			parse_result result;
+			result.m_ok = false;
+			result.m_error = std::move(message);
+			return result;
+		}
+	};
+}
+
+#endif
+// ===== end include/mgmake/cli/parse_result.hxx =====
+
+
+// ===== begin include/mgmake/cli/option_parse_result.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CLI_OPTION_PARSE_RESULT_HXX
+#define MGMAKE_CLI_OPTION_PARSE_RESULT_HXX
+
+#include <string>
+#include <utility>
+
+namespace mgmake::cli {
+	struct option_parse_result {
+		bool m_matched = false;
+		bool m_ok = true;
+		std::string m_error{};
+
+		[[nodiscard]] static option_parse_result no_match() {
+			return {};
+		}
+
+		[[nodiscard]] static option_parse_result success() {
+			option_parse_result result;
+			result.m_matched = true;
+			result.m_ok = true;
+			return result;
+		}
+
+		[[nodiscard]] static option_parse_result failure(std::string error) {
+			option_parse_result result;
+			result.m_matched = true;
+			result.m_ok = false;
+			result.m_error = std::move(error);
+			return result;
+		}
+	};
+}
+
+#endif
+// ===== end include/mgmake/cli/option_parse_result.hxx =====
+
+
+// ===== begin include/mgmake/cli/value_parser.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CLI_VALUE_PARSER_HXX
+#define MGMAKE_CLI_VALUE_PARSER_HXX
+
+// skipped duplicate include: include/mgmake/cli/backend.hxx
+
+// ===== begin include/mgmake/cli/util.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CLI_UTIL_HXX
+#define MGMAKE_CLI_UTIL_HXX
+
+#include <charconv>
+#include <print>
+#include <string_view>
+
+namespace mgmake::cli {
+	[[nodiscard]] inline constexpr bool parse_positive_int(std::string_view text, int& out) {
+		if (text.empty()) {
+			return false;
+		}
+
+		int value = 0;
+
+		const char* first = text.data();
+		const char* last = text.data() + text.size();
+
+		auto [ptr, ec] = std::from_chars(first, last, value);
+
+		if (ec != std::errc{} || ptr != last || value <= 0) {
+			return false;
+		}
+
+		out = value;
+		return true;
+	}
+
+	[[nodiscard]] inline constexpr bool is_option(std::string_view arg) {
+		return arg.size() >= 2 && arg[0] == '-';
+	}
+
+	inline void print_help(std::string_view program_name) {
+		if (program_name.empty()) {
+			program_name = "mgmake";
+		}
+
+		std::println("usage:");
+		std::println("  {} [command] [options] [targets...] [-- passthrough...]", program_name);
+		std::println("");
+		std::println("commands:");
+		std::println("  build       Build the project. This is the default command.");
+		std::println("  generate    Generate backend build files.");
+		std::println("  clean       Remove generated build output.");
+		std::println("  run         Build and run a target.");
+		std::println("  help        Show this help text.");
+		std::println("  version     Show version information.");
+		std::println("");
+		std::println("options:");
+		std::println("  --backend <name>       Backend to use: auto, ninja, make, direct.");
+		std::println("  --build-dir <path>     Build directory. Default: .build.");
+		std::println("  --target <name>        Target to build. Can be passed multiple times.");
+		std::println("  -j, --jobs <count>     Number of parallel jobs.");
+		std::println("  -v, --verbose          Print more detailed output.");
+		std::println("  --dry-run              Print what would happen without doing it.");
+		std::println("  -h, --help             Show this help text.");
+		std::println("  --version              Show version information.");
+	}
+}
+
+#endif
+// ===== end include/mgmake/cli/util.hxx =====
+
+
+#include <format>
+#include <string>
+#include <string_view>
+
+namespace mgmake::cli {
+	template <typename T>
+	struct value_parser;
+
+	template <>
+	struct value_parser<std::string> {
+		[[nodiscard]] static bool parse(std::string_view text, std::string& out) {
+			out = std::string{ text };
+			return true;
+		}
+
+		[[nodiscard]] static std::string error(std::string_view text) {
+			return std::format("invalid string value '{}'", text);
+		}
+	};
+
+	template <>
+	struct value_parser<int> {
+		[[nodiscard]] static bool parse(std::string_view text, int& out) {
+			return parse_positive_int(text, out);
+		}
+
+		[[nodiscard]] static std::string error(std::string_view text) {
+			return std::format("invalid integer value '{}'", text);
+		}
+	};
+}
+
+#endif
+// ===== end include/mgmake/cli/value_parser.hxx =====
+
+
+// ===== begin include/mgmake/cli/enum_value_parser.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CLI_ENUM_VALUE_PARSER_HXX
+#define MGMAKE_CLI_ENUM_VALUE_PARSER_HXX
+
+// skipped duplicate include: include/mgmake/cli/action.hxx
+// skipped duplicate include: include/mgmake/cli/backend.hxx
+// skipped duplicate include: include/mgmake/cli/value_parser.hxx
+
+#include <format>
+#include <string>
+#include <string_view>
+#include <utility>
+
+namespace mgmake::cli {
+	template <typename ParseTable, typename ChoiceTable = ParseTable>
+	struct enum_value_parser {
+		using value_type = typename ParseTable::value_type;
+
+		[[nodiscard]] static constexpr bool parse(
+			std::string_view text,
+			value_type& out
+		) noexcept {
+			const auto parsed = ParseTable::from_string(text);
+
+			if (!parsed.has_value()) {
+				return false;
+			}
+
+			out = *parsed;
+			return true;
+		}
+
+		template <typename Fn>
+		static constexpr void for_each_choice(Fn&& fn) {
+			ChoiceTable::for_each_name(std::forward<Fn>(fn));
+		}
+
+		[[nodiscard]] static std::string choices_string() {
+			return ChoiceTable::choices_string();
+		}
+
+		[[nodiscard]] static std::string error(std::string_view text) {
+			return std::format(
+				"unknown value '{}'; expected one of: {}",
+				text,
+				ChoiceTable::choices_string()
+			);
+		}
+	};
+
+	template <>
+	struct value_parser<backend_kind> :
+		enum_value_parser<backend_kind_parse_names, backend_kind_names>
+	{
+		[[nodiscard]] static std::string error(std::string_view text) {
+			return std::format(
+				"unknown backend '{}'; expected one of: {}",
+				text,
+				backend_kind_names::choices_string()
+			);
+		}
+	};
+
+	template <>
+	struct value_parser<action_kind> :
+		enum_value_parser<action_kind_parse_names, action_kind_names>
+	{
+		[[nodiscard]] static std::string error(std::string_view text) {
+			return std::format(
+				"unknown action '{}'; expected one of: {}",
+				text,
+				action_kind_names::choices_string()
+			);
+		}
+	};
+}
+
+#endif
+// ===== end include/mgmake/cli/enum_value_parser.hxx =====
+
+
+// ===== begin include/mgmake/cli/option_builder.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CLI_OPTION_BUILDER_HXX
+#define MGMAKE_CLI_OPTION_BUILDER_HXX
+
+// skipped duplicate include: include/mgmake/cli/option_parse_result.hxx
+// skipped duplicate include: include/mgmake/cli/options.hxx
+// skipped duplicate include: include/mgmake/cli/value_parser.hxx
+// skipped duplicate include: include/mgmake/cli/enum_value_parser.hxx
+// skipped duplicate include: include/mgmake/cli/util.hxx
+// skipped duplicate include: include/mgmake/detail/static_string.hxx
+
+#include <concepts>
+#include <format>
+#include <span>
+#include <string>
+#include <string_view>
+#include <type_traits>
+#include <utility>
+#include <vector>
+
+namespace mgmake::cli {
+	template <detail::static_string... Values>
+	struct choice_list {
+		[[nodiscard]] static consteval bool empty() noexcept {
+			return sizeof...(Values) == 0;
+		}
+
+		[[nodiscard]] static constexpr bool contains(std::string_view value) noexcept {
+			return ((value == Values.view()) || ...);
+		}
+
+		template <typename Fn>
+		static constexpr void for_each(Fn&& fn) {
+			(fn(Values.view()), ...);
+		}
+	};
+}
+
+namespace mgmake::cli::detail {
+	template <typename T>
+	struct member_pointer_traits;
+
+	template <typename Object, typename Value>
+	struct member_pointer_traits<Value Object::*> {
+		using object_type = Object;
+		using value_type = Value;
+	};
+
+	template <auto Member>
+	using member_value_t = typename member_pointer_traits<decltype(Member)>::value_type;
+
+	template <typename T>
+	struct vector_traits {
+		static constexpr bool is_vector = false;
+	};
+
+	template <typename T, typename Alloc>
+	struct vector_traits<std::vector<T, Alloc>> {
+		static constexpr bool is_vector = true;
+		using value_type = T;
+	};
+
+	template <typename T>
+	inline constexpr bool is_vector_v = vector_traits<T>::is_vector;
+
+	template <typename Parser>
+	concept has_for_each_choice = requires {
+		Parser::for_each_choice([](std::string_view) {});
+	};
+
+	template <typename Parser>
+	concept has_choices_string = requires {
+		{ Parser::choices_string() } -> std::same_as<std::string>;
+	};
+
+	template <mgmake::detail::static_string Long>
+	[[nodiscard]] constexpr bool matches_long(std::string_view arg) {
+		constexpr auto name = Long.view();
+
+		return arg.size() == name.size() + 2
+			&& arg[0] == '-'
+			&& arg[1] == '-'
+			&& arg.substr(2) == name;
+	}
+
+	template <mgmake::detail::static_string Long>
+	[[nodiscard]] constexpr bool starts_with_long_equals(std::string_view arg) {
+		constexpr auto name = Long.view();
+
+		return arg.size() >= name.size() + 3
+			&& arg[0] == '-'
+			&& arg[1] == '-'
+			&& arg.substr(2, name.size()) == name
+			&& arg[2 + name.size()] == '=';
+	}
+
+	template <char Short>
+	[[nodiscard]] constexpr bool matches_short(std::string_view arg) {
+		if constexpr (Short == '\0') {
+			return false;
+		} else {
+			return arg.size() == 2 && arg[0] == '-' && arg[1] == Short;
+		}
+	}
+
+	template <char Short>
+	[[nodiscard]] constexpr bool starts_with_short_value(std::string_view arg) {
+		if constexpr (Short == '\0') {
+			return false;
+		} else {
+			return arg.size() > 2 && arg[0] == '-' && arg[1] == Short;
+		}
+	}
+
+	struct no_field_t {};
+	inline constexpr no_field_t no_field{};
+
+	struct no_callback_t {};
+	inline constexpr no_callback_t no_callback{};
+}
+
+namespace mgmake::cli {
+	enum struct option_mode {
+		deduce,
+		flag,
+		value,
+		append,
+		callback
+	};
+
+	template <typename Option>
+	struct option_impl;
+
+	template <
+		auto Field = detail::no_field,
+		mgmake::detail::static_string LongName = "",
+		char ShortName = '\0',
+		option_mode Mode = option_mode::deduce,
+		mgmake::detail::static_string ValueName = "",
+		mgmake::detail::static_string Description = "",
+		typename Choices = choice_list<>,
+		auto Callback = detail::no_callback
+	>
+	struct option_builder {
+		template <auto NewField>
+		using field = option_builder<NewField, LongName, ShortName, Mode, ValueName, Description, Choices, Callback>;
+
+		template <mgmake::detail::static_string NewName>
+		using long_name = option_builder<Field, NewName, ShortName, Mode, ValueName, Description, Choices, Callback>;
+
+		template <char NewShortName>
+		using short_name = option_builder<Field, LongName, NewShortName, Mode, ValueName, Description, Choices, Callback>;
+
+		using flag = option_builder<Field, LongName, ShortName, option_mode::flag, ValueName, Description, Choices, Callback>;
+		using value = option_builder<Field, LongName, ShortName, option_mode::value, ValueName, Description, Choices, Callback>;
+		using append = option_builder<Field, LongName, ShortName, option_mode::append, ValueName, Description, Choices, Callback>;
+
+		template <mgmake::detail::static_string NewValueName>
+		using value_name = option_builder<Field, LongName, ShortName, Mode, NewValueName, Description, Choices, Callback>;
+
+		template <mgmake::detail::static_string NewDescription>
+		using description = option_builder<Field, LongName, ShortName, Mode, ValueName, NewDescription, Choices, Callback>;
+
+		template <mgmake::detail::static_string... NewChoices>
+		using choices = option_builder<Field, LongName, ShortName, Mode, ValueName, Description, choice_list<NewChoices...>, Callback>;
+
+		template <auto NewCallback>
+		using callback = option_builder<Field, LongName, ShortName, option_mode::callback, ValueName, Description, Choices, NewCallback>;
+
+		static option_parse_result try_parse(
+			options& opts,
+			std::span<const std::string> args,
+			std::size_t& index,
+			std::string_view arg
+		) {
+			return option_impl<option_builder>::try_parse(opts, args, index, arg);
+		}
+	};
+
+	template <auto Field, mgmake::detail::static_string LongName, char ShortName = '\0'>
+	using value_option =
+		typename option_builder<>::template field<Field>
+			::template long_name<LongName>
+			::template short_name<ShortName>
+			::value;
+
+	template <auto Field, mgmake::detail::static_string LongName, char ShortName = '\0'>
+	using flag_option =
+		typename option_builder<>::template field<Field>
+			::template long_name<LongName>
+			::template short_name<ShortName>
+			::flag;
+
+	template <auto Field, mgmake::detail::static_string LongName, char ShortName = '\0'>
+	using append_option =
+		typename option_builder<>::template field<Field>
+			::template long_name<LongName>
+			::template short_name<ShortName>
+			::append;
+
+	template <mgmake::detail::static_string LongName, char ShortName, auto Callback>
+	using callback_option =
+		typename option_builder<>::template long_name<LongName>
+			::template short_name<ShortName>
+			::template callback<Callback>;
+
+	template <
+		auto Field,
+		mgmake::detail::static_string LongName,
+		char ShortName,
+		option_mode Mode,
+		mgmake::detail::static_string ValueName,
+		mgmake::detail::static_string Description,
+		typename Choices,
+		auto Callback
+	>
+	struct option_impl<
+		option_builder<Field, LongName, ShortName, Mode, ValueName, Description, Choices, Callback>
+	> {
+		static option_parse_result try_parse(
+			options& opts,
+			std::span<const std::string> args,
+			std::size_t& index,
+			std::string_view arg
+		) {
+			if constexpr (Mode == option_mode::callback) {
+				return try_parse_callback(opts, arg);
+			} else if constexpr (Mode == option_mode::flag) {
+				return try_parse_flag(opts, arg);
+			} else if constexpr (Mode == option_mode::value) {
+				return try_parse_value(opts, args, index, arg);
+			} else if constexpr (Mode == option_mode::append) {
+				return try_parse_append(opts, args, index, arg);
+			} else {
+				static_assert(Mode != option_mode::deduce);
+			}
+		}
+
+		static option_parse_result try_parse_callback(options& opts, std::string_view arg) {
+			if (detail::matches_long<LongName>(arg) || detail::matches_short<ShortName>(arg)) {
+				Callback(opts);
+				return option_parse_result::success();
+			}
+
+			return option_parse_result::no_match();
+		}
+
+		static option_parse_result try_parse_flag(options& opts, std::string_view arg) {
+			if (detail::matches_long<LongName>(arg) || detail::matches_short<ShortName>(arg)) {
+				opts.*Field = true;
+				return option_parse_result::success();
+			}
+
+			return option_parse_result::no_match();
+		}
+
+		static option_parse_result try_parse_value(
+			options& opts,
+			std::span<const std::string> args,
+			std::size_t& index,
+			std::string_view arg
+		) {
+			using value_type = detail::member_value_t<Field>;
+
+			if (detail::starts_with_long_equals<LongName>(arg)) {
+				constexpr auto name = LongName.view();
+				std::string_view value = arg.substr(3 + name.size());
+
+				if (value.empty()) {
+					return option_parse_result::failure(
+						std::format("missing value after '--{}='", name)
+					);
+				}
+
+				return parse_and_assign<value_type>(opts, value);
+			}
+
+			if (detail::matches_long<LongName>(arg) || detail::matches_short<ShortName>(arg)) {
+				if (index + 1 >= args.size()) {
+					return option_parse_result::failure(
+						std::format("missing value after '{}'", arg)
+					);
+				}
+
+				++index;
+				return parse_and_assign<value_type>(opts, args[index]);
+			}
+
+			if (detail::starts_with_short_value<ShortName>(arg)) {
+				return parse_and_assign<value_type>(opts, arg.substr(2));
+			}
+
+			return option_parse_result::no_match();
+		}
+
+		static option_parse_result try_parse_append(
+			options& opts,
+			std::span<const std::string> args,
+			std::size_t& index,
+			std::string_view arg
+		) {
+			using vector_type = detail::member_value_t<Field>;
+			using value_type = typename detail::vector_traits<vector_type>::value_type;
+
+			if (detail::starts_with_long_equals<LongName>(arg)) {
+				constexpr auto name = LongName.view();
+				std::string_view value = arg.substr(3 + name.size());
+
+				if (value.empty()) {
+					return option_parse_result::failure(
+						std::format("missing value after '--{}='", name)
+					);
+				}
+
+				return parse_and_append<value_type>(opts, value);
+			}
+
+			if (detail::matches_long<LongName>(arg) || detail::matches_short<ShortName>(arg)) {
+				if (index + 1 >= args.size()) {
+					return option_parse_result::failure(
+						std::format("missing value after '{}'", arg)
+					);
+				}
+
+				++index;
+				return parse_and_append<value_type>(opts, args[index]);
+			}
+
+			if (detail::starts_with_short_value<ShortName>(arg)) {
+				return parse_and_append<value_type>(opts, arg.substr(2));
+			}
+
+			return option_parse_result::no_match();
+		}
+
+		template <typename Value>
+		static option_parse_result parse_and_assign(options& opts, std::string_view text) {
+			if constexpr (!Choices::empty()) {
+				if (!Choices::contains(text)) {
+					return option_parse_result::failure(
+						std::format("invalid value '{}' for option '--{}'", text, LongName.view())
+					);
+				}
+			}
+
+			Value value{};
+
+			if (!value_parser<Value>::parse(text, value)) {
+				return option_parse_result::failure(value_parser<Value>::error(text));
+			}
+
+			opts.*Field = std::move(value);
+			return option_parse_result::success();
+		}
+
+		template <typename Value>
+		static option_parse_result parse_and_append(options& opts, std::string_view text) {
+			if constexpr (!Choices::empty()) {
+				if (!Choices::contains(text)) {
+					return option_parse_result::failure(
+						std::format("invalid value '{}' for option '--{}'", text, LongName.view())
+					);
+				}
+			}
+
+			Value value{};
+
+			if (!value_parser<Value>::parse(text, value)) {
+				return option_parse_result::failure(value_parser<Value>::error(text));
+			}
+
+			(opts.*Field).emplace_back(std::move(value));
+			return option_parse_result::success();
+		}
+	};
+}
+
+#endif
+// ===== end include/mgmake/cli/option_builder.hxx =====
+
+
+// ===== begin include/mgmake/cli/option_parser.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CLI_OPTION_PARSER_HXX
+#define MGMAKE_CLI_OPTION_PARSER_HXX
+
+// skipped duplicate include: include/mgmake/cli/option_builder.hxx
+// skipped duplicate include: include/mgmake/cli/parse_result.hxx
+// skipped duplicate include: include/mgmake/cli/util.hxx
+
+#include <format>
+#include <span>
+#include <string>
+#include <string_view>
+#include <utility>
+
+namespace mgmake::cli {
+	template <typename... Options>
+	struct option_parser {
+		[[nodiscard]] static option_parse_result try_parse_option(
+			options& opts,
+			std::span<const std::string> args,
+			std::size_t& index,
+			std::string_view arg
+		) {
+			option_parse_result result = option_parse_result::no_match();
+			bool matched = false;
+
+			([&] {
+				if (!matched) {
+					result = Options::try_parse(opts, args, index, arg);
+					matched = result.m_matched;
+				}
+			}(), ...);
+
+			return result;
+		}
+
+		[[nodiscard]] static parse_result parse(std::span<const std::string> args) {
+			options opts;
+			bool saw_first_positional = false;
+
+			for (std::size_t i = 0; i < args.size(); ++i) {
+				std::string_view arg = args[i];
+
+				if (arg == "--") {
+					for (++i; i < args.size(); ++i) {
+						opts.m_passthrough_args.emplace_back(args[i]);
+					}
+
+					break;
+				}
+
+				option_parse_result option_result = try_parse_option(opts, args, i, arg);
+
+				if (option_result.m_matched) {
+					if (!option_result.m_ok) {
+						return parse_result::failure(std::move(option_result.m_error));
+					}
+
+					continue;
+				}
+
+				if (is_option(arg)) {
+					return parse_result::failure(std::format("unknown option '{}'", arg));
+				}
+
+				if (!saw_first_positional) {
+					saw_first_positional = true;
+
+					action_kind parsed_action{};
+
+					if (parse_action(arg, parsed_action)) {
+						opts.m_action = parsed_action;
+
+						if (parsed_action == action_kind::help) {
+							opts.m_show_help = true;
+						}
+
+						if (parsed_action == action_kind::version) {
+							opts.m_show_version = true;
+						}
+
+						continue;
+					}
+				}
+
+				opts.m_targets.emplace_back(arg);
+			}
+
+			return parse_result::success(std::move(opts));
+		}
+	};
+}
+
+#endif
+// ===== end include/mgmake/cli/option_parser.hxx =====
+
+
+// ===== begin include/mgmake/cli/parse.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CLI_PARSE_HXX
+#define MGMAKE_CLI_PARSE_HXX
+
+// skipped duplicate include: include/mgmake/cli/option_parser.hxx
+// skipped duplicate include: include/mgmake/sys/command_line.hxx
+
+namespace mgmake::cli {
+	inline void apply_help(options& opts) {
+		opts.m_action = action_kind::help;
+		opts.m_show_help = true;
+	}
+
+	inline void apply_version(options& opts) {
+		opts.m_action = action_kind::version;
+		opts.m_show_version = true;
+	}
+
+	using help_option =
+		callback_option<"help", 'h', apply_help>
+			::description<"Show help.">;
+
+	using version_option =
+		callback_option<"version", '\0', apply_version>
+			::description<"Show version information.">;
+
+	using verbose_option =
+		flag_option<&options::m_verbose, "verbose", 'v'>
+			::description<"Print commands before executing them.">;
+
+	using dry_run_option =
+		flag_option<&options::m_dry_run, "dry-run">
+			::description<"Print commands without executing them.">;
+
+	using backend_option =
+		value_option<&options::m_backend, "backend">
+			::value_name<"name">
+			::description<"Select a build backend to use.">;
+
+	using build_dir_option =
+		value_option<&options::m_build_dir, "build-dir">
+			::value_name<"path">
+			::description<"Set the build directory.">;
+
+	using jobs_option =
+		value_option<&options::m_jobs, "jobs", 'j'>
+			::value_name<"count">
+			::description<"Set the maximum number of parallel jobs.">;
+
+	using target_option =
+		append_option<&options::m_targets, "target">
+			::value_name<"name">
+			::description<"Build a specific target. May be passed multiple times.">;
+
+	using default_parser = option_parser<
+		help_option,
+		version_option,
+		verbose_option,
+		dry_run_option,
+		backend_option,
+		build_dir_option,
+		jobs_option,
+		target_option
+	>;
+
+	[[nodiscard]] inline parse_result parse(std::span<const std::string> args) {
+		return default_parser::parse(args);
+	}
+
+	inline auto parse(const sys::command_line& cmd) {
+		return parse(cmd.m_args);
+	}
+}
+
+#endif
+// ===== end include/mgmake/cli/parse.hxx =====
+
+// skipped duplicate include: include/mgmake/cli/util.hxx
+// skipped duplicate include: include/mgmake/dag/action.hxx
+// skipped duplicate include: include/mgmake/dag/artifact.hxx
+// skipped duplicate include: include/mgmake/dag/graph.hxx
+// skipped duplicate include: include/mgmake/dag/target.hxx
+// skipped duplicate include: include/mgmake/detail/convert.hxx
+// skipped duplicate include: include/mgmake/detail/enum_string.hxx
 // skipped duplicate include: include/mgmake/detail/static_string.hxx
 
 // ===== begin include/mgmake/lower/target.hxx =====

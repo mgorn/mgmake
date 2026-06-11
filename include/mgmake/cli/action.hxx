@@ -3,6 +3,9 @@
 #ifndef MGMAKE_CLI_ACTION_HXX
 #define MGMAKE_CLI_ACTION_HXX
 
+#include "../detail/enum_string.hxx"
+
+#include <optional>
 #include <string_view>
 
 namespace mgmake::cli {
@@ -12,60 +15,64 @@ namespace mgmake::cli {
 		clean,
 		run,
 		help,
-		version
+		version,
+
+		count
 	};
 
-	[[nodiscard]] inline constexpr std::string_view action_name(action_kind action) {
-		switch (action) {
-			case action_kind::build:
-				return "build";
-			case action_kind::generate:
-				return "generate";
-			case action_kind::clean:
-				return "clean";
-			case action_kind::run:
-				return "run";
-			case action_kind::help:
-				return "help";
-			case action_kind::version:
-				return "version";
-		}
+	using action_kind_names = detail::enum_table<
+		action_kind,
+		detail::enum_entry<action_kind::build, "build">,
+		detail::enum_entry<action_kind::generate, "generate">,
+		detail::enum_entry<action_kind::clean, "clean">,
+		detail::enum_entry<action_kind::run, "run">,
+		detail::enum_entry<action_kind::help, "help">,
+		detail::enum_entry<action_kind::version, "version">
+	>;
 
-		return "unknown";
+	static_assert(
+		action_kind_names::is_zero_based_count_canonical(action_kind::count),
+		"action_kind_names must cover every action_kind value exactly once"
+	);
+
+	using action_kind_parse_names = detail::enum_table<
+		action_kind,
+		detail::enum_entry<action_kind::build, "build">,
+		detail::enum_entry<action_kind::generate, "generate">,
+		detail::enum_entry<action_kind::generate, "gen">,
+		detail::enum_entry<action_kind::clean, "clean">,
+		detail::enum_entry<action_kind::run, "run">,
+		detail::enum_entry<action_kind::help, "help">,
+		detail::enum_entry<action_kind::version, "version">
+	>;
+
+	static_assert(
+		action_kind_parse_names::is_display_aliases(),
+		"action_kind_parse_names must not contain duplicate or empty names"
+	);
+
+	[[nodiscard]] inline constexpr std::string_view action_name(action_kind action) noexcept {
+		return action_kind_names::to_string(action);
 	}
 
-	[[nodiscard]] inline constexpr bool parse_action(std::string_view text, action_kind& out) {
-		if (text == "build") {
-			out = action_kind::build;
-			return true;
+	[[nodiscard]] inline constexpr std::optional<action_kind> action_from_string(
+		std::string_view text
+	) noexcept {
+		return action_kind_parse_names::from_string(text);
+	}
+
+	[[nodiscard]] inline constexpr bool parse_action(
+		std::string_view text,
+		action_kind& out
+	) noexcept {
+		const auto parsed = action_from_string(text);
+
+		if (!parsed.has_value()) {
+			return false;
 		}
 
-		if (text == "generate" || text == "gen") {
-			out = action_kind::generate;
-			return true;
-		}
-
-		if (text == "clean") {
-			out = action_kind::clean;
-			return true;
-		}
-
-		if (text == "run") {
-			out = action_kind::run;
-			return true;
-		}
-
-		if (text == "help") {
-			out = action_kind::help;
-			return true;
-		}
-
-		if (text == "version") {
-			out = action_kind::version;
-			return true;
-		}
-
-		return false;
+		out = *parsed;
+		return true;
 	}
 }
 

@@ -3,6 +3,10 @@
 #ifndef MGMAKE_DETAIL_STATIC_STRING_HXX
 #define MGMAKE_DETAIL_STATIC_STRING_HXX
 
+#include <array>
+#include <cstddef>
+#include <string_view>
+
 namespace mgmake::detail {
 	template <std::size_t N>
 	struct static_string {

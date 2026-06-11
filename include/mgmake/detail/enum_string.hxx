@@ -107,7 +107,7 @@ namespace mgmake::detail {
         ) noexcept {
             std::optional<std::string_view> result{};
 
-            ((Entries::value() == value
+            (void)((Entries::value() == value
                 ? (result = Entries::name(), true)
                 : false) || ...);
 
@@ -132,7 +132,7 @@ namespace mgmake::detail {
         ) noexcept {
             std::optional<E> result{};
 
-            ((Entries::name() == name
+            (void)((Entries::name() == name
                 ? (result = Entries::value(), true)
                 : false) || ...);
 

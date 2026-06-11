@@ -11,6 +11,12 @@
 #include "cli/action.hxx"
 #include "cli/backend.hxx"
 #include "cli/options.hxx"
+#include "cli/parse_result.hxx"
+#include "cli/option_parse_result.hxx"
+#include "cli/value_parser.hxx"
+#include "cli/enum_value_parser.hxx"
+#include "cli/option_builder.hxx"
+#include "cli/option_parser.hxx"
 #include "cli/parse.hxx"
 #include "cli/util.hxx"
 #include "dag/action.hxx"
@@ -37,7 +43,6 @@
 #include "sys/util.hxx"
 
 namespace mgmake {
-	template<typename ProjectType>
 	int entry(const sys::command_line& command_line) {
 		auto parsed = cli::parse(command_line.user_args());
 

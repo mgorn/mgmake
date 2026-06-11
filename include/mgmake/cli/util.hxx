@@ -4,11 +4,7 @@
 #define MGMAKE_CLI_UTIL_HXX
 
 #include <charconv>
-#include <cstdint>
-#include <format>
 #include <print>
-#include <span>
-#include <string>
 #include <string_view>
 
 namespace mgmake::cli {
@@ -29,23 +25,6 @@ namespace mgmake::cli {
 		}
 
 		out = value;
-		return true;
-	}
-
-	[[nodiscard]] inline constexpr bool consume_value(
-		std::span<const std::string> args,
-		std::size_t& index,
-		std::string_view option_name,
-		std::string& out,
-		std::string& error
-	) {
-		if (index + 1 >= args.size()) {
-			error = std::format("missing value after '{}'", option_name);
-			return false;
-		}
-
-		++index;
-		out = args[index];
 		return true;
 	}
 
@@ -71,7 +50,7 @@ namespace mgmake::cli {
 		std::println("");
 		std::println("options:");
 		std::println("  --backend <name>       Backend to use: auto, ninja, make, direct.");
-		std::println("  --build-dir <path>     Build directory. Default: build.");
+		std::println("  --build-dir <path>     Build directory. Default: .build.");
 		std::println("  --target <name>        Target to build. Can be passed multiple times.");
 		std::println("  -j, --jobs <count>     Number of parallel jobs.");
 		std::println("  -v, --verbose          Print more detailed output.");
