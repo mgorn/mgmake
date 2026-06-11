@@ -18,6 +18,7 @@
 #include "dag/graph.hxx"
 #include "dag/target.hxx"
 #include "detail/convert.hxx"
+#include "detail/enum_string.hxx"
 #include "detail/static_string.hxx"
 #include "lower/target.hxx"
 #include "lower/usage.hxx"
