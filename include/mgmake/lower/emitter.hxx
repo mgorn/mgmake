@@ -3,7 +3,6 @@
 #ifndef MGMK_LOWER_EMITTER_HXX
 #define MGMK_LOWER_EMITTER_HXX
 
-#include "../build/request.hxx"
 #include "../dag/action.hxx"
 #include "../dag/artifact.hxx"
 #include "../dag/graph.hxx"
@@ -18,11 +17,9 @@
 namespace mgmake::lower {
 	struct emitter {
 		dag::graph& m_graph;
-		const build::request& m_req;
 
-		emitter(dag::graph& graph, const build::request& req)
-			: m_graph{graph}
-			, m_req{req} {}
+		emitter(dag::graph& graph)
+			: m_graph{graph} {}
 
 		dag::artifact::id source(const std::filesystem::path& path) {
 			return m_graph.create_artifact(dag::artifact::kind::source, path);

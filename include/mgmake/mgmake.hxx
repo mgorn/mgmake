@@ -30,6 +30,7 @@
 #include "spec/project.hxx"
 #include "lower/objects.hxx"
 #include "lower/context_impl.hxx"
+#include "spec/project_impl.hxx"
 #include "sys/command_line.hxx"
 #include "sys/platform.hxx"
 #include "sys/util.hxx"

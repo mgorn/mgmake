@@ -14,6 +14,10 @@ include_pattern = re.compile(r'^\s*#\s*include\s+([<"])([^>"]+)[>"]')
 visited: set[Path] = set()
 
 
+def display_path(path: Path) -> str:
+    return path.relative_to(ROOT).as_posix()
+
+
 def resolve_project_include(name: str, current_file: Path) -> Path | None:
     candidates = []
 
@@ -39,13 +43,13 @@ def emit_file(path: Path, out: list[str]) -> None:
     path = path.resolve()
 
     if path in visited:
-        out.append(f"// skipped duplicate include: {path.relative_to(ROOT)}\n")
+        out.append(f"// skipped duplicate include: {display_path(path)}\n")
         return
 
     visited.add(path)
 
     out.append("\n")
-    out.append(f"// ===== begin {path.relative_to(ROOT)} =====\n")
+    out.append(f"// ===== begin {display_path(path)} =====\n")
 
     for line in path.read_text().splitlines(keepends=True):
         match = include_pattern.match(line)
@@ -64,7 +68,7 @@ def emit_file(path: Path, out: list[str]) -> None:
 
         emit_file(project_header, out)
 
-    out.append(f"// ===== end {path.relative_to(ROOT)} =====\n")
+    out.append(f"// ===== end {display_path(path)} =====\n")
     out.append("\n")
 
 

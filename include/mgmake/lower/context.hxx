@@ -23,8 +23,9 @@ namespace mgmake::spec {
 
 namespace mgmake::lower {
 	struct context {
-		lower::emitter m_emit;
+		const build::request& m_req;
 		const spec::project& m_project;
+		lower::emitter m_emit;
 
 		context(
 			dag::graph& graph,
@@ -37,11 +38,11 @@ namespace mgmake::lower {
 		}
 
 		const build::request& request() const {
-			return m_emit.m_req;
+			return m_req;
 		}
 
 		const build::toolchain& toolchain() const {
-			return m_emit.m_req.toolchain();
+			return m_req.toolchain();
 		}
 
 		const lower::target& lower_library(spec::library::id id);
@@ -59,22 +60,19 @@ namespace mgmake::lower {
 		);
 
 	private:
-		void lower_interface_library(
+		lower::target lower_interface_library(
 			const spec::library& lib,
-			lower::usage usage,
-			lower::target& lowered
+			lower::usage usage
 		);
 
-		void lower_static_library(
+		lower::target lower_static_library(
 			const spec::library& lib,
-			lower::usage usage,
-			lower::target& lowered
+			lower::usage usage
 		);
 
-		void lower_shared_library(
+		lower::target lower_shared_library(
 			const spec::library& lib,
-			lower::usage usage,
-			lower::target& lowered
+			lower::usage usage
 		);
 
 		std::vector<std::optional<lower::target>> m_libraries;

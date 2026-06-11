@@ -14,7 +14,7 @@ namespace mgmake::lower {
 	struct usage {
 		std::set<std::filesystem::path> m_include_dirs;
 		std::vector<dag::artifact::id> m_link_inputs;
-		std::set<dag::target::id> m_target_dependencies;
+		std::set<dag::target::id> m_dag_dependencies;
 	};
 }
 

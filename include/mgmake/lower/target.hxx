@@ -15,6 +15,7 @@ namespace mgmake::lower {
 	struct target {
 		std::optional<dag::target::id> m_dag_target;
 		std::vector<dag::artifact::id> m_linkable_artifacts;
+		// Include dirs inherited by consumers of this lowered target.
 		std::set<std::filesystem::path> m_include_dirs;
 	};
 }

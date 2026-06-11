@@ -23,8 +23,9 @@ namespace mgmake::lower {
 		const build::request& req,
 		const spec::project& project
 	)
-		: m_emit{graph, req}
+		: m_req{req}
 		, m_project{project}
+		, m_emit{graph}
 		, m_libraries(project.m_libraries.size()) {}
 
 	inline lower::usage context::use_libraries(
@@ -45,7 +46,7 @@ namespace mgmake::lower {
 			const lower::target& dep = lower_library(linked_id.value());
 
 			if (dep.m_dag_target.has_value()) {
-				result.m_target_dependencies.emplace(dep.m_dag_target.value());
+				result.m_dag_dependencies.emplace(dep.m_dag_target.value());
 			}
 
 			result.m_link_inputs.insert(
@@ -86,32 +87,28 @@ namespace mgmake::lower {
 			lib.m_name
 		);
 
-		lower::target lowered{};
-
 		switch (lib.m_kind) {
 			case spec::library::kind::interface:
-				lower_interface_library(lib, std::move(usage), lowered);
+				m_libraries.at(id) = lower_interface_library(lib, std::move(usage));
 				break;
 
 			case spec::library::kind::static_lib:
-				lower_static_library(lib, std::move(usage), lowered);
+				m_libraries.at(id) = lower_static_library(lib, std::move(usage));
 				break;
 
 			case spec::library::kind::shared_lib:
-				lower_shared_library(lib, std::move(usage), lowered);
+				m_libraries.at(id) = lower_shared_library(lib, std::move(usage));
 				break;
 		}
 
 		m_active_libraries.erase(id);
-		m_libraries.at(id) = std::move(lowered);
 
 		return m_libraries.at(id).value();
 	}
 
-	inline void context::lower_interface_library(
+	inline lower::target context::lower_interface_library(
 		const spec::library& lib,
-		lower::usage usage,
-		lower::target& lowered
+		lower::usage usage
 	) {
 		mgmkassert(
 			lib.m_sources.empty(),
@@ -120,21 +117,24 @@ namespace mgmake::lower {
 
 		auto include_dirs = lib.include_dirs();
 		include_dirs.insert_range(usage.m_include_dirs);
+		auto link_inputs = std::move(usage.m_link_inputs);
 
 		dag::target dag_target{
 			lib.m_name,
 			{},
-			std::move(usage.m_target_dependencies)
+			std::move(usage.m_dag_dependencies)
 		};
 
+		lower::target lowered{};
 		lowered.m_dag_target = m_emit.target(std::move(dag_target));
+		lowered.m_linkable_artifacts = std::move(link_inputs);
 		lowered.m_include_dirs = std::move(include_dirs);
+		return lowered;
 	}
 
-	inline void context::lower_static_library(
+	inline lower::target context::lower_static_library(
 		const spec::library& lib,
-		lower::usage usage,
-		lower::target& lowered
+		lower::usage usage
 	) {
 		const auto& tc = toolchain();
 
@@ -211,9 +211,10 @@ namespace mgmake::lower {
 		dag::target dag_target{
 			lib.m_name,
 			{ archive_id },
-			std::move(usage.m_target_dependencies)
+			std::move(usage.m_dag_dependencies)
 		};
 
+		lower::target lowered{};
 		lowered.m_dag_target = m_emit.target(std::move(dag_target));
 		lowered.m_linkable_artifacts.emplace_back(archive_id);
 		lowered.m_linkable_artifacts.insert(
@@ -222,12 +223,12 @@ namespace mgmake::lower {
 			usage.m_link_inputs.end()
 		);
 		lowered.m_include_dirs = std::move(include_dirs);
+		return lowered;
 	}
 
-	inline void context::lower_shared_library(
+	inline lower::target context::lower_shared_library(
 		const spec::library& lib,
-		lower::usage usage,
-		lower::target& lowered
+		lower::usage usage
 	) {
 		const auto& tc = toolchain();
 
@@ -294,9 +295,10 @@ namespace mgmake::lower {
 		dag::target dag_target{
 			lib.m_name,
 			{ shared_id },
-			std::move(usage.m_target_dependencies)
+			std::move(usage.m_dag_dependencies)
 		};
 
+		lower::target lowered{};
 		lowered.m_dag_target = m_emit.target(std::move(dag_target));
 		lowered.m_linkable_artifacts.emplace_back(shared_id);
 		lowered.m_linkable_artifacts.insert(
@@ -305,6 +307,7 @@ namespace mgmake::lower {
 			usage.m_link_inputs.end()
 		);
 		lowered.m_include_dirs = std::move(include_dirs);
+		return lowered;
 	}
 
 	inline void context::lower_executable(spec::executable::id id) {
@@ -388,7 +391,7 @@ namespace mgmake::lower {
 		dag::target dag_target{
 			exe.m_name,
 			{ output_id },
-			std::move(usage.m_target_dependencies)
+			std::move(usage.m_dag_dependencies)
 		};
 
 		m_emit.target(std::move(dag_target));
