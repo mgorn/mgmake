@@ -12,1375 +12,6 @@
 #define MGMAKE_MGMAKE_HXX
 
 
-// ===== begin include/mgmake/backend/graphviz.hxx =====
-#pragma once
-
-#ifndef MGMAKE_BACKEND_GRAPHVIZ_HXX
-#define MGMAKE_BACKEND_GRAPHVIZ_HXX
-
-
-// ===== begin include/mgmake/build/request.hxx =====
-#pragma once
-
-#ifndef MGMAKE_BUILD_REQUEST_HXX
-#define MGMAKE_BUILD_REQUEST_HXX
-
-
-// ===== begin include/mgmake/build/toolchain.hxx =====
-#pragma once
-
-#ifndef MGMAKE_BUILD_TOOLCHAIN_HXX
-#define MGMAKE_BUILD_TOOLCHAIN_HXX
-
-#include <initializer_list>
-#include <optional>
-#include <string>
-#include <string_view>
-#include <vector>
-
-namespace mgmake::build {
-    struct toolchain {
-        // Determines how MGMake should pass args to the compiler driver(s)
-        enum struct dialect {
-            gcc, // GCC-like command arguments (typically with a '-' dash)
-            msvc // Windows-like arguments (typically with a '/' slash)
-        };
-
-        std::string m_name; // The name of the toolchain
-        dialect m_dialect = []{
-#ifdef MGMAKE_PLATFORM_WINDOWS
-            return dialect::msvc;
-#else
-            return dialect::gcc;
-#endif
-        }();
-
-        std::string m_cc;
-        std::string m_cxx;
-        std::string m_ar;
-        std::string m_linker;
-
-        std::vector<std::string> m_compile_flags;
-        std::vector<std::string> m_c_flags;
-        std::vector<std::string> m_cxx_flags;
-        std::vector<std::string> m_archive_flags;
-        std::vector<std::string> m_link_flags;
-
-        std::optional<std::string> m_arch_triple;
-        std::optional<std::string> m_sysroot;
-
-       [[nodiscard]] inline constexpr std::string_view name() const {
-            return m_name;
-        }
-        inline constexpr auto& name(std::string_view str) {
-            m_name = str;
-            return *this;
-        }
-
-        [[nodiscard]] inline constexpr enum dialect dialect() const noexcept {
-            return m_dialect;
-        }
-        inline constexpr auto& dialect(enum dialect value) noexcept {
-            m_dialect = value;
-            return *this;
-        }
-
-        // cc
-        [[nodiscard]] inline constexpr const std::string& cc() const noexcept {
-            return m_cc;
-        }
-        inline constexpr auto& cc(std::string path) {
-            m_cc = std::move(path);
-            return *this;
-        }
-
-        // cxx
-        [[nodiscard]] inline constexpr const std::string& cxx() const noexcept {
-            return m_cxx;
-        }
-        inline constexpr auto& cxx(std::string path) {
-            m_cxx = std::move(path);
-            return *this;
-        }
-
-        // ar
-        [[nodiscard]] inline constexpr const std::string& ar() const noexcept {
-            return m_ar;
-        }
-        inline constexpr auto& ar(std::string path) {
-            m_ar = std::move(path);
-            return *this;
-        }
-
-        // linker
-        [[nodiscard]] inline constexpr const std::string& linker() const noexcept {
-            return m_linker;
-        }
-        inline constexpr auto& linker(std::string path) {
-            m_linker = std::move(path);
-            return *this;
-        }
-
-        // compile_flags
-        [[nodiscard]] inline constexpr const std::vector<std::string>& compile_flags() const noexcept {
-            return m_compile_flags;
-        }
-        inline constexpr auto& compile_flags(std::vector<std::string> flags) {
-            m_compile_flags = std::move(flags);
-            return *this;
-        }
-        inline constexpr auto& compile_flags(std::initializer_list<std::string_view> flags) {
-            m_compile_flags.clear();
-
-            for (std::string_view flag : flags) {
-                m_compile_flags.emplace_back(flag);
-            }
-
-            return *this;
-        }
-        inline constexpr auto& add_compile_flag(std::string_view flag) {
-            m_compile_flags.emplace_back(flag);
-            return *this;
-        }
-        inline constexpr auto& clear_compile_flags() noexcept {
-            m_compile_flags.clear();
-            return *this;
-        }
-
-        // c_flags
-        [[nodiscard]] inline constexpr const std::vector<std::string>& c_flags() const noexcept {
-            return m_c_flags;
-        }
-        inline constexpr auto& c_flags(std::vector<std::string> flags) {
-            m_c_flags = std::move(flags);
-            return *this;
-        }
-        inline constexpr auto& c_flags(std::initializer_list<std::string_view> flags) {
-            m_c_flags.clear();
-
-            for (std::string_view flag : flags) {
-                m_c_flags.emplace_back(flag);
-            }
-
-            return *this;
-        }
-        inline constexpr auto& add_c_flag(std::string_view flag) {
-            m_c_flags.emplace_back(flag);
-            return *this;
-        }
-        inline constexpr auto& clear_c_flags() noexcept {
-            m_c_flags.clear();
-            return *this;
-        }
-
-        // cxx_flags
-        [[nodiscard]] inline constexpr const std::vector<std::string>& cxx_flags() const noexcept {
-            return m_cxx_flags;
-        }
-        inline constexpr auto& cxx_flags(std::vector<std::string> flags) {
-            m_cxx_flags = std::move(flags);
-            return *this;
-        }
-        inline constexpr auto& cxx_flags(std::initializer_list<std::string_view> flags) {
-            m_cxx_flags.clear();
-
-            for (std::string_view flag : flags) {
-                m_cxx_flags.emplace_back(flag);
-            }
-
-            return *this;
-        }
-        inline constexpr auto& add_cxx_flag(std::string_view flag) {
-            m_cxx_flags.emplace_back(flag);
-            return *this;
-        }
-        inline constexpr auto& clear_cxx_flags() noexcept {
-            m_cxx_flags.clear();
-            return *this;
-        }
-
-        // archive_flags
-        [[nodiscard]] inline constexpr const std::vector<std::string>& archive_flags() const noexcept {
-            return m_archive_flags;
-        }
-        inline constexpr auto& archive_flags(std::vector<std::string> flags) {
-            m_archive_flags = std::move(flags);
-            return *this;
-        }
-        inline constexpr auto& archive_flags(std::initializer_list<std::string_view> flags) {
-            m_archive_flags.clear();
-
-            for (std::string_view flag : flags) {
-                m_archive_flags.emplace_back(flag);
-            }
-
-            return *this;
-        }
-        inline constexpr auto& add_archive_flag(std::string_view flag) {
-            m_archive_flags.emplace_back(flag);
-            return *this;
-        }
-        inline constexpr auto& clear_archive_flags() noexcept {
-            m_archive_flags.clear();
-            return *this;
-        }
-
-        // link_flags
-        [[nodiscard]] inline constexpr const std::vector<std::string>& link_flags() const noexcept {
-            return m_link_flags;
-        }
-        inline constexpr auto& link_flags(std::vector<std::string> flags) {
-            m_link_flags = std::move(flags);
-            return *this;
-        }
-        inline constexpr auto& link_flags(std::initializer_list<std::string_view> flags) {
-            m_link_flags.clear();
-
-            for (std::string_view flag : flags) {
-                m_link_flags.emplace_back(flag);
-            }
-
-            return *this;
-        }
-        inline constexpr auto& add_link_flag(std::string_view flag) {
-            m_link_flags.emplace_back(flag);
-            return *this;
-        }
-        inline constexpr auto& clear_link_flags() noexcept {
-            m_link_flags.clear();
-            return *this;
-        }
-
-        // arch_triple
-        [[nodiscard]] inline constexpr const std::optional<std::string>& arch_triple() const noexcept {
-            return m_arch_triple;
-        }
-        inline constexpr auto& arch_triple(std::string_view triple) {
-            m_arch_triple = std::string { triple };
-            return *this;
-        }
-        inline constexpr auto& arch_triple(std::optional<std::string> triple) {
-            m_arch_triple = std::move(triple);
-            return *this;
-        }
-        inline constexpr auto& clear_arch_triple() noexcept {
-            m_arch_triple.reset();
-            return *this;
-        }
-
-        // sysroot
-        [[nodiscard]] inline constexpr const std::optional<std::string>& sysroot() const noexcept {
-            return m_sysroot;
-        }
-        inline constexpr auto& sysroot(std::string path) {
-            m_sysroot = std::move(path);
-            return *this;
-        }
-        inline constexpr auto& sysroot(std::optional<std::string> path) {
-            m_sysroot = std::move(path);
-            return *this;
-        }
-        inline constexpr auto& clear_sysroot() noexcept {
-            m_sysroot.reset();
-            return *this;
-        }
-    };
-
-    static constexpr auto tc_clang_mg = build::toolchain{"clang-mg"}
-        .dialect(build::toolchain::dialect::gcc)
-        .cc("clang-mg")
-        .cxx("clang-mg++")
-        .ar("llvm-ar")
-        .linker("clang-mg++");
-
-    static constexpr auto tc_clang = build::toolchain{"clang"}
-        .dialect(build::toolchain::dialect::gcc)
-        .cc("clang")
-        .cxx("clang++")
-        .ar("llvm-ar")
-        .linker("clang++");
-
-    static constexpr auto tc_gcc = build::toolchain{"gcc"}
-        .dialect(build::toolchain::dialect::gcc)
-        .cc("gcc")
-        .cxx("g++")
-        .ar("ar")
-        .linker("g++");
-    
-    static constexpr auto tc_msvc = build::toolchain{"msvc"}
-        .dialect(build::toolchain::dialect::msvc)
-        .cc("cl")
-        .cxx("cl")
-        .ar("lib")
-        .linker("link");
-}
-
-#endif// ===== end include/mgmake/build/toolchain.hxx =====
-
-
-#include <filesystem>
-#include <vector>
-
-namespace mgmake::build {
-    struct request {
-        toolchain m_tc;
-        std::filesystem::path m_build_dir;
-        std::vector<std::string> m_targets; // Which targets to build, empty = build all
-
-        inline constexpr const toolchain& toolchain() const {
-            return m_tc;
-        }
-        inline constexpr auto& toolchain(struct toolchain& tc) {
-            m_tc = tc;
-            return *this;
-        }
-
-        inline constexpr const std::filesystem::path& build_dir() const {
-            return m_build_dir;
-        }
-        inline constexpr auto& build_dir(const std::filesystem::path dir) {
-            m_build_dir = dir;
-            return *this;
-        }
-    };
-}
-
-#endif// ===== end include/mgmake/build/request.hxx =====
-
-
-// ===== begin include/mgmake/dag/artifact.hxx =====
-#pragma once
-
-#ifndef MGMAKE_DAG_ARTIFACT_HXX
-#define MGMAKE_DAG_ARTIFACT_HXX
-
-#include <filesystem>
-#include <vector>
-
-namespace mgmake::dag {
-    struct artifact {
-        using id = std::vector<artifact>::size_type;
-
-        enum struct kind {
-            source, // A source code (.cxx, .c, etc)
-            generated, // Generated by another program
-            phony // Fake placeholder
-        } m_kind = kind::source;
-        std::filesystem::path m_path;
-    };
-}
-
-#endif// ===== end include/mgmake/dag/artifact.hxx =====
-
-
-// ===== begin include/mgmake/dag/graph.hxx =====
-#pragma once
-
-#ifndef MGMAKE_DAG_GRAPH_HXX
-#define MGMAKE_DAG_GRAPH_HXX
-
-
-// ===== begin include/mgmake/detail/assert.hxx =====
-#pragma once
-
-#ifndef MGMAKE_DETAIL_ASSERT_HXX
-#define MGMAKE_DETAIL_ASSERT_HXX
-
-#include <cstdio>
-#include <cstdlib>
-#include <source_location>
-#include <string_view>
-
-#if defined(_MSC_VER)
-    #include <intrin.h>
-#endif
-
-namespace mgmake::detail {
-
-inline void debug_break() {
-#if defined(_MSC_VER)
-    __debugbreak();
-#elif defined(__clang__) || defined(__GNUC__)
-    __builtin_trap();
-#else
-    std::abort();
-#endif
-}
-
-[[noreturn]] inline void assertion_failed(
-    std::string_view condition,
-    std::string_view message,
-    std::source_location location = std::source_location::current()
-) {
-    std::fprintf(
-        stderr,
-        "\nmgmake assertion failed\n"
-        "  condition: %.*s\n"
-        "  message:   %.*s\n"
-        "  location:  %s:%u:%u\n"
-        "  function:  %s\n\n",
-        static_cast<int>(condition.size()),
-        condition.data(),
-        static_cast<int>(message.size()),
-        message.data(),
-        location.file_name(),
-        location.line(),
-        location.column(),
-        location.function_name()
-    );
-
-    debug_break();
-
-    // In case the platform/debugger allows execution to continue.
-    std::abort();
-}
-
-inline void mgmk_assert_impl(
-    bool condition,
-    std::string_view condition_text,
-    std::string_view message,
-    std::source_location location = std::source_location::current()
-) {
-    if (!condition) {
-        assertion_failed(condition_text, message, location);
-    }
-}
-
-} // namespace mgmake::detail
-
-#ifndef MGMK_ENABLE_ASSERTS
-    #ifndef NDEBUG
-        #define MGMK_ENABLE_ASSERTS 1
-    #else
-        #define MGMK_ENABLE_ASSERTS 0
-    #endif
-#endif
-
-#if MGMK_ENABLE_ASSERTS
-    #define mgmkassert(condition, message)                                      \
-        do {                                                                    \
-            ::mgmake::detail::mgmk_assert_impl(                                 \
-                static_cast<bool>(condition),                                   \
-                #condition,                                                     \
-                message,                                                        \
-                std::source_location::current()                                 \
-            );                                                                  \
-        } while (false)
-#else
-    #define mgmkassert(condition, message)                                      \
-        do {                                                                    \
-            (void)sizeof(condition);                                            \
-        } while (false)
-#endif
-
-#endif// ===== end include/mgmake/detail/assert.hxx =====
-
-
-// ===== begin include/mgmake/dag/action.hxx =====
-#pragma once
-
-#ifndef MGMAKE_DAG_ACTION_HXX
-#define MGMAKE_DAG_ACTION_HXX
-
-// skipped duplicate include: include/mgmake/dag/artifact.hxx
-
-
-// ===== begin include/mgmake/sys/command_line.hxx =====
-#pragma once
-
-#ifndef MGMAKE_SYS_COMMAND_LINE_HXX
-#define MGMAKE_SYS_COMMAND_LINE_HXX
-
-
-// ===== begin include/mgmake/detail/convert.hxx =====
-#pragma once
-
-#ifndef MGMAKE_DETAIL_CONVERT_HXX
-#define MGMAKE_DETAIL_CONVERT_HXX
-
-
-// ===== begin include/mgmake/sys/platform.hxx =====
-#pragma once
-
-#ifndef MGMAKE_SYS_PLATFORM_HXX
-#define MGMAKE_SYS_PLATFORM_HXX
-
-// Cursed windows shit here
-#if defined(_WIN32) 
-    // You can still use MGMake on Windows without windows.h <3
-    // with love - Michael
-    #ifndef MGMK_NO_WINDOWS
-        #ifndef NOMINMAX
-            #define NOMINMAX
-        #endif
-
-        #ifndef WIN32_LEAN_AND_MEAN
-            #define WIN32_LEAN_AND_MEAN
-        #endif
-
-        #include <windows.h>
-	    #pragma message("Windows is included here. This is probably the source of your pain.")
-        #define MGMK_INCLUDED_WINDOWS
-    #endif
-
-    #define MGMK_PLATFORM_WINDOWS 1
-#elif defined(__unix__) || defined(__APPLE__)
-    #define MGMK_PLATFORM_POSIX 1
-#else
-    #define MGMK_PLATFORM_UNSUPPORTED 1
-#endif
-
-namespace mgmake::sys {
-	enum struct platform {
-		windows,
-		posix,
-		unsupported
-	};
-
-	static constexpr platform g_host_platform = [] constexpr {
-#ifdef MGMK_PLATFORM_WINDOWS
-		return platform::windows;
-#elifdef MGMK_PLATFORM_POSIX
-		return platform::posix;
-#else
-		return platform::unsupported;
-#endif
-	}();
-}
-
-#endif// ===== end include/mgmake/sys/platform.hxx =====
-
-
-namespace mgmake::detail {
-#ifdef MGMK_INCLUDED_WINDOWS
-	inline constexpr std::string wide_to_utf8(std::wstring_view text) {
-		if (text.empty()) {
-			return {};
-		}
-
-		mgmkassert(text.size() < static_cast<std::size_t>(std::numeric_limits<int>::max()), "Wide string is too large to convert to UTF-8");
-
-		int wide_size = static_cast<int>(text.size());
-
-		int utf8_size = WideCharToMultiByte(
-			CP_UTF8,
-			WC_ERR_INVALID_CHARS,
-			text.data(),
-			wide_size,
-			nullptr,
-			0,
-			nullptr,
-			nullptr
-		);
-
-		mgmkassert(utf8_size > 0, "Failed to calculate UTF-8 argument size");
-
-		std::string result;
-		result.resize(static_cast<std::size_t>(utf8_size));
-
-		int written = WideCharToMultiByte(
-			CP_UTF8,
-			WC_ERR_INVALID_CHARS,
-			text.data(),
-			wide_size,
-			result.data(),
-			utf8_size,
-			nullptr,
-			nullptr
-		);
-
-		mgmkassert(written > 0, "Failed to convert command line argument to UTF-8");
-
-		return result;
-	}
-#endif
-}
-
-#endif// ===== end include/mgmake/detail/convert.hxx =====
-
-
-// ===== begin include/mgmake/sys/util.hxx =====
-#pragma once
-
-#ifndef MGMAKE_SYS_UTIL_HXX
-#define MGMAKE_SYS_UTIL_HXX
-
-// skipped duplicate include: include/mgmake/sys/platform.hxx
-
-#include <string>
-#include <string_view>
-
-namespace mgmake::sys {
-#ifdef MGMK_PLATFORM_WINDOWS
-	inline constexpr std::string shell_escape(std::string_view arg) {
-		if (arg.empty()) {
-			return "\"\"";
-		}
-
-		bool needs_quotes = false;
-
-		for (const char ch : arg) {
-			if (ch == ' ' || ch == '\t' || ch == '"' || ch == '\\') {
-				needs_quotes = true;
-				break;
-			}
-		}
-
-		if (!needs_quotes) {
-			return std::string(arg);
-		}
-
-		std::string result;
-		result += '"';
-
-		std::size_t backslashes = 0;
-
-		for (const char ch : arg) {
-			if (ch == '\\') {
-				++backslashes;
-				continue;
-			}
-
-			if (ch == '"') {
-				result.append(backslashes * 2 + 1, '\\');
-				result += '"';
-				backslashes = 0;
-				continue;
-			}
-
-			if (backslashes != 0) {
-				result.append(backslashes, '\\');
-				backslashes = 0;
-			}
-
-			result += ch;
-		}
-
-		if (backslashes != 0) {
-			result.append(backslashes * 2, '\\');
-		}
-
-		result += '"';
-		return result;
-	}
-#else
-	inline constexpr std::string shell_escape(std::string_view arg) {
-		if (arg.empty()) {
-			return "''";
-		}
-
-		bool needs_quotes = false;
-
-		for (const char ch : arg) {
-			if (ch == ' ' || ch == '\t' || ch == '\'' || ch == '"' || ch == '$' || ch == '\\' || ch == '&' || ch == ';' || ch == '(' || ch == ')' || ch == '<' || ch == '>' || ch == '|') {
-				needs_quotes = true;
-				break;
-			}
-		}
-
-		if (!needs_quotes) {
-			return std::string(arg);
-		}
-
-		std::string result;
-		result += '\'';
-
-		for (const char ch : arg) {
-			if (ch == '\'') {
-				result += "'\\''";
-			} else {
-				result += ch;
-			}
-		}
-
-		result += '\'';
-		return result;
-	}
-#endif
-}
-
-#endif// ===== end include/mgmake/sys/util.hxx =====
-
-
-#include <cstdlib>
-#include <span>
-#include <string_view>
-#include <vector>
-
-namespace mgmake::sys {
-	struct command_line {
-		std::vector<std::string> m_args;
-
-		inline constexpr std::string_view program_name() const {
-			return m_args.empty() ? std::string_view{} : std::string_view(m_args[0]);
-		}
-
-		inline constexpr std::span<const std::string> user_args() const {
-			if (m_args.size() <= 1) {
-				return {};
-			}
-
-			return std::span<const std::string>(m_args).subspan(1);
-		}
-
-		inline constexpr std::string full_command() const {
-			std::string result;
-
-            for (std::size_t i = 0; i < m_args.size(); ++i) {
-                if (i != 0) {
-                    result += ' ';
-                }
-
-                result += sys::shell_escape(m_args[i]);
-            }
-
-            return result;
-		}
-
-		auto invoke() const {
-			return std::system(full_command().c_str());
-		}
-	};
-
-	inline constexpr command_line args_from_utf8(int argc, const char** argv) {
-		command_line result;
-
-		for (int i = 0; i < argc; ++i) {
-			result.m_args.emplace_back(argv[i] ? argv[i] : "");
-		}
-
-		return result;
-	}
-
-#ifdef MGMK_INCLUDED_WINDOWS
-	inline constexpr command_line args_from_wide(int argc, const wchar_t** argv) {
-		command_line result;
-		if (argc <= 0 || argv == nullptr) {
-			return result;
-		}
-		result.m_args.reserve(static_cast<std::size_t>(argc));
-		for (int i = 0; i < argc; ++i) {
-			if (argv[i] == nullptr) {
-				result.m_args.emplace_back();
-				continue;
-			}
-			result.m_args.emplace_back(detail::wide_to_utf8(argv[i]));
-		}
-		return result;
-	}
-#endif
-}
-
-#endif// ===== end include/mgmake/sys/command_line.hxx =====
-
-
-#include <filesystem>
-#include <string>
-#include <vector>
-
-namespace mgmake::dag {
-    struct action {
-        using id = std::vector<action>::size_type;
-
-        std::string m_name;
-        std::string m_description;
-
-        std::vector<artifact::id> m_inputs;
-        std::vector<artifact::id> m_outputs;
-
-        bool m_always_run = false; // always_fun = false :(
-
-        sys::command_line m_command;
-        std::filesystem::path m_working_directory;
-    };
-}
-
-#endif// ===== end include/mgmake/dag/action.hxx =====
-
-// skipped duplicate include: include/mgmake/dag/artifact.hxx
-
-// ===== begin include/mgmake/dag/target.hxx =====
-#pragma once
-
-#ifndef MGMAKE_DAG_TARGET_HXX
-#define MGMAKE_DAG_TARGET_HXX
-
-// skipped duplicate include: include/mgmake/dag/artifact.hxx
-
-#include <set>
-#include <string>
-#include <vector>
-
-namespace mgmake::dag {
-    struct target {
-        using id = std::vector<target>::size_type;
-
-        std::string m_name;
-
-        // Empty is valid for interface/no-op/metadata targets
-        std::set<artifact::id> m_outputs;
-
-        // Other DAG targets this target conceptually depends on.
-        // For now this mostly exists so graphviz/ninja can show target-level deps.
-        std::set<target::id> m_dependencies;
-
-		void add_dependency(const target::id dep) {
-			m_dependencies.emplace(dep);
-		}
-    };
-}
-
-#endif// ===== end include/mgmake/dag/target.hxx =====
-
-
-#include <utility>
-#include <vector>
-
-namespace mgmake::dag {
-    struct graph {
-        std::vector<artifact> m_artifacts;
-        std::vector<action> m_actions;
-        std::vector<target> m_targets;
-
-        inline constexpr artifact::id create_artifact(auto&&... args) {
-            m_artifacts.emplace_back(std::forward<decltype(args)>(args)...);
-            return { m_artifacts.size() - 1 };
-        }
-        inline constexpr action::id create_action(auto&&... args) {
-            m_actions.emplace_back(std::forward<decltype(args)>(args)...);
-            return { m_actions.size() - 1 };
-        }
-        inline constexpr target::id create_target(auto&&... args) {
-            m_targets.emplace_back(std::forward<decltype(args)>(args)...);
-            return { m_targets.size() - 1 };
-        }
-
-		inline constexpr struct artifact& artifact(const artifact::id id) {
-			mgmkassert(not m_artifacts.empty(), "Invalid artifact ID: there are no artifacts.");
-			mgmkassert(id < m_artifacts.size(), "Invalid artifact ID");
-			return m_artifacts.at(id);
-		}
-		inline constexpr const struct artifact& artifact(const artifact::id id) const {
-			mgmkassert(not m_artifacts.empty(), "Invalid artifact ID: there are no artifacts.");
-			mgmkassert(id < m_artifacts.size(), "Invalid artifact ID");
-			return m_artifacts.at(id);
-		}
-		inline constexpr struct action& action(const action::id id) {
-			mgmkassert(not m_actions.empty(), "Invalid action ID: there are no actions.");
-			mgmkassert(id < m_actions.size(), "Invalid action ID");
-			return m_actions.at(id);
-		}
-		inline constexpr const struct action& action(const action::id id) const {
-			mgmkassert(not m_actions.empty(), "Invalid action ID: there are no actions.");
-			mgmkassert(id < m_actions.size(), "Invalid action ID");
-			return m_actions.at(id);
-		}
-		inline constexpr struct target& target(const target::id id) {
-			mgmkassert(not m_targets.empty(), "Invalid target ID: there are no targets.");
-			mgmkassert(id < m_targets.size(), "Invalid target ID");
-			return m_targets.at(id);
-		}
-		inline constexpr const struct target& target(const target::id id) const {
-			mgmkassert(not m_targets.empty(), "Invalid target ID: there are no targets.");
-			mgmkassert(id < m_targets.size(), "Invalid target ID");
-			return m_targets.at(id);
-		}
-    };
-}
-
-#endif// ===== end include/mgmake/dag/graph.hxx =====
-
-
-#include <filesystem>
-#include <fstream>
-
-namespace mgmake::backend {
-    namespace detail {
-        inline std::string dot_escape(std::string_view text) {
-            std::string result;
-
-            for (const char ch : text) {
-                switch (ch) {
-                    case '\\':
-                        result += "\\\\";
-                        break;
-
-                    case '"':
-                        result += "\\\"";
-                        break;
-
-                    case '\n':
-                        result += "\\n";
-                        break;
-
-                    case '\r':
-                        break;
-
-                    default:
-                        result += ch;
-                        break;
-                }
-            }
-
-            return result;
-        }
-
-        inline std::string dot_label(const std::filesystem::path& path) {
-            return dot_escape(path.generic_string());
-        }
-
-        inline std::string artifact_shape(dag::artifact::kind kind) {
-            switch (kind) {
-                case dag::artifact::kind::source:
-                    return "box";
-
-                case dag::artifact::kind::generated:
-                    return "component";
-
-                case dag::artifact::kind::phony:
-                    return "note";
-            }
-
-            return "box";
-        }
-
-        inline std::string artifact_kind_name(dag::artifact::kind kind) {
-            switch (kind) {
-                case dag::artifact::kind::source:
-                    return "source";
-
-                case dag::artifact::kind::generated:
-                    return "generated";
-
-                case dag::artifact::kind::phony:
-                    return "phony";
-            }
-
-            return "artifact";
-        }
-    }
-
-    template<bool show_commands = true, bool show_action_ids = true, bool show_artifact_ids = true, bool show_targets = true>
-    struct graphviz {
-        std::filesystem::path m_output_file = "graph.dot";
-
-        void generate(const dag::graph& graph, const build::request& req) const {
-            auto output_path = req.build_dir() / m_output_file;
-            if (output_path.has_parent_path()) {
-                std::filesystem::create_directories(output_path.parent_path());
-            }
-            std::ofstream out(output_path);
-
-            out << "digraph mgmake {\n";
-            out << "    rankdir=LR;\n";
-            out << "    graph [fontname=\"monospace\"];\n";
-            out << "    node [fontname=\"monospace\"];\n";
-            out << "    edge [fontname=\"monospace\"];\n\n";
-
-            for (auto i = 0; i < graph.m_artifacts.size(); ++i) {
-                const auto& artifact = graph.artifact(i);
-
-                std::string label;
-
-                if constexpr (show_artifact_ids) {
-                    label += "artifact ";
-                    label += std::to_string(i);
-                    label += "\\n";
-                }
-
-                label += detail::artifact_kind_name(artifact.m_kind);
-                label += "\\n";
-                label += detail::dot_label(artifact.m_path);
-
-                out << "    artifact_" << i
-                    << " [shape=" << detail::artifact_shape(artifact.m_kind)
-                    << ", label=\"" << label << "\"];\n";
-            }
-
-            out << "\n";
-
-            for (auto i = 0; i < graph.m_actions.size(); ++i) {
-                const auto& action = graph.action(i);
-
-                std::string label;
-
-                if (show_action_ids) {
-                    label += "action ";
-                    label += std::to_string(i);
-                    label += "\\n";
-                }
-
-                if (!action.m_name.empty()) {
-                    label += detail::dot_escape(action.m_name);
-                } else {
-                    label += "unnamed action";
-                }
-
-                if (!action.m_description.empty()) {
-                    label += "\\n";
-                    label += detail::dot_escape(action.m_description);
-                }
-
-                if (show_commands && !action.m_command.m_args.empty()) {
-                    label += "\\n";
-
-                    for (std::size_t arg_i = 0; arg_i < action.m_command.m_args.size(); ++arg_i) {
-                        if (arg_i != 0) {
-                            label += " ";
-                        }
-
-                        label += detail::dot_escape(action.m_command.m_args[arg_i]);
-                    }
-                }
-
-                out << "    action_" << i
-                    << " [shape=ellipse, label=\"" << label << "\"];\n";
-            }
-
-            out << "\n";
-
-            if constexpr (show_targets) {
-                for (auto i = 0; i < graph.m_targets.size(); ++i) {
-                    const auto& target = graph.target(i);
-
-                    std::string label = "target";
-                    label += "\\n";
-                    label += detail::dot_escape(target.m_name);
-
-                    out << "    target_" << i
-                        << " [shape=house, label=\"" << label << "\"];\n";
-                }
-
-                out << "\n";
-            }
-
-            for (auto i = 0; i < graph.m_actions.size(); ++i) {
-                const auto& action = graph.action(i);
-
-                for (const auto input : action.m_inputs) {
-                    out << "    artifact_" << input << " -> action_" << i << ";\n";
-                }
-
-                for (const auto output : action.m_outputs) {
-                    out << "    action_" << i << " -> artifact_" << output << ";\n";
-                }
-            }
-
-            if constexpr (show_targets) {
-                out << "\n";
-
-                for (auto i = 0; i < graph.m_targets.size(); ++i) {
-                    const auto& target = graph.target(i);
-
-                    for (const auto output : target.m_outputs) {
-                        out << "    target_" << i << " -> artifact_" << output << ";\n";
-                    }
-                }
-            }
-
-            out << "}\n";
-        }
-    };
-}
-
-#endif// ===== end include/mgmake/backend/graphviz.hxx =====
-
-
-// ===== begin include/mgmake/backend/ninja.hxx =====
-#pragma once
-
-#ifndef MGMAKE_BACKEND_NINJA_HXX
-#define MGMAKE_BACKEND_NINJA_HXX
-
-// skipped duplicate include: include/mgmake/build/request.hxx
-// skipped duplicate include: include/mgmake/dag/graph.hxx
-// skipped duplicate include: include/mgmake/sys/util.hxx
-
-#include <cstdlib>
-#include <expected>
-#include <filesystem>
-#include <fstream>
-#include <ranges>
-#include <set>
-#include <string>
-#include <string_view>
-
-namespace mgmake::backend {
-    namespace detail {
-        inline std::string ninja_escape_build_text(std::string_view text) {
-            std::string result;
-
-            for (const char ch : text) {
-                switch (ch) {
-                    case '$':
-                        result += "$$";
-                        break;
-
-                    case ' ':
-                        result += "$ ";
-                        break;
-
-                    case ':':
-                        result += "$:";
-                        break;
-
-                    case '|':
-                        result += "$|";
-                        break;
-
-                    case '\n':
-                        result += "$\n";
-                        break;
-
-                    default:
-                        result += ch;
-                        break;
-                }
-            }
-
-            return result;
-        }
-
-        inline std::string ninja_escape_path(const std::filesystem::path& path) {
-            return ninja_escape_build_text(path.generic_string());
-        }
-
-        inline std::string ninja_escape_variable_text(std::string_view text) {
-            std::string result;
-
-            for (const char ch : text) {
-                switch (ch) {
-                    case '$':
-                        result += "$$";
-                        break;
-
-                    case '\n':
-                        result += "$\n";
-                        break;
-
-                    default:
-                        result += ch;
-                        break;
-                }
-            }
-
-            return result;
-        }
-
-        inline void write_artifact_list(std::ofstream& out, const dag::graph& graph, const std::vector<dag::artifact::id>& artifacts) {
-            bool first = true;
-
-            for (const auto id : artifacts) {
-                const auto& artifact = graph.artifact(id);
-
-                if (!first) {
-                    out << ' ';
-                }
-
-                out << ninja_escape_path(artifact.m_path);
-                first = false;
-            }
-        }
-		inline void write_artifact_list(std::ofstream& out, const dag::graph& graph, const std::set<dag::artifact::id>& artifacts) {
-			return write_artifact_list(out, graph, artifacts | std::ranges::to<std::vector<dag::artifact::id>>());
-		}
-
-        inline void create_output_directories(const dag::graph& graph) {
-            for (const auto& action : graph.m_actions) {
-                for (const auto output_id : action.m_outputs) {
-                    const auto& output = graph.artifact(output_id);
-
-                    if (output.m_kind == dag::artifact::kind::phony) {
-                        continue;
-                    }
-
-                    const auto parent = output.m_path.parent_path();
-
-                    if (!parent.empty()) {
-                        std::filesystem::create_directories(parent);
-                    }
-                }
-            }
-        }
-
-        inline void write_target_defaults(std::ofstream& out, const dag::graph& graph) {
-            if (graph.m_targets.empty()) {
-                return;
-            }
-
-            out << "\ndefault";
-
-            for (const auto& target : graph.m_targets) {
-                out << ' ' << ninja_escape_build_text(target.m_name);
-            }
-
-            out << "\n";
-        }
-    }
-
-    struct ninja {
-        std::filesystem::path m_output_file = "build.ninja";
-
-        void generate(const dag::graph& graph, const build::request& req) const {
-            auto output_path = req.build_dir() / m_output_file;
-            if (output_path.has_parent_path()) {
-                std::filesystem::create_directories(output_path.parent_path());
-            }
-            detail::create_output_directories(graph);
-
-            std::ofstream out(output_path);
-			mgmkassert(out.is_open(), "ninja backend: failed to open " + output_path.string());
-
-            out << "# generated by mgmake\n\n";
-
-            out << "builddir = "
-                << detail::ninja_escape_variable_text(req.build_dir().generic_string())
-                << "\n\n";
-
-            bool needs_always = false;
-
-            for (const auto& action : graph.m_actions) {
-                if (action.m_always_run) {
-                    needs_always = true;
-                    break;
-                }
-            }
-
-            if (needs_always) {
-                out << "build __mgmake_always: phony\n\n";
-            }
-
-            for (auto i = 0; i < graph.m_actions.size(); ++i) {
-                const auto& action = graph.action(i);
-
-                mgmkassert(not action.m_outputs.empty(), "ninja backend: action '" + action.m_name + "' has no outputs");
-				mgmkassert(not action.m_command.m_args.empty(), "ninja backend: action '" + action.m_name + "' has no command");
-
-                out << "rule action_" << i << "\n";
-                out << "  command = " << action.m_command.full_command() << "\n";
-
-                if (!action.m_description.empty()) {
-                    out << "  description = " << detail::ninja_escape_variable_text(action.m_description) << "\n";
-                } else if (!action.m_name.empty()) {
-                    out << "  description = " << detail::ninja_escape_variable_text(action.m_name) << "\n";
-                }
-
-                if (!action.m_working_directory.empty()) {
-#if defined(_WIN32) // bruh
-                    out << "  command = cd /d "
-                        << detail::ninja_escape_variable_text(sys::shell_escape(action.m_working_directory.string()))
-                        << " && "
-                        << action.m_command.full_command()
-                        << "\n";
-#else
-                    out << "  command = cd "
-                        << detail::ninja_escape_variable_text(sys::shell_escape(action.m_working_directory.string()))
-                        << " && "
-                        << action.m_command.full_command()
-                        << "\n";
-#endif
-                }
-
-                out << "\n";
-
-                out << "build ";
-                detail::write_artifact_list(out, graph, action.m_outputs);
-                out << ": action_" << i;
-
-                if (!action.m_inputs.empty()) {
-                    out << ' ';
-                    detail::write_artifact_list(out, graph, action.m_inputs);
-                }
-
-                if (action.m_always_run) {
-                    out << " | __mgmake_always";
-                }
-
-                out << "\n\n";
-            }
-
-            for (const auto& target : graph.m_targets) {
-                out << "build " << detail::ninja_escape_build_text(target.m_name) << ": phony ";
-                if (not target.m_outputs.empty()) {
-                    out << ' ';
-                    detail::write_artifact_list(out, graph, target.m_outputs);
-                }
-                for (const auto dep_id : target.m_dependencies) {
-                    const auto& dep = graph.target(dep_id);
-                    out << ' ' << detail::ninja_escape_build_text(dep.m_name);
-                }
-                out << "\n";
-            }
-
-            detail::write_target_defaults(out, graph);
-        }
-
-		std::expected<void, std::string> build(const dag::graph& graph, const build::request& req) const {
-            auto output_path = req.build_dir() / m_output_file;
-            if (output_path.has_parent_path()) {
-                std::filesystem::create_directories(output_path.parent_path());
-            }
-			generate(graph, req);
-
-			sys::command_line command;
-			command.m_args.emplace_back("ninja");
-			command.m_args.emplace_back("-f");
-			command.m_args.emplace_back(output_path.string());
-
-			const auto exit_code = command.invoke();
-
-			if (exit_code != 0) {
-				return std::unexpected(
-					"ninja backend: ninja failed with exit code " + std::to_string(exit_code)
-				);
-			}
-
-			return {};
-		}
-    };
-}
-
-#endif// ===== end include/mgmake/backend/ninja.hxx =====
-
-
-// ===== begin include/mgmake/backend/traits.hxx =====
-#pragma once
-
-#ifndef MGMAKE_BACKEND_TRAITS_HXX
-#define MGMAKE_BACKEND_TRAITS_HXX
-
-// skipped duplicate include: include/mgmake/dag/graph.hxx
-
-namespace mgmake::backend {
-    // Generates graph output (graph.dot, build.ninja)
-    trait generator {
-        void generate(const dag::graph& graph, const build::request& req) const;
-    };
-    // Actually builds the program from the graph (invokes compiler, runs ninja)
-    trait builder {
-        void build(const dag::graph& graph, const build::request& req) const;
-    };
-}
-
-#endif// ===== end include/mgmake/backend/traits.hxx =====
-
-// skipped duplicate include: include/mgmake/build/request.hxx
-// skipped duplicate include: include/mgmake/build/toolchain.hxx
-
-// ===== begin include/mgmake/cli/action.hxx =====
-#pragma once
-
-#ifndef MGMAKE_CLI_ACTION_HXX
-#define MGMAKE_CLI_ACTION_HXX
-
-
-// ===== begin include/mgmake/detail/enum_string.hxx =====
-#pragma once
-
-#ifndef MGMAKE_DETAIL_ENUM_STRING_HXX
-#define MGMAKE_DETAIL_ENUM_STRING_HXX
-
-
 // ===== begin include/mgmake/detail/static_string.hxx =====
 #pragma once
 
@@ -1447,6 +78,14 @@ namespace mgmake::detail {
 #endif
 // ===== end include/mgmake/detail/static_string.hxx =====
 
+
+// ===== begin include/mgmake/detail/enum_string.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DETAIL_ENUM_STRING_HXX
+#define MGMAKE_DETAIL_ENUM_STRING_HXX
+
+// skipped duplicate include: include/mgmake/detail/static_string.hxx
 
 #include <array>
 #include <concepts>
@@ -1750,6 +389,1149 @@ namespace mgmake::detail {
 // ===== end include/mgmake/detail/enum_string.hxx =====
 
 
+// ===== begin include/mgmake/detail/convert.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DETAIL_CONVERT_HXX
+#define MGMAKE_DETAIL_CONVERT_HXX
+
+
+// ===== begin include/mgmake/detail/assert.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DETAIL_ASSERT_HXX
+#define MGMAKE_DETAIL_ASSERT_HXX
+
+#include <cstdio>
+#include <cstdlib>
+#include <source_location>
+#include <string_view>
+
+#if defined(_MSC_VER)
+    #include <intrin.h>
+#endif
+
+namespace mgmake::detail {
+
+inline void debug_break() {
+#if defined(_MSC_VER)
+    __debugbreak();
+#elif defined(__clang__) || defined(__GNUC__)
+    __builtin_trap();
+#else
+    std::abort();
+#endif
+}
+
+[[noreturn]] inline void assertion_failed(
+    std::string_view condition,
+    std::string_view message,
+    std::source_location location = std::source_location::current()
+) {
+    std::fprintf(
+        stderr,
+        "\nmgmake assertion failed\n"
+        "  condition: %.*s\n"
+        "  message:   %.*s\n"
+        "  location:  %s:%u:%u\n"
+        "  function:  %s\n\n",
+        static_cast<int>(condition.size()),
+        condition.data(),
+        static_cast<int>(message.size()),
+        message.data(),
+        location.file_name(),
+        location.line(),
+        location.column(),
+        location.function_name()
+    );
+
+    debug_break();
+
+    // In case the platform/debugger allows execution to continue.
+    std::abort();
+}
+
+inline void mgmk_assert_impl(
+    bool condition,
+    std::string_view condition_text,
+    std::string_view message,
+    std::source_location location = std::source_location::current()
+) {
+    if (!condition) {
+        assertion_failed(condition_text, message, location);
+    }
+}
+
+} // namespace mgmake::detail
+
+#ifndef MGMK_ENABLE_ASSERTS
+    #ifndef NDEBUG
+        #define MGMK_ENABLE_ASSERTS 1
+    #else
+        #define MGMK_ENABLE_ASSERTS 0
+    #endif
+#endif
+
+#if MGMK_ENABLE_ASSERTS
+    #define mgmkassert(condition, message)                                      \
+        do {                                                                    \
+            ::mgmake::detail::mgmk_assert_impl(                                 \
+                static_cast<bool>(condition),                                   \
+                #condition,                                                     \
+                message,                                                        \
+                std::source_location::current()                                 \
+            );                                                                  \
+        } while (false)
+#else
+    #define mgmkassert(condition, message)                                      \
+        do {                                                                    \
+            (void)sizeof(condition);                                            \
+        } while (false)
+#endif
+
+#endif// ===== end include/mgmake/detail/assert.hxx =====
+
+
+// ===== begin include/mgmake/sys/platform.hxx =====
+#pragma once
+
+#ifndef MGMAKE_SYS_PLATFORM_HXX
+#define MGMAKE_SYS_PLATFORM_HXX
+
+// skipped duplicate include: include/mgmake/detail/enum_string.hxx
+
+#include <optional>
+#include <string>
+#include <string_view>
+
+#if defined(_WIN32)
+	#ifndef MGMK_NO_WINDOWS
+		#ifndef NOMINMAX
+			#define NOMINMAX
+		#endif
+
+		#ifndef WIN32_LEAN_AND_MEAN
+			#define WIN32_LEAN_AND_MEAN
+		#endif
+
+		#include <windows.h>
+		#pragma message("Windows is included here. This is probably the source of your pain.")
+		#define MGMK_INCLUDED_WINDOWS
+	#endif
+
+	#define MGMK_PLATFORM_WINDOWS 1
+#elif defined(__EMSCRIPTEN__)
+	#define MGMK_PLATFORM_WASM 1
+	#define MGMK_PLATFORM_POSIX 1
+#elif defined(__APPLE__)
+	#define MGMK_PLATFORM_MACOS 1
+	#define MGMK_PLATFORM_POSIX 1
+#elif defined(__linux__)
+	#define MGMK_PLATFORM_LINUX 1
+	#define MGMK_PLATFORM_POSIX 1
+#elif defined(__unix__)
+	#define MGMK_PLATFORM_OTHER_POSIX 1
+	#define MGMK_PLATFORM_POSIX 1
+#else
+	#define MGMK_PLATFORM_UNSUPPORTED 1
+#endif
+
+namespace mgmake::sys {
+	enum struct arch {
+		unknown,
+
+		x86,
+		x86_64,
+
+		arm,
+		aarch64,
+
+		wasm32,
+		wasm64,
+
+		riscv32,
+		riscv64,
+
+		count
+	};
+
+	enum struct platform {
+		unknown,
+
+		windows,
+		linux,
+		macos,
+		wasm,
+		freestanding,
+		other_posix,
+
+		count
+	};
+
+	enum struct abi {
+		unknown,
+
+		msvc,
+		gnu,
+		musl,
+		android,
+		eabi,
+		none,
+
+		count
+	};
+
+	struct target {
+		arch m_arch = arch::unknown;
+		platform m_platform = platform::unknown;
+		abi m_abi = abi::unknown;
+		std::string m_triple{};
+	};
+
+	static constexpr arch g_host_arch = [] constexpr {
+#if defined(_M_X64) || defined(__x86_64__)
+		return arch::x86_64;
+#elif defined(_M_IX86) || defined(__i386__)
+		return arch::x86;
+#elif defined(_M_ARM64) || defined(__aarch64__)
+		return arch::aarch64;
+#elif defined(_M_ARM) || defined(__arm__)
+		return arch::arm;
+#elif defined(__wasm64__)
+		return arch::wasm64;
+#elif defined(__wasm32__) || defined(__EMSCRIPTEN__)
+		return arch::wasm32;
+#elif defined(__riscv) && (__riscv_xlen == 64)
+		return arch::riscv64;
+#elif defined(__riscv) && (__riscv_xlen == 32)
+		return arch::riscv32;
+#else
+		return arch::unknown;
+#endif
+	}();
+
+	static constexpr platform g_host_platform = [] constexpr {
+#if defined(MGMK_PLATFORM_WINDOWS)
+		return platform::windows;
+#elif defined(MGMK_PLATFORM_WASM)
+		return platform::wasm;
+#elif defined(MGMK_PLATFORM_MACOS)
+		return platform::macos;
+#elif defined(MGMK_PLATFORM_LINUX)
+		return platform::linux;
+#elif defined(MGMK_PLATFORM_OTHER_POSIX)
+		return platform::other_posix;
+#else
+		return platform::unknown;
+#endif
+	}();
+
+	static constexpr abi g_host_abi = [] constexpr {
+#if defined(_MSC_VER)
+		return abi::msvc;
+#elif defined(__ANDROID__)
+		return abi::android;
+#elif defined(__MUSL__)
+		return abi::musl;
+#elif defined(__GNUC__) || defined(__clang__)
+		return abi::gnu;
+#else
+		return abi::unknown;
+#endif
+	}();
+
+	inline const target g_host_target{
+		g_host_arch,
+		g_host_platform,
+		g_host_abi,
+		{}
+	};
+
+	using arch_names = detail::enum_table<
+		arch,
+		detail::enum_entry<arch::unknown, "unknown">,
+		detail::enum_entry<arch::x86, "x86">,
+		detail::enum_entry<arch::x86_64, "x86_64">,
+		detail::enum_entry<arch::arm, "arm">,
+		detail::enum_entry<arch::aarch64, "aarch64">,
+		detail::enum_entry<arch::wasm32, "wasm32">,
+		detail::enum_entry<arch::wasm64, "wasm64">,
+		detail::enum_entry<arch::riscv32, "riscv32">,
+		detail::enum_entry<arch::riscv64, "riscv64">
+	>;
+
+	using platform_names = detail::enum_table<
+		platform,
+		detail::enum_entry<platform::unknown, "unknown">,
+		detail::enum_entry<platform::windows, "windows">,
+		detail::enum_entry<platform::linux, "linux">,
+		detail::enum_entry<platform::macos, "macos">,
+		detail::enum_entry<platform::wasm, "wasm">,
+		detail::enum_entry<platform::freestanding, "freestanding">,
+		detail::enum_entry<platform::other_posix, "other-posix">
+	>;
+
+	using abi_names = detail::enum_table<
+		abi,
+		detail::enum_entry<abi::unknown, "unknown">,
+		detail::enum_entry<abi::msvc, "msvc">,
+		detail::enum_entry<abi::gnu, "gnu">,
+		detail::enum_entry<abi::musl, "musl">,
+		detail::enum_entry<abi::android, "android">,
+		detail::enum_entry<abi::eabi, "eabi">,
+		detail::enum_entry<abi::none, "none">
+	>;
+
+	static_assert(arch_names::is_zero_based_count_canonical(arch::count));
+	static_assert(platform_names::is_zero_based_count_canonical(platform::count));
+	static_assert(abi_names::is_zero_based_count_canonical(abi::count));
+
+	[[nodiscard]] inline constexpr std::string_view name(arch value) noexcept {
+		return arch_names::to_string(value);
+	}
+
+	[[nodiscard]] inline constexpr std::string_view name(platform value) noexcept {
+		return platform_names::to_string(value);
+	}
+
+	[[nodiscard]] inline constexpr std::string_view name(abi value) noexcept {
+		return abi_names::to_string(value);
+	}
+
+	using arch_parse_names = detail::enum_table<
+		arch,
+		detail::enum_entry<g_host_arch, "host">,
+		detail::enum_entry<g_host_arch, "native">,
+		detail::enum_entry<arch::unknown, "unknown">,
+		detail::enum_entry<arch::x86, "x86">,
+		detail::enum_entry<arch::x86, "i386">,
+		detail::enum_entry<arch::x86, "i686">,
+		detail::enum_entry<arch::x86_64, "x86_64">,
+		detail::enum_entry<arch::x86_64, "x64">,
+		detail::enum_entry<arch::x86_64, "amd64">,
+		detail::enum_entry<arch::arm, "arm">,
+		detail::enum_entry<arch::aarch64, "aarch64">,
+		detail::enum_entry<arch::aarch64, "arm64">,
+		detail::enum_entry<arch::wasm32, "wasm32">,
+		detail::enum_entry<arch::wasm64, "wasm64">,
+		detail::enum_entry<arch::riscv32, "riscv32">,
+		detail::enum_entry<arch::riscv64, "riscv64">
+	>;
+
+	using platform_parse_names = detail::enum_table<
+		platform,
+		detail::enum_entry<g_host_platform, "host">,
+		detail::enum_entry<g_host_platform, "native">,
+		detail::enum_entry<platform::unknown, "unknown">,
+		detail::enum_entry<platform::windows, "windows">,
+		detail::enum_entry<platform::windows, "win">,
+		detail::enum_entry<platform::windows, "win32">,
+		detail::enum_entry<platform::windows, "win64">,
+		detail::enum_entry<platform::linux, "linux">,
+		detail::enum_entry<platform::macos, "macos">,
+		detail::enum_entry<platform::macos, "mac">,
+		detail::enum_entry<platform::macos, "darwin">,
+		detail::enum_entry<platform::macos, "osx">,
+		detail::enum_entry<platform::wasm, "wasm">,
+		detail::enum_entry<platform::wasm, "webassembly">,
+		detail::enum_entry<platform::wasm, "emscripten">,
+		detail::enum_entry<platform::freestanding, "freestanding">,
+		detail::enum_entry<platform::freestanding, "none">,
+		detail::enum_entry<platform::other_posix, "posix">,
+		detail::enum_entry<platform::other_posix, "unix">,
+		detail::enum_entry<platform::other_posix, "other-posix">
+	>;
+
+	using abi_parse_names = detail::enum_table<
+		abi,
+		detail::enum_entry<g_host_abi, "host">,
+		detail::enum_entry<g_host_abi, "native">,
+		detail::enum_entry<abi::unknown, "unknown">,
+		detail::enum_entry<abi::msvc, "msvc">,
+		detail::enum_entry<abi::gnu, "gnu">,
+		detail::enum_entry<abi::musl, "musl">,
+		detail::enum_entry<abi::android, "android">,
+		detail::enum_entry<abi::eabi, "eabi">,
+		detail::enum_entry<abi::none, "none">
+	>;
+
+	static_assert(arch_parse_names::is_display_aliases());
+	static_assert(platform_parse_names::is_display_aliases());
+	static_assert(abi_parse_names::is_display_aliases());
+
+	[[nodiscard]] inline constexpr std::optional<arch> arch_from_string(
+		std::string_view text
+	) noexcept {
+		return arch_parse_names::from_string(text);
+	}
+
+	[[nodiscard]] inline constexpr std::optional<platform> platform_from_string(
+		std::string_view text
+	) noexcept {
+		return platform_parse_names::from_string(text);
+	}
+
+	[[nodiscard]] inline constexpr std::optional<abi> abi_from_string(
+		std::string_view text
+	) noexcept {
+		return abi_parse_names::from_string(text);
+	}
+
+	using arch_triple_names = detail::enum_table<
+		arch,
+		detail::enum_entry<arch::unknown, "unknown">,
+		detail::enum_entry<arch::x86, "i686">,
+		detail::enum_entry<arch::x86_64, "x86_64">,
+		detail::enum_entry<arch::arm, "arm">,
+		detail::enum_entry<arch::aarch64, "aarch64">,
+		detail::enum_entry<arch::wasm32, "wasm32">,
+		detail::enum_entry<arch::wasm64, "wasm64">,
+		detail::enum_entry<arch::riscv32, "riscv32">,
+		detail::enum_entry<arch::riscv64, "riscv64">
+	>;
+
+	using platform_triple_names = detail::enum_table<
+		platform,
+		detail::enum_entry<platform::unknown, "unknown">,
+		detail::enum_entry<platform::windows, "windows">,
+		detail::enum_entry<platform::linux, "linux">,
+		detail::enum_entry<platform::macos, "darwin">,
+		detail::enum_entry<platform::wasm, "unknown">,
+		detail::enum_entry<platform::freestanding, "none">,
+		detail::enum_entry<platform::other_posix, "unknown">
+	>;
+
+	using abi_triple_names = detail::enum_table<
+		abi,
+		detail::enum_entry<abi::unknown, "">,
+		detail::enum_entry<abi::msvc, "msvc">,
+		detail::enum_entry<abi::gnu, "gnu">,
+		detail::enum_entry<abi::musl, "musl">,
+		detail::enum_entry<abi::android, "android">,
+		detail::enum_entry<abi::eabi, "eabi">,
+		detail::enum_entry<abi::none, "">
+	>;
+
+	static_assert(arch_triple_names::covers_zero_based_count(arch::count));
+	static_assert(platform_triple_names::covers_zero_based_count(platform::count));
+	static_assert(abi_triple_names::covers_zero_based_count(abi::count));
+
+	[[nodiscard]] inline constexpr std::string_view triple_name(arch value) noexcept {
+		return arch_triple_names::to_string(value);
+	}
+
+	[[nodiscard]] inline constexpr std::string_view triple_name(platform value) noexcept {
+		return platform_triple_names::to_string(value);
+	}
+
+	[[nodiscard]] inline constexpr std::string_view triple_name(abi value) noexcept {
+		return abi_triple_names::to_string(value, "");
+	}
+
+	[[nodiscard]] inline std::string triple(const target& value) {
+		if (!value.m_triple.empty()) {
+			return value.m_triple;
+		}
+
+		std::string result{ triple_name(value.m_arch) };
+		result += "-unknown-";
+		result += triple_name(value.m_platform);
+
+		const auto abi_name = triple_name(value.m_abi);
+
+		if (!abi_name.empty()) {
+			result += "-";
+			result += abi_name;
+		}
+
+		return result;
+	}
+}
+
+#endif
+// ===== end include/mgmake/sys/platform.hxx =====
+
+
+#include <limits>
+#include <string>
+#include <string_view>
+
+namespace mgmake::detail {
+#ifdef MGMK_INCLUDED_WINDOWS
+	inline constexpr std::string wide_to_utf8(std::wstring_view text) {
+		if (text.empty()) {
+			return {};
+		}
+
+		mgmkassert(text.size() < static_cast<std::size_t>(std::numeric_limits<int>::max()), "Wide string is too large to convert to UTF-8");
+
+		int wide_size = static_cast<int>(text.size());
+
+		int utf8_size = WideCharToMultiByte(
+			CP_UTF8,
+			WC_ERR_INVALID_CHARS,
+			text.data(),
+			wide_size,
+			nullptr,
+			0,
+			nullptr,
+			nullptr
+		);
+
+		mgmkassert(utf8_size > 0, "Failed to calculate UTF-8 argument size");
+
+		std::string result;
+		result.resize(static_cast<std::size_t>(utf8_size));
+
+		int written = WideCharToMultiByte(
+			CP_UTF8,
+			WC_ERR_INVALID_CHARS,
+			text.data(),
+			wide_size,
+			result.data(),
+			utf8_size,
+			nullptr,
+			nullptr
+		);
+
+		mgmkassert(written > 0, "Failed to convert command line argument to UTF-8");
+
+		return result;
+	}
+#endif
+}
+
+#endif
+// ===== end include/mgmake/detail/convert.hxx =====
+
+// skipped duplicate include: include/mgmake/detail/assert.hxx
+// skipped duplicate include: include/mgmake/sys/platform.hxx
+
+// ===== begin include/mgmake/sys/command_line.hxx =====
+#pragma once
+
+#ifndef MGMAKE_SYS_COMMAND_LINE_HXX
+#define MGMAKE_SYS_COMMAND_LINE_HXX
+
+// skipped duplicate include: include/mgmake/detail/convert.hxx
+
+// ===== begin include/mgmake/sys/util.hxx =====
+#pragma once
+
+#ifndef MGMAKE_SYS_UTIL_HXX
+#define MGMAKE_SYS_UTIL_HXX
+
+// skipped duplicate include: include/mgmake/sys/platform.hxx
+
+#include <string>
+#include <string_view>
+
+namespace mgmake::sys {
+#ifdef MGMK_PLATFORM_WINDOWS
+	inline constexpr std::string shell_escape(std::string_view arg) {
+		if (arg.empty()) {
+			return "\"\"";
+		}
+
+		bool needs_quotes = false;
+
+		for (const char ch : arg) {
+			if (ch == ' ' || ch == '\t' || ch == '"' || ch == '\\') {
+				needs_quotes = true;
+				break;
+			}
+		}
+
+		if (!needs_quotes) {
+			return std::string(arg);
+		}
+
+		std::string result;
+		result += '"';
+
+		std::size_t backslashes = 0;
+
+		for (const char ch : arg) {
+			if (ch == '\\') {
+				++backslashes;
+				continue;
+			}
+
+			if (ch == '"') {
+				result.append(backslashes * 2 + 1, '\\');
+				result += '"';
+				backslashes = 0;
+				continue;
+			}
+
+			if (backslashes != 0) {
+				result.append(backslashes, '\\');
+				backslashes = 0;
+			}
+
+			result += ch;
+		}
+
+		if (backslashes != 0) {
+			result.append(backslashes * 2, '\\');
+		}
+
+		result += '"';
+		return result;
+	}
+#else
+	inline constexpr std::string shell_escape(std::string_view arg) {
+		if (arg.empty()) {
+			return "''";
+		}
+
+		bool needs_quotes = false;
+
+		for (const char ch : arg) {
+			if (ch == ' ' || ch == '\t' || ch == '\'' || ch == '"' || ch == '$' || ch == '\\' || ch == '&' || ch == ';' || ch == '(' || ch == ')' || ch == '<' || ch == '>' || ch == '|') {
+				needs_quotes = true;
+				break;
+			}
+		}
+
+		if (!needs_quotes) {
+			return std::string(arg);
+		}
+
+		std::string result;
+		result += '\'';
+
+		for (const char ch : arg) {
+			if (ch == '\'') {
+				result += "'\\''";
+			} else {
+				result += ch;
+			}
+		}
+
+		result += '\'';
+		return result;
+	}
+#endif
+}
+
+#endif// ===== end include/mgmake/sys/util.hxx =====
+
+
+#include <cstdlib>
+#include <span>
+#include <string_view>
+#include <vector>
+
+namespace mgmake::sys {
+	struct command_line {
+		std::vector<std::string> m_args;
+
+		inline constexpr std::string_view program_name() const {
+			return m_args.empty() ? std::string_view{} : std::string_view(m_args[0]);
+		}
+
+		inline constexpr std::span<const std::string> user_args() const {
+			if (m_args.size() <= 1) {
+				return {};
+			}
+
+			return std::span<const std::string>(m_args).subspan(1);
+		}
+
+		inline constexpr std::string full_command() const {
+			std::string result;
+
+            for (std::size_t i = 0; i < m_args.size(); ++i) {
+                if (i != 0) {
+                    result += ' ';
+                }
+
+                result += sys::shell_escape(m_args[i]);
+            }
+
+            return result;
+		}
+
+		auto invoke() const {
+			return std::system(full_command().c_str());
+		}
+	};
+
+	inline constexpr command_line args_from_utf8(int argc, const char** argv) {
+		command_line result;
+
+		for (int i = 0; i < argc; ++i) {
+			result.m_args.emplace_back(argv[i] ? argv[i] : "");
+		}
+
+		return result;
+	}
+
+#ifdef MGMK_INCLUDED_WINDOWS
+	inline constexpr command_line args_from_wide(int argc, const wchar_t** argv) {
+		command_line result;
+		if (argc <= 0 || argv == nullptr) {
+			return result;
+		}
+		result.m_args.reserve(static_cast<std::size_t>(argc));
+		for (int i = 0; i < argc; ++i) {
+			if (argv[i] == nullptr) {
+				result.m_args.emplace_back();
+				continue;
+			}
+			result.m_args.emplace_back(detail::wide_to_utf8(argv[i]));
+		}
+		return result;
+	}
+#endif
+}
+
+#endif// ===== end include/mgmake/sys/command_line.hxx =====
+
+// skipped duplicate include: include/mgmake/sys/util.hxx
+
+// ===== begin include/mgmake/build/toolchain.hxx =====
+#pragma once
+
+#ifndef MGMAKE_BUILD_TOOLCHAIN_HXX
+#define MGMAKE_BUILD_TOOLCHAIN_HXX
+
+// skipped duplicate include: include/mgmake/sys/platform.hxx
+
+#include <initializer_list>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <vector>
+
+namespace mgmake::build {
+    struct toolchain {
+        // Determines how MGMake should pass args to the compiler driver(s)
+        enum struct dialect {
+            gcc, // GCC-like command arguments (typically with a '-' dash)
+            msvc // Windows-like arguments (typically with a '/' slash)
+        };
+
+        std::string m_name; // The name of the toolchain
+        dialect m_dialect = []{
+#ifdef MGMK_PLATFORM_WINDOWS
+            return dialect::msvc;
+#else
+            return dialect::gcc;
+#endif
+        }();
+
+        std::string m_cc;
+        std::string m_cxx;
+        std::string m_ar;
+        std::string m_linker;
+
+        std::vector<std::string> m_compile_flags;
+        std::vector<std::string> m_c_flags;
+        std::vector<std::string> m_cxx_flags;
+        std::vector<std::string> m_archive_flags;
+        std::vector<std::string> m_link_flags;
+
+        std::optional<std::string> m_arch_triple;
+        std::optional<std::string> m_sysroot;
+
+       [[nodiscard]] inline constexpr std::string_view name() const {
+            return m_name;
+        }
+        inline constexpr auto& name(std::string_view str) {
+            m_name = str;
+            return *this;
+        }
+
+        [[nodiscard]] inline constexpr enum dialect dialect() const noexcept {
+            return m_dialect;
+        }
+        inline constexpr auto& dialect(enum dialect value) noexcept {
+            m_dialect = value;
+            return *this;
+        }
+
+        // cc
+        [[nodiscard]] inline constexpr const std::string& cc() const noexcept {
+            return m_cc;
+        }
+        inline constexpr auto& cc(std::string path) {
+            m_cc = std::move(path);
+            return *this;
+        }
+
+        // cxx
+        [[nodiscard]] inline constexpr const std::string& cxx() const noexcept {
+            return m_cxx;
+        }
+        inline constexpr auto& cxx(std::string path) {
+            m_cxx = std::move(path);
+            return *this;
+        }
+
+        // ar
+        [[nodiscard]] inline constexpr const std::string& ar() const noexcept {
+            return m_ar;
+        }
+        inline constexpr auto& ar(std::string path) {
+            m_ar = std::move(path);
+            return *this;
+        }
+
+        // linker
+        [[nodiscard]] inline constexpr const std::string& linker() const noexcept {
+            return m_linker;
+        }
+        inline constexpr auto& linker(std::string path) {
+            m_linker = std::move(path);
+            return *this;
+        }
+
+        // compile_flags
+        [[nodiscard]] inline constexpr const std::vector<std::string>& compile_flags() const noexcept {
+            return m_compile_flags;
+        }
+        inline constexpr auto& compile_flags(std::vector<std::string> flags) {
+            m_compile_flags = std::move(flags);
+            return *this;
+        }
+        inline constexpr auto& compile_flags(std::initializer_list<std::string_view> flags) {
+            m_compile_flags.clear();
+
+            for (std::string_view flag : flags) {
+                m_compile_flags.emplace_back(flag);
+            }
+
+            return *this;
+        }
+        inline constexpr auto& add_compile_flag(std::string_view flag) {
+            m_compile_flags.emplace_back(flag);
+            return *this;
+        }
+        inline constexpr auto& clear_compile_flags() noexcept {
+            m_compile_flags.clear();
+            return *this;
+        }
+
+        // c_flags
+        [[nodiscard]] inline constexpr const std::vector<std::string>& c_flags() const noexcept {
+            return m_c_flags;
+        }
+        inline constexpr auto& c_flags(std::vector<std::string> flags) {
+            m_c_flags = std::move(flags);
+            return *this;
+        }
+        inline constexpr auto& c_flags(std::initializer_list<std::string_view> flags) {
+            m_c_flags.clear();
+
+            for (std::string_view flag : flags) {
+                m_c_flags.emplace_back(flag);
+            }
+
+            return *this;
+        }
+        inline constexpr auto& add_c_flag(std::string_view flag) {
+            m_c_flags.emplace_back(flag);
+            return *this;
+        }
+        inline constexpr auto& clear_c_flags() noexcept {
+            m_c_flags.clear();
+            return *this;
+        }
+
+        // cxx_flags
+        [[nodiscard]] inline constexpr const std::vector<std::string>& cxx_flags() const noexcept {
+            return m_cxx_flags;
+        }
+        inline constexpr auto& cxx_flags(std::vector<std::string> flags) {
+            m_cxx_flags = std::move(flags);
+            return *this;
+        }
+        inline constexpr auto& cxx_flags(std::initializer_list<std::string_view> flags) {
+            m_cxx_flags.clear();
+
+            for (std::string_view flag : flags) {
+                m_cxx_flags.emplace_back(flag);
+            }
+
+            return *this;
+        }
+        inline constexpr auto& add_cxx_flag(std::string_view flag) {
+            m_cxx_flags.emplace_back(flag);
+            return *this;
+        }
+        inline constexpr auto& clear_cxx_flags() noexcept {
+            m_cxx_flags.clear();
+            return *this;
+        }
+
+        // archive_flags
+        [[nodiscard]] inline constexpr const std::vector<std::string>& archive_flags() const noexcept {
+            return m_archive_flags;
+        }
+        inline constexpr auto& archive_flags(std::vector<std::string> flags) {
+            m_archive_flags = std::move(flags);
+            return *this;
+        }
+        inline constexpr auto& archive_flags(std::initializer_list<std::string_view> flags) {
+            m_archive_flags.clear();
+
+            for (std::string_view flag : flags) {
+                m_archive_flags.emplace_back(flag);
+            }
+
+            return *this;
+        }
+        inline constexpr auto& add_archive_flag(std::string_view flag) {
+            m_archive_flags.emplace_back(flag);
+            return *this;
+        }
+        inline constexpr auto& clear_archive_flags() noexcept {
+            m_archive_flags.clear();
+            return *this;
+        }
+
+        // link_flags
+        [[nodiscard]] inline constexpr const std::vector<std::string>& link_flags() const noexcept {
+            return m_link_flags;
+        }
+        inline constexpr auto& link_flags(std::vector<std::string> flags) {
+            m_link_flags = std::move(flags);
+            return *this;
+        }
+        inline constexpr auto& link_flags(std::initializer_list<std::string_view> flags) {
+            m_link_flags.clear();
+
+            for (std::string_view flag : flags) {
+                m_link_flags.emplace_back(flag);
+            }
+
+            return *this;
+        }
+        inline constexpr auto& add_link_flag(std::string_view flag) {
+            m_link_flags.emplace_back(flag);
+            return *this;
+        }
+        inline constexpr auto& clear_link_flags() noexcept {
+            m_link_flags.clear();
+            return *this;
+        }
+
+        // arch_triple
+        [[nodiscard]] inline constexpr const std::optional<std::string>& arch_triple() const noexcept {
+            return m_arch_triple;
+        }
+        inline constexpr auto& arch_triple(std::string_view triple) {
+            m_arch_triple = std::string { triple };
+            return *this;
+        }
+        inline constexpr auto& arch_triple(std::optional<std::string> triple) {
+            m_arch_triple = std::move(triple);
+            return *this;
+        }
+        inline constexpr auto& clear_arch_triple() noexcept {
+            m_arch_triple.reset();
+            return *this;
+        }
+
+        // sysroot
+        [[nodiscard]] inline constexpr const std::optional<std::string>& sysroot() const noexcept {
+            return m_sysroot;
+        }
+        inline constexpr auto& sysroot(std::string path) {
+            m_sysroot = std::move(path);
+            return *this;
+        }
+        inline constexpr auto& sysroot(std::optional<std::string> path) {
+            m_sysroot = std::move(path);
+            return *this;
+        }
+        inline constexpr auto& clear_sysroot() noexcept {
+            m_sysroot.reset();
+            return *this;
+        }
+    };
+
+    static constexpr auto tc_clang_mg = build::toolchain{"clang-mg"}
+        .dialect(build::toolchain::dialect::gcc)
+        .cc("clang-mg")
+        .cxx("clang-mg++")
+        .ar("llvm-ar")
+        .linker("clang-mg++");
+
+    static constexpr auto tc_clang = build::toolchain{"clang"}
+        .dialect(build::toolchain::dialect::gcc)
+        .cc("clang")
+        .cxx("clang++")
+        .ar("llvm-ar")
+        .linker("clang++");
+
+    static constexpr auto tc_gcc = build::toolchain{"gcc"}
+        .dialect(build::toolchain::dialect::gcc)
+        .cc("gcc")
+        .cxx("g++")
+        .ar("ar")
+        .linker("g++");
+    
+    static constexpr auto tc_msvc = build::toolchain{"msvc"}
+        .dialect(build::toolchain::dialect::msvc)
+        .cc("cl")
+        .cxx("cl")
+        .ar("lib")
+        .linker("link");
+}
+
+#endif
+// ===== end include/mgmake/build/toolchain.hxx =====
+
+
+// ===== begin include/mgmake/build/request.hxx =====
+#pragma once
+
+#ifndef MGMAKE_BUILD_REQUEST_HXX
+#define MGMAKE_BUILD_REQUEST_HXX
+
+// skipped duplicate include: include/mgmake/build/toolchain.hxx
+// skipped duplicate include: include/mgmake/sys/platform.hxx
+
+#include <filesystem>
+#include <string>
+#include <utility>
+#include <vector>
+
+namespace mgmake::build {
+    struct request {
+        toolchain m_tc;
+        std::filesystem::path m_build_dir;
+        std::vector<std::string> m_targets; // Which targets to build, empty = build all
+        sys::target m_target = sys::g_host_target;
+
+        [[nodiscard]] inline constexpr const toolchain& toolchain() const {
+            return m_tc;
+        }
+        inline constexpr auto& toolchain(struct toolchain& tc) {
+            m_tc = tc;
+            return *this;
+        }
+
+        [[nodiscard]] inline constexpr const std::filesystem::path& build_dir() const {
+            return m_build_dir;
+        }
+        inline constexpr auto& build_dir(const std::filesystem::path dir) {
+            m_build_dir = dir;
+            return *this;
+        }
+
+        [[nodiscard]] inline const sys::target& target() const noexcept {
+            return m_target;
+        }
+
+        inline auto& target(sys::target value) {
+            m_target = std::move(value);
+            return *this;
+        }
+
+        [[nodiscard]] inline constexpr sys::platform target_platform() const noexcept {
+            return m_target.m_platform;
+        }
+
+        inline constexpr auto& target_platform(sys::platform value) noexcept {
+            m_target.m_platform = value;
+            return *this;
+        }
+    };
+}
+
+#endif
+// ===== end include/mgmake/build/request.hxx =====
+
+
+// ===== begin include/mgmake/build/artifact_names.hxx =====
+#pragma once
+
+#ifndef MGMAKE_BUILD_ARTIFACT_NAMES_HXX
+#define MGMAKE_BUILD_ARTIFACT_NAMES_HXX
+
+// skipped duplicate include: include/mgmake/detail/enum_string.hxx
+// skipped duplicate include: include/mgmake/sys/platform.hxx
+
+#include <string_view>
+
+namespace mgmake::build {
+	using executable_extensions = detail::enum_table<
+		sys::platform,
+		detail::enum_entry<sys::platform::windows, ".exe">,
+		detail::enum_entry<sys::platform::wasm, ".wasm">
+	>;
+
+	static_assert(executable_extensions::has_no_empty_names());
+	static_assert(executable_extensions::has_no_duplicate_values());
+
+	[[nodiscard]] inline constexpr std::string_view executable_extension(
+		sys::platform platform
+	) noexcept {
+		return executable_extensions::to_string(platform, "");
+	}
+
+	using shared_library_extensions = detail::enum_table<
+		sys::platform,
+		detail::enum_entry<sys::platform::windows, ".dll">,
+		detail::enum_entry<sys::platform::linux, ".so">,
+		detail::enum_entry<sys::platform::macos, ".dylib">,
+		detail::enum_entry<sys::platform::wasm, ".wasm">,
+		detail::enum_entry<sys::platform::other_posix, ".so">
+	>;
+
+	static_assert(shared_library_extensions::has_no_empty_names());
+	static_assert(shared_library_extensions::has_no_duplicate_values());
+
+	[[nodiscard]] inline constexpr std::string_view shared_library_extension(
+		sys::platform platform
+	) noexcept {
+		return shared_library_extensions::to_string(platform, "");
+	}
+
+	using shared_library_link_flags = detail::enum_table<
+		sys::platform,
+		detail::enum_entry<sys::platform::windows, "-shared">,
+		detail::enum_entry<sys::platform::linux, "-shared">,
+		detail::enum_entry<sys::platform::macos, "-dynamiclib">,
+		detail::enum_entry<sys::platform::other_posix, "-shared">
+	>;
+
+	static_assert(shared_library_link_flags::has_no_empty_names());
+	static_assert(shared_library_link_flags::has_no_duplicate_values());
+
+	[[nodiscard]] inline constexpr std::string_view shared_library_link_flag(
+		sys::platform platform
+	) noexcept {
+		return shared_library_link_flags::to_string(platform, "");
+	}
+
+	[[nodiscard]] inline constexpr std::string_view shared_library_prefix(
+		sys::platform platform
+	) noexcept {
+		return (
+			platform == sys::platform::linux
+			|| platform == sys::platform::macos
+			|| platform == sys::platform::other_posix
+		) ? "lib" : "";
+	}
+}
+
+#endif
+// ===== end include/mgmake/build/artifact_names.hxx =====
+
+
+// ===== begin include/mgmake/cli/action.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CLI_ACTION_HXX
+#define MGMAKE_CLI_ACTION_HXX
+
+// skipped duplicate include: include/mgmake/detail/enum_string.hxx
+
 #include <optional>
 #include <string_view>
 #include <utility>
@@ -1961,6 +1743,7 @@ namespace mgmake::cli {
 
 // skipped duplicate include: include/mgmake/cli/action.hxx
 // skipped duplicate include: include/mgmake/cli/backend.hxx
+// skipped duplicate include: include/mgmake/sys/platform.hxx
 
 #include <string>
 #include <vector>
@@ -1977,14 +1760,29 @@ namespace mgmake::cli {
 
 		int m_jobs = 0;
 
+		sys::arch m_target_arch = sys::g_host_arch;
+		sys::platform m_target_platform = sys::g_host_platform;
+		sys::abi m_target_abi = sys::g_host_abi;
+		std::string m_target_triple{};
+
 		bool m_verbose = false;
 		bool m_dry_run = false;
 		bool m_show_help = false;
 		bool m_show_version = false;
+
+		[[nodiscard]] inline sys::target target() const {
+			return sys::target{
+				m_target_arch,
+				m_target_platform,
+				m_target_abi,
+				m_target_triple
+			};
+		}
 	};
 }
 
-#endif// ===== end include/mgmake/cli/options.hxx =====
+#endif
+// ===== end include/mgmake/cli/options.hxx =====
 
 
 // ===== begin include/mgmake/cli/parse_result.hxx =====
@@ -2165,6 +1963,7 @@ namespace mgmake::cli {
 // skipped duplicate include: include/mgmake/cli/action.hxx
 // skipped duplicate include: include/mgmake/cli/backend.hxx
 // skipped duplicate include: include/mgmake/cli/value_parser.hxx
+// skipped duplicate include: include/mgmake/sys/platform.hxx
 
 #include <format>
 #include <string>
@@ -2230,6 +2029,45 @@ namespace mgmake::cli {
 				"unknown action '{}'; expected one of: {}",
 				text,
 				action_kind_names::choices_string()
+			);
+		}
+	};
+
+	template <>
+	struct value_parser<sys::platform> :
+		enum_value_parser<sys::platform_parse_names, sys::platform_names>
+	{
+		[[nodiscard]] static std::string error(std::string_view text) {
+			return std::format(
+				"unknown platform '{}'; expected one of: {}",
+				text,
+				sys::platform_names::choices_string()
+			);
+		}
+	};
+
+	template <>
+	struct value_parser<sys::arch> :
+		enum_value_parser<sys::arch_parse_names, sys::arch_names>
+	{
+		[[nodiscard]] static std::string error(std::string_view text) {
+			return std::format(
+				"unknown architecture '{}'; expected one of: {}",
+				text,
+				sys::arch_names::choices_string()
+			);
+		}
+	};
+
+	template <>
+	struct value_parser<sys::abi> :
+		enum_value_parser<sys::abi_parse_names, sys::abi_names>
+	{
+		[[nodiscard]] static std::string error(std::string_view text) {
+			return std::format(
+				"unknown ABI '{}'; expected one of: {}",
+				text,
+				sys::abi_names::choices_string()
 			);
 		}
 	};
@@ -3008,6 +2846,26 @@ namespace mgmake::cli {
 			::value_name<"name">
 			::description<"Build a specific target. May be passed multiple times.">;
 
+	using platform_option =
+		value_option<&options::m_target_platform, "platform">
+			::value_name<"platform">
+			::description<"Set the target platform used for output naming.">;
+
+	using arch_option =
+		value_option<&options::m_target_arch, "arch">
+			::value_name<"arch">
+			::description<"Set the target architecture.">;
+
+	using abi_option =
+		value_option<&options::m_target_abi, "abi">
+			::value_name<"abi">
+			::description<"Set the target ABI.">;
+
+	using target_triple_option =
+		value_option<&options::m_target_triple, "target-triple">
+			::value_name<"triple">
+			::description<"Set an explicit compiler target triple.">;
+
 	using default_parser = option_parser<
 		help_option,
 		version_option,
@@ -3016,7 +2874,11 @@ namespace mgmake::cli {
 		backend_option,
 		build_dir_option,
 		jobs_option,
-		target_option
+		target_option,
+		platform_option,
+		arch_option,
+		abi_option,
+		target_triple_option
 	>;
 
 	[[nodiscard]] inline parse_result parse(std::span<const std::string> args) {
@@ -3036,13 +2898,874 @@ namespace mgmake::cli {
 // ===== end include/mgmake/cli/parse.hxx =====
 
 // skipped duplicate include: include/mgmake/cli/util.hxx
+
+// ===== begin include/mgmake/dag/action.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DAG_ACTION_HXX
+#define MGMAKE_DAG_ACTION_HXX
+
+
+// ===== begin include/mgmake/dag/artifact.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DAG_ARTIFACT_HXX
+#define MGMAKE_DAG_ARTIFACT_HXX
+
+#include <filesystem>
+#include <vector>
+
+namespace mgmake::dag {
+    struct artifact {
+        using id = std::vector<artifact>::size_type;
+
+        enum struct kind {
+            source, // A source code (.cxx, .c, etc)
+            generated, // Generated by another program
+            phony // Fake placeholder
+        } m_kind = kind::source;
+        std::filesystem::path m_path;
+    };
+}
+
+#endif// ===== end include/mgmake/dag/artifact.hxx =====
+
+
+// skipped duplicate include: include/mgmake/sys/command_line.hxx
+
+#include <filesystem>
+#include <string>
+#include <vector>
+
+namespace mgmake::dag {
+    struct action {
+        using id = std::vector<action>::size_type;
+
+        std::string m_name;
+        std::string m_description;
+
+        std::vector<artifact::id> m_inputs;
+        std::vector<artifact::id> m_outputs;
+
+        bool m_always_run = false; // always_fun = false :(
+
+        sys::command_line m_command;
+        std::filesystem::path m_working_directory;
+    };
+}
+
+#endif// ===== end include/mgmake/dag/action.hxx =====
+
+// skipped duplicate include: include/mgmake/dag/artifact.hxx
+
+// ===== begin include/mgmake/dag/graph.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DAG_GRAPH_HXX
+#define MGMAKE_DAG_GRAPH_HXX
+
+// skipped duplicate include: include/mgmake/detail/assert.hxx
 // skipped duplicate include: include/mgmake/dag/action.hxx
 // skipped duplicate include: include/mgmake/dag/artifact.hxx
-// skipped duplicate include: include/mgmake/dag/graph.hxx
+
+// ===== begin include/mgmake/dag/target.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DAG_TARGET_HXX
+#define MGMAKE_DAG_TARGET_HXX
+
+// skipped duplicate include: include/mgmake/dag/artifact.hxx
+
+#include <set>
+#include <string>
+#include <vector>
+
+namespace mgmake::dag {
+    struct target {
+        using id = std::vector<target>::size_type;
+
+        std::string m_name;
+
+        // Empty is valid for interface/no-op/metadata targets
+        std::set<artifact::id> m_outputs;
+
+        // Other DAG targets this target conceptually depends on.
+        // For now this mostly exists so graphviz/ninja can show target-level deps.
+        std::set<target::id> m_dependencies;
+
+		void add_dependency(const target::id dep) {
+			m_dependencies.emplace(dep);
+		}
+    };
+}
+
+#endif// ===== end include/mgmake/dag/target.hxx =====
+
+
+#include <utility>
+#include <vector>
+
+namespace mgmake::dag {
+    struct graph {
+        std::vector<artifact> m_artifacts;
+        std::vector<action> m_actions;
+        std::vector<target> m_targets;
+
+        inline constexpr artifact::id create_artifact(auto&&... args) {
+            m_artifacts.emplace_back(std::forward<decltype(args)>(args)...);
+            return { m_artifacts.size() - 1 };
+        }
+        inline constexpr action::id create_action(auto&&... args) {
+            m_actions.emplace_back(std::forward<decltype(args)>(args)...);
+            return { m_actions.size() - 1 };
+        }
+        inline constexpr target::id create_target(auto&&... args) {
+            m_targets.emplace_back(std::forward<decltype(args)>(args)...);
+            return { m_targets.size() - 1 };
+        }
+
+		inline constexpr struct artifact& artifact(const artifact::id id) {
+			mgmkassert(not m_artifacts.empty(), "Invalid artifact ID: there are no artifacts.");
+			mgmkassert(id < m_artifacts.size(), "Invalid artifact ID");
+			return m_artifacts.at(id);
+		}
+		inline constexpr const struct artifact& artifact(const artifact::id id) const {
+			mgmkassert(not m_artifacts.empty(), "Invalid artifact ID: there are no artifacts.");
+			mgmkassert(id < m_artifacts.size(), "Invalid artifact ID");
+			return m_artifacts.at(id);
+		}
+		inline constexpr struct action& action(const action::id id) {
+			mgmkassert(not m_actions.empty(), "Invalid action ID: there are no actions.");
+			mgmkassert(id < m_actions.size(), "Invalid action ID");
+			return m_actions.at(id);
+		}
+		inline constexpr const struct action& action(const action::id id) const {
+			mgmkassert(not m_actions.empty(), "Invalid action ID: there are no actions.");
+			mgmkassert(id < m_actions.size(), "Invalid action ID");
+			return m_actions.at(id);
+		}
+		inline constexpr struct target& target(const target::id id) {
+			mgmkassert(not m_targets.empty(), "Invalid target ID: there are no targets.");
+			mgmkassert(id < m_targets.size(), "Invalid target ID");
+			return m_targets.at(id);
+		}
+		inline constexpr const struct target& target(const target::id id) const {
+			mgmkassert(not m_targets.empty(), "Invalid target ID: there are no targets.");
+			mgmkassert(id < m_targets.size(), "Invalid target ID");
+			return m_targets.at(id);
+		}
+    };
+}
+
+#endif// ===== end include/mgmake/dag/graph.hxx =====
+
 // skipped duplicate include: include/mgmake/dag/target.hxx
-// skipped duplicate include: include/mgmake/detail/convert.hxx
-// skipped duplicate include: include/mgmake/detail/enum_string.hxx
-// skipped duplicate include: include/mgmake/detail/static_string.hxx
+
+// ===== begin include/mgmake/backend/traits.hxx =====
+#pragma once
+
+#ifndef MGMAKE_BACKEND_TRAITS_HXX
+#define MGMAKE_BACKEND_TRAITS_HXX
+
+// skipped duplicate include: include/mgmake/dag/graph.hxx
+
+namespace mgmake::backend {
+    // Generates graph output (graph.dot, build.ninja)
+    trait generator {
+        void generate(const dag::graph& graph, const build::request& req) const;
+    };
+    // Actually builds the program from the graph (invokes compiler, runs ninja)
+    trait builder {
+        void build(const dag::graph& graph, const build::request& req) const;
+    };
+}
+
+#endif// ===== end include/mgmake/backend/traits.hxx =====
+
+
+// ===== begin include/mgmake/backend/graphviz.hxx =====
+#pragma once
+
+#ifndef MGMAKE_BACKEND_GRAPHVIZ_HXX
+#define MGMAKE_BACKEND_GRAPHVIZ_HXX
+
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/dag/artifact.hxx
+// skipped duplicate include: include/mgmake/dag/graph.hxx
+
+#include <filesystem>
+#include <fstream>
+
+namespace mgmake::backend {
+    namespace detail {
+        inline std::string dot_escape(std::string_view text) {
+            std::string result;
+
+            for (const char ch : text) {
+                switch (ch) {
+                    case '\\':
+                        result += "\\\\";
+                        break;
+
+                    case '"':
+                        result += "\\\"";
+                        break;
+
+                    case '\n':
+                        result += "\\n";
+                        break;
+
+                    case '\r':
+                        break;
+
+                    default:
+                        result += ch;
+                        break;
+                }
+            }
+
+            return result;
+        }
+
+        inline std::string dot_label(const std::filesystem::path& path) {
+            return dot_escape(path.generic_string());
+        }
+
+        inline std::string artifact_shape(dag::artifact::kind kind) {
+            switch (kind) {
+                case dag::artifact::kind::source:
+                    return "box";
+
+                case dag::artifact::kind::generated:
+                    return "component";
+
+                case dag::artifact::kind::phony:
+                    return "note";
+            }
+
+            return "box";
+        }
+
+        inline std::string artifact_kind_name(dag::artifact::kind kind) {
+            switch (kind) {
+                case dag::artifact::kind::source:
+                    return "source";
+
+                case dag::artifact::kind::generated:
+                    return "generated";
+
+                case dag::artifact::kind::phony:
+                    return "phony";
+            }
+
+            return "artifact";
+        }
+    }
+
+    template<bool show_commands = true, bool show_action_ids = true, bool show_artifact_ids = true, bool show_targets = true>
+    struct graphviz {
+        std::filesystem::path m_output_file = "graph.dot";
+
+        void generate(const dag::graph& graph, const build::request& req) const {
+            auto output_path = req.build_dir() / m_output_file;
+            if (output_path.has_parent_path()) {
+                std::filesystem::create_directories(output_path.parent_path());
+            }
+            std::ofstream out(output_path);
+
+            out << "digraph mgmake {\n";
+            out << "    rankdir=LR;\n";
+            out << "    graph [fontname=\"monospace\"];\n";
+            out << "    node [fontname=\"monospace\"];\n";
+            out << "    edge [fontname=\"monospace\"];\n\n";
+
+            for (auto i = 0; i < graph.m_artifacts.size(); ++i) {
+                const auto& artifact = graph.artifact(i);
+
+                std::string label;
+
+                if constexpr (show_artifact_ids) {
+                    label += "artifact ";
+                    label += std::to_string(i);
+                    label += "\\n";
+                }
+
+                label += detail::artifact_kind_name(artifact.m_kind);
+                label += "\\n";
+                label += detail::dot_label(artifact.m_path);
+
+                out << "    artifact_" << i
+                    << " [shape=" << detail::artifact_shape(artifact.m_kind)
+                    << ", label=\"" << label << "\"];\n";
+            }
+
+            out << "\n";
+
+            for (auto i = 0; i < graph.m_actions.size(); ++i) {
+                const auto& action = graph.action(i);
+
+                std::string label;
+
+                if (show_action_ids) {
+                    label += "action ";
+                    label += std::to_string(i);
+                    label += "\\n";
+                }
+
+                if (!action.m_name.empty()) {
+                    label += detail::dot_escape(action.m_name);
+                } else {
+                    label += "unnamed action";
+                }
+
+                if (!action.m_description.empty()) {
+                    label += "\\n";
+                    label += detail::dot_escape(action.m_description);
+                }
+
+                if (show_commands && !action.m_command.m_args.empty()) {
+                    label += "\\n";
+
+                    for (std::size_t arg_i = 0; arg_i < action.m_command.m_args.size(); ++arg_i) {
+                        if (arg_i != 0) {
+                            label += " ";
+                        }
+
+                        label += detail::dot_escape(action.m_command.m_args[arg_i]);
+                    }
+                }
+
+                out << "    action_" << i
+                    << " [shape=ellipse, label=\"" << label << "\"];\n";
+            }
+
+            out << "\n";
+
+            if constexpr (show_targets) {
+                for (auto i = 0; i < graph.m_targets.size(); ++i) {
+                    const auto& target = graph.target(i);
+
+                    std::string label = "target";
+                    label += "\\n";
+                    label += detail::dot_escape(target.m_name);
+
+                    out << "    target_" << i
+                        << " [shape=house, label=\"" << label << "\"];\n";
+                }
+
+                out << "\n";
+            }
+
+            for (auto i = 0; i < graph.m_actions.size(); ++i) {
+                const auto& action = graph.action(i);
+
+                for (const auto input : action.m_inputs) {
+                    out << "    artifact_" << input << " -> action_" << i << ";\n";
+                }
+
+                for (const auto output : action.m_outputs) {
+                    out << "    action_" << i << " -> artifact_" << output << ";\n";
+                }
+            }
+
+            if constexpr (show_targets) {
+                out << "\n";
+
+                for (auto i = 0; i < graph.m_targets.size(); ++i) {
+                    const auto& target = graph.target(i);
+
+                    for (const auto output : target.m_outputs) {
+                        out << "    target_" << i << " -> artifact_" << output << ";\n";
+                    }
+                }
+            }
+
+            out << "}\n";
+        }
+    };
+}
+
+#endif// ===== end include/mgmake/backend/graphviz.hxx =====
+
+
+// ===== begin include/mgmake/backend/ninja.hxx =====
+#pragma once
+
+#ifndef MGMAKE_BACKEND_NINJA_HXX
+#define MGMAKE_BACKEND_NINJA_HXX
+
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/dag/graph.hxx
+// skipped duplicate include: include/mgmake/sys/util.hxx
+
+#include <cstdlib>
+#include <expected>
+#include <filesystem>
+#include <fstream>
+#include <ranges>
+#include <set>
+#include <string>
+#include <string_view>
+
+namespace mgmake::backend {
+    namespace detail {
+        inline std::string ninja_escape_build_text(std::string_view text) {
+            std::string result;
+
+            for (const char ch : text) {
+                switch (ch) {
+                    case '$':
+                        result += "$$";
+                        break;
+
+                    case ' ':
+                        result += "$ ";
+                        break;
+
+                    case ':':
+                        result += "$:";
+                        break;
+
+                    case '|':
+                        result += "$|";
+                        break;
+
+                    case '\n':
+                        result += "$\n";
+                        break;
+
+                    default:
+                        result += ch;
+                        break;
+                }
+            }
+
+            return result;
+        }
+
+        inline std::string ninja_escape_path(const std::filesystem::path& path) {
+            return ninja_escape_build_text(path.generic_string());
+        }
+
+        inline std::string ninja_escape_variable_text(std::string_view text) {
+            std::string result;
+
+            for (const char ch : text) {
+                switch (ch) {
+                    case '$':
+                        result += "$$";
+                        break;
+
+                    case '\n':
+                        result += "$\n";
+                        break;
+
+                    default:
+                        result += ch;
+                        break;
+                }
+            }
+
+            return result;
+        }
+
+        inline void write_artifact_list(std::ofstream& out, const dag::graph& graph, const std::vector<dag::artifact::id>& artifacts) {
+            bool first = true;
+
+            for (const auto id : artifacts) {
+                const auto& artifact = graph.artifact(id);
+
+                if (!first) {
+                    out << ' ';
+                }
+
+                out << ninja_escape_path(artifact.m_path);
+                first = false;
+            }
+        }
+		inline void write_artifact_list(std::ofstream& out, const dag::graph& graph, const std::set<dag::artifact::id>& artifacts) {
+			return write_artifact_list(out, graph, artifacts | std::ranges::to<std::vector<dag::artifact::id>>());
+		}
+
+        inline void create_output_directories(const dag::graph& graph) {
+            for (const auto& action : graph.m_actions) {
+                for (const auto output_id : action.m_outputs) {
+                    const auto& output = graph.artifact(output_id);
+
+                    if (output.m_kind == dag::artifact::kind::phony) {
+                        continue;
+                    }
+
+                    const auto parent = output.m_path.parent_path();
+
+                    if (!parent.empty()) {
+                        std::filesystem::create_directories(parent);
+                    }
+                }
+            }
+        }
+
+        inline void write_target_defaults(std::ofstream& out, const dag::graph& graph) {
+            if (graph.m_targets.empty()) {
+                return;
+            }
+
+            out << "\ndefault";
+
+            for (const auto& target : graph.m_targets) {
+                out << ' ' << ninja_escape_build_text(target.m_name);
+            }
+
+            out << "\n";
+        }
+    }
+
+    struct ninja {
+        std::filesystem::path m_output_file = "build.ninja";
+
+        void generate(const dag::graph& graph, const build::request& req) const {
+            auto output_path = req.build_dir() / m_output_file;
+            if (output_path.has_parent_path()) {
+                std::filesystem::create_directories(output_path.parent_path());
+            }
+            detail::create_output_directories(graph);
+
+            std::ofstream out(output_path);
+			mgmkassert(out.is_open(), "ninja backend: failed to open " + output_path.string());
+
+            out << "# generated by mgmake\n\n";
+
+            out << "builddir = "
+                << detail::ninja_escape_variable_text(req.build_dir().generic_string())
+                << "\n\n";
+
+            bool needs_always = false;
+
+            for (const auto& action : graph.m_actions) {
+                if (action.m_always_run) {
+                    needs_always = true;
+                    break;
+                }
+            }
+
+            if (needs_always) {
+                out << "build __mgmake_always: phony\n\n";
+            }
+
+            for (auto i = 0; i < graph.m_actions.size(); ++i) {
+                const auto& action = graph.action(i);
+
+                mgmkassert(not action.m_outputs.empty(), "ninja backend: action '" + action.m_name + "' has no outputs");
+				mgmkassert(not action.m_command.m_args.empty(), "ninja backend: action '" + action.m_name + "' has no command");
+
+                out << "rule action_" << i << "\n";
+                out << "  command = " << action.m_command.full_command() << "\n";
+
+                if (!action.m_description.empty()) {
+                    out << "  description = " << detail::ninja_escape_variable_text(action.m_description) << "\n";
+                } else if (!action.m_name.empty()) {
+                    out << "  description = " << detail::ninja_escape_variable_text(action.m_name) << "\n";
+                }
+
+                if (!action.m_working_directory.empty()) {
+#if defined(_WIN32) // bruh
+                    out << "  command = cd /d "
+                        << detail::ninja_escape_variable_text(sys::shell_escape(action.m_working_directory.string()))
+                        << " && "
+                        << action.m_command.full_command()
+                        << "\n";
+#else
+                    out << "  command = cd "
+                        << detail::ninja_escape_variable_text(sys::shell_escape(action.m_working_directory.string()))
+                        << " && "
+                        << action.m_command.full_command()
+                        << "\n";
+#endif
+                }
+
+                out << "\n";
+
+                out << "build ";
+                detail::write_artifact_list(out, graph, action.m_outputs);
+                out << ": action_" << i;
+
+                if (!action.m_inputs.empty()) {
+                    out << ' ';
+                    detail::write_artifact_list(out, graph, action.m_inputs);
+                }
+
+                if (action.m_always_run) {
+                    out << " | __mgmake_always";
+                }
+
+                out << "\n\n";
+            }
+
+            for (const auto& target : graph.m_targets) {
+                out << "build " << detail::ninja_escape_build_text(target.m_name) << ": phony ";
+                if (not target.m_outputs.empty()) {
+                    out << ' ';
+                    detail::write_artifact_list(out, graph, target.m_outputs);
+                }
+                for (const auto dep_id : target.m_dependencies) {
+                    const auto& dep = graph.target(dep_id);
+                    out << ' ' << detail::ninja_escape_build_text(dep.m_name);
+                }
+                out << "\n";
+            }
+
+            detail::write_target_defaults(out, graph);
+        }
+
+		std::expected<void, std::string> build(const dag::graph& graph, const build::request& req) const {
+            auto output_path = req.build_dir() / m_output_file;
+            if (output_path.has_parent_path()) {
+                std::filesystem::create_directories(output_path.parent_path());
+            }
+			generate(graph, req);
+
+			sys::command_line command;
+			command.m_args.emplace_back("ninja");
+			command.m_args.emplace_back("-f");
+			command.m_args.emplace_back(output_path.string());
+
+			const auto exit_code = command.invoke();
+
+			if (exit_code != 0) {
+				return std::unexpected(
+					"ninja backend: ninja failed with exit code " + std::to_string(exit_code)
+				);
+			}
+
+			return {};
+		}
+    };
+}
+
+#endif// ===== end include/mgmake/backend/ninja.hxx =====
+
+
+// ===== begin include/mgmake/spec/executable.hxx =====
+#pragma once
+
+#ifndef MGMK_SPEC_EXECUTABLE_HXX
+#define MGMK_SPEC_EXECUTABLE_HXX
+
+
+// ===== begin include/mgmake/spec/target.hxx =====
+#pragma once
+
+#ifndef MGMK_SPEC_TARGET_HXX
+#define MGMK_SPEC_TARGET_HXX
+
+#include <filesystem>
+#include <set>
+#include <string>
+#include <string_view>
+
+namespace mgmake::spec {
+	template<typename target_t>
+	struct target {
+		std::string m_name;
+		std::set<std::filesystem::path> m_sources;
+		std::set<std::filesystem::path> m_include_dirs;
+		std::set<std::string> m_linked_libraries;
+
+		inline constexpr auto& name() const {
+			return m_name;
+		}
+
+		inline constexpr auto& add_source(const std::filesystem::path& file) {
+			m_sources.emplace(file);
+			return self();
+		}
+		inline constexpr auto& sources() const {
+			return m_sources;
+		}
+
+		inline constexpr auto& add_include_dir(const std::filesystem::path& file) {
+			m_include_dirs.emplace(file);
+			return self();
+		}
+		inline constexpr auto& include_dirs() const {
+			return m_include_dirs;
+		}
+
+		inline constexpr auto& link(std::string_view lib) {
+			m_linked_libraries.emplace(lib);
+			return self();
+		}
+		inline constexpr auto& link(const std::string& lib) {
+			return link(std::string_view{ lib });
+		}
+		inline constexpr auto& linked_libraries() const {
+			return m_linked_libraries;
+		}
+
+		// Implicit cast to std::string_view for when the target needs to be identified by name
+		operator std::string_view() const {
+			return m_name;
+		}
+	private:
+		inline constexpr target_t& self() {
+			return *static_cast<target_t*>(this);
+		}
+	};
+}
+
+#endif
+// ===== end include/mgmake/spec/target.hxx =====
+
+
+#include <vector>
+
+namespace mgmake::spec {
+	struct executable : public target<executable> {
+		using id = std::vector<executable>::size_type;
+	};
+}
+
+#endif
+// ===== end include/mgmake/spec/executable.hxx =====
+
+
+// ===== begin include/mgmake/spec/executable_impl.hxx =====
+#pragma once
+
+#ifndef MGMK_SPEC_EXECUTABLE_IMPL_HXX
+#define MGMK_SPEC_EXECUTABLE_IMPL_HXX
+
+// skipped duplicate include: include/mgmake/spec/executable.hxx
+
+#endif
+// ===== end include/mgmake/spec/executable_impl.hxx =====
+
+
+// ===== begin include/mgmake/spec/library.hxx =====
+#pragma once
+
+#ifndef MGMK_SPEC_LIBRARY_HXX
+#define MGMK_SPEC_LIBRARY_HXX
+
+// skipped duplicate include: include/mgmake/spec/target.hxx
+
+#include <string>
+#include <string_view>
+#include <vector>
+
+namespace mgmake::spec {
+	struct project;
+
+	struct library : public target<library> {
+		using id = std::vector<library>::size_type;
+
+		enum struct kind {
+			static_lib, // k prefix bc static is a keyword
+			shared_lib,
+			interface
+		} m_kind;
+
+		library(std::string_view name, kind k) : target<library>{ std::string{ name } }, m_kind{k} {}
+	};
+}
+
+#endif
+// ===== end include/mgmake/spec/library.hxx =====
+
+
+// ===== begin include/mgmake/spec/library_impl.hxx =====
+#pragma once
+
+#ifndef MGMK_SPEC_LIBRARY_IMPL_HXX
+#define MGMK_SPEC_LIBRARY_IMPL_HXX
+
+// skipped duplicate include: include/mgmake/spec/library.hxx
+
+#endif
+// ===== end include/mgmake/spec/library_impl.hxx =====
+
+
+// ===== begin include/mgmake/spec/project.hxx =====
+#pragma once
+
+#ifndef MGMK_SPEC_PROJECT_HXX
+#define MGMK_SPEC_PROJECT_HXX
+
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/dag/graph.hxx
+// skipped duplicate include: include/mgmake/detail/assert.hxx
+// skipped duplicate include: include/mgmake/spec/executable.hxx
+// skipped duplicate include: include/mgmake/spec/library.hxx
+
+#include <optional>
+#include <string>
+#include <string_view>
+#include <vector>
+
+namespace mgmake::spec {
+	struct project {
+		std::string m_name;
+		std::vector<spec::executable> m_executables;
+		std::vector<spec::library> m_libraries;
+
+		inline constexpr project& add_target(const spec::executable& exe) {
+			mgmkassert(not exe.m_name.empty(), "mgmake spec: executable target has no name");
+            mgmkassert(not find_library(exe.m_name).has_value(), "mgmake spec: target name conflict '" + exe.m_name + "'");
+            mgmkassert(not find_executable(exe.m_name).has_value(), "mgmake spec: target name conflict '" + exe.m_name + "'");
+
+			m_executables.emplace_back(exe);
+			return *this;
+		}
+		inline constexpr project& add_target(const spec::library& lib) {
+			mgmkassert(not lib.m_name.empty(), "mgmake spec: library target has no name");
+            mgmkassert(not find_executable(lib.m_name).has_value(), "mgmake spec: target name conflict '" + lib.m_name + "'");
+
+			// Skip if the library was already added
+			if (find_library(lib.m_name).has_value()) {
+                return *this;
+            }
+
+			m_libraries.emplace_back(lib);
+			return *this;
+		}
+
+		const std::optional<spec::library::id> find_library(std::string_view name) const {
+            for (spec::library::id idx = 0; idx < m_libraries.size(); idx++) {
+				const auto& lib = m_libraries.at(idx);
+                if (lib.m_name == name) {
+                    return idx;
+                }
+            }
+            return std::nullopt;
+		}
+		const spec::library* get_library(const spec::library::id idx) const {
+			if (idx >= m_libraries.size())
+				return nullptr;
+			return &m_libraries.at(idx);
+		}
+
+		const std::optional<spec::executable::id> find_executable(std::string_view name) const {
+            for (spec::executable::id idx = 0; idx < m_executables.size(); idx++) {
+				const auto& exe = m_executables.at(idx);
+                if (exe.m_name == name) {
+                    return idx;
+                }
+            }
+            return std::nullopt;
+        }
+		const spec::executable* get_executable(const spec::executable::id idx) const {
+			if (idx >= m_executables.size())
+				return nullptr;
+			return &m_executables.at(idx);
+		}
+
+		dag::graph graph(const build::request& req) const;
+	};
+}
+
+#endif
+// ===== end include/mgmake/spec/project.hxx =====
+
 
 // ===== begin include/mgmake/lower/target.hxx =====
 #pragma once
@@ -3170,122 +3893,8 @@ namespace mgmake::lower {
 // skipped duplicate include: include/mgmake/lower/target.hxx
 // skipped duplicate include: include/mgmake/lower/usage.hxx
 // skipped duplicate include: include/mgmake/build/request.hxx
-
-// ===== begin include/mgmake/spec/executable.hxx =====
-#pragma once
-
-#ifndef MGMK_SPEC_EXECUTABLE_HXX
-#define MGMK_SPEC_EXECUTABLE_HXX
-
-
-// ===== begin include/mgmake/spec/target.hxx =====
-#pragma once
-
-#ifndef MGMK_SPEC_TARGET_HXX
-#define MGMK_SPEC_TARGET_HXX
-
-#include <filesystem>
-#include <set>
-#include <string>
-#include <string_view>
-
-namespace mgmake::spec {
-	template<typename target_t>
-	struct target {
-		std::string m_name;
-		std::set<std::filesystem::path> m_sources;
-		std::set<std::filesystem::path> m_include_dirs;
-		std::set<std::string> m_linked_libraries;
-
-		inline constexpr auto& name() const {
-			return m_name;
-		}
-
-		inline constexpr auto& add_source(const std::filesystem::path& file) {
-			m_sources.emplace(file);
-			return self();
-		}
-		inline constexpr auto& sources() const {
-			return m_sources;
-		}
-
-		inline constexpr auto& add_include_dir(const std::filesystem::path& file) {
-			m_include_dirs.emplace(file);
-			return self();
-		}
-		inline constexpr auto& include_dirs() const {
-			return m_include_dirs;
-		}
-
-		inline constexpr auto& link(std::string_view lib) {
-			m_linked_libraries.emplace(lib);
-			return self();
-		}
-		inline constexpr auto& link(const std::string& lib) {
-			return link(std::string_view{ lib });
-		}
-		inline constexpr auto& linked_libraries() const {
-			return m_linked_libraries;
-		}
-
-		// Implicit cast to std::string_view for when the target needs to be identified by name
-		operator std::string_view() const {
-			return m_name;
-		}
-	private:
-		inline constexpr target_t& self() {
-			return *static_cast<target_t*>(this);
-		}
-	};
-}
-
-#endif
-// ===== end include/mgmake/spec/target.hxx =====
-
-
-#include <vector>
-
-namespace mgmake::spec {
-	struct executable : public target<executable> {
-		using id = std::vector<executable>::size_type;
-	};
-}
-
-#endif
-// ===== end include/mgmake/spec/executable.hxx =====
-
-
-// ===== begin include/mgmake/spec/library.hxx =====
-#pragma once
-
-#ifndef MGMK_SPEC_LIBRARY_HXX
-#define MGMK_SPEC_LIBRARY_HXX
-
-// skipped duplicate include: include/mgmake/spec/target.hxx
-
-#include <string>
-#include <string_view>
-#include <vector>
-
-namespace mgmake::spec {
-	struct project;
-
-	struct library : public target<library> {
-		using id = std::vector<library>::size_type;
-
-		enum struct kind {
-			static_lib, // k prefix bc static is a keyword
-			shared_lib,
-			interface
-		} m_kind;
-
-		library(std::string_view name, kind k) : target<library>{ std::string{ name } }, m_kind{k} {}
-	};
-}
-
-#endif
-// ===== end include/mgmake/spec/library.hxx =====
-
+// skipped duplicate include: include/mgmake/spec/executable.hxx
+// skipped duplicate include: include/mgmake/spec/library.hxx
 
 #include <filesystem>
 #include <optional>
@@ -3364,114 +3973,6 @@ namespace mgmake::lower {
 #endif
 // ===== end include/mgmake/lower/context.hxx =====
 
-// skipped duplicate include: include/mgmake/spec/executable.hxx
-
-// ===== begin include/mgmake/spec/executable_impl.hxx =====
-#pragma once
-
-#ifndef MGMK_SPEC_EXECUTABLE_IMPL_HXX
-#define MGMK_SPEC_EXECUTABLE_IMPL_HXX
-
-// skipped duplicate include: include/mgmake/spec/executable.hxx
-
-#endif
-// ===== end include/mgmake/spec/executable_impl.hxx =====
-
-// skipped duplicate include: include/mgmake/spec/library.hxx
-
-// ===== begin include/mgmake/spec/library_impl.hxx =====
-#pragma once
-
-#ifndef MGMK_SPEC_LIBRARY_IMPL_HXX
-#define MGMK_SPEC_LIBRARY_IMPL_HXX
-
-// skipped duplicate include: include/mgmake/spec/library.hxx
-
-#endif
-// ===== end include/mgmake/spec/library_impl.hxx =====
-
-
-// ===== begin include/mgmake/spec/project.hxx =====
-#pragma once
-
-#ifndef MGMK_SPEC_PROJECT_HXX
-#define MGMK_SPEC_PROJECT_HXX
-
-// skipped duplicate include: include/mgmake/build/request.hxx
-// skipped duplicate include: include/mgmake/dag/graph.hxx
-// skipped duplicate include: include/mgmake/detail/assert.hxx
-// skipped duplicate include: include/mgmake/spec/executable.hxx
-// skipped duplicate include: include/mgmake/spec/library.hxx
-
-#include <optional>
-#include <string>
-#include <string_view>
-#include <vector>
-
-namespace mgmake::spec {
-	struct project {
-		std::string m_name;
-		std::vector<spec::executable> m_executables;
-		std::vector<spec::library> m_libraries;
-
-		inline constexpr project& add_target(const spec::executable& exe) {
-			mgmkassert(not exe.m_name.empty(), "mgmake spec: executable target has no name");
-            mgmkassert(not find_library(exe.m_name).has_value(), "mgmake spec: target name conflict '" + exe.m_name + "'");
-            mgmkassert(not find_executable(exe.m_name).has_value(), "mgmake spec: target name conflict '" + exe.m_name + "'");
-
-			m_executables.emplace_back(exe);
-			return *this;
-		}
-		inline constexpr project& add_target(const spec::library& lib) {
-			mgmkassert(not lib.m_name.empty(), "mgmake spec: library target has no name");
-            mgmkassert(not find_executable(lib.m_name).has_value(), "mgmake spec: target name conflict '" + lib.m_name + "'");
-
-			// Skip if the library was already added
-			if (find_library(lib.m_name).has_value()) {
-                return *this;
-            }
-
-			m_libraries.emplace_back(lib);
-			return *this;
-		}
-
-		const std::optional<spec::library::id> find_library(std::string_view name) const {
-            for (spec::library::id idx = 0; idx < m_libraries.size(); idx++) {
-				const auto& lib = m_libraries.at(idx);
-                if (lib.m_name == name) {
-                    return idx;
-                }
-            }
-            return std::nullopt;
-		}
-		const spec::library* get_library(const spec::library::id idx) const {
-			if (idx >= m_libraries.size())
-				return nullptr;
-			return &m_libraries.at(idx);
-		}
-
-		const std::optional<spec::executable::id> find_executable(std::string_view name) const {
-            for (spec::executable::id idx = 0; idx < m_executables.size(); idx++) {
-				const auto& exe = m_executables.at(idx);
-                if (exe.m_name == name) {
-                    return idx;
-                }
-            }
-            return std::nullopt;
-        }
-		const spec::executable* get_executable(const spec::executable::id idx) const {
-			if (idx >= m_executables.size())
-				return nullptr;
-			return &m_executables.at(idx);
-		}
-
-		dag::graph graph(const build::request& req) const;
-	};
-}
-
-#endif
-// ===== end include/mgmake/spec/project.hxx =====
-
 
 // ===== begin include/mgmake/lower/objects.hxx =====
 #pragma once
@@ -3481,7 +3982,7 @@ namespace mgmake::spec {
 
 // skipped duplicate include: include/mgmake/lower/context.hxx
 // skipped duplicate include: include/mgmake/sys/command_line.hxx
-// skipped duplicate include: include/mgmake/sys/platform.hxx
+// skipped duplicate include: include/mgmake/build/toolchain.hxx
 
 #include <cstddef>
 #include <filesystem>
@@ -3505,18 +4006,14 @@ namespace mgmake::lower {
 
 		for (const auto& source : target.m_sources) {
 			auto source_id = m_emit.source(source);
+			const std::string_view object_extension =
+				tc.dialect() == build::toolchain::dialect::msvc ? ".obj" : ".o";
 
 			std::filesystem::path object_path =
 				request().build_dir() /
 				"obj" /
 				target.m_name /
-				(std::to_string(source_index++) +
-#if defined(MGMK_PLATFORM_WINDOWS)
-					".obj"
-#else
-					".o"
-#endif
-				);
+				(std::to_string(source_index++) + std::string{ object_extension });
 
 			auto object_id = m_emit.generated(object_path);
 
@@ -3585,10 +4082,10 @@ namespace mgmake::lower {
 
 // skipped duplicate include: include/mgmake/lower/context.hxx
 // skipped duplicate include: include/mgmake/lower/objects.hxx
+// skipped duplicate include: include/mgmake/build/artifact_names.hxx
 // skipped duplicate include: include/mgmake/detail/assert.hxx
 // skipped duplicate include: include/mgmake/spec/project.hxx
 // skipped duplicate include: include/mgmake/sys/command_line.hxx
-// skipped duplicate include: include/mgmake/sys/platform.hxx
 
 #include <filesystem>
 #include <set>
@@ -3827,24 +4324,29 @@ namespace mgmake::lower {
 
 		auto object_ids = lower_objects(lib, include_dirs);
 
-		std::filesystem::path shared_path;
-
-#if defined(__APPLE__)
-		shared_path = request().build_dir() / "lib" / ("lib" + lib.m_name + ".dylib");
-#else
-		shared_path = request().build_dir() / "lib" / ("lib" + lib.m_name + ".so");
-#endif
+		const auto platform = request().target_platform();
+		std::filesystem::path shared_path =
+			request().build_dir() /
+			"lib" /
+			(
+				std::string{ build::shared_library_prefix(platform) } +
+				lib.m_name +
+				std::string{ build::shared_library_extension(platform) }
+			);
 
 		auto shared_id = m_emit.generated(shared_path);
 
 		sys::command_line command{};
 		command.m_args.emplace_back(tc.linker());
 
-#if defined(__APPLE__)
-		command.m_args.emplace_back("-dynamiclib");
-#else
-		command.m_args.emplace_back("-shared");
-#endif
+		const auto shared_flag = build::shared_library_link_flag(platform);
+
+		mgmkassert(
+			!shared_flag.empty(),
+			"mgmake lower: shared library lowering is not supported for requested target platform"
+		);
+
+		command.m_args.emplace_back(shared_flag);
 
 		for (auto object_id : object_ids) {
 			command.m_args.emplace_back(m_emit.path(object_id).string());
@@ -3917,11 +4419,12 @@ namespace mgmake::lower {
 		std::vector<dag::artifact::id> inputs = object_ids;
 		inputs.insert(inputs.end(), usage.m_link_inputs.begin(), usage.m_link_inputs.end());
 
-		std::filesystem::path output = request().build_dir() / exe.m_name;
-
-#if defined(MGMK_PLATFORM_WINDOWS)
-		output += ".exe";
-#endif
+		std::filesystem::path output =
+			request().build_dir() /
+			(
+				exe.m_name +
+				std::string{ build::executable_extension(request().target_platform()) }
+			);
 
 		auto output_id = m_emit.generated(output);
 
@@ -4002,9 +4505,6 @@ namespace mgmake::spec {
 #endif
 // ===== end include/mgmake/spec/project_impl.hxx =====
 
-// skipped duplicate include: include/mgmake/sys/command_line.hxx
-// skipped duplicate include: include/mgmake/sys/platform.hxx
-// skipped duplicate include: include/mgmake/sys/util.hxx
 
 namespace mgmake {
 	int entry(const sys::command_line& command_line) {

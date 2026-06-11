@@ -53,6 +53,26 @@ namespace mgmake::cli {
 			::value_name<"name">
 			::description<"Build a specific target. May be passed multiple times.">;
 
+	using platform_option =
+		value_option<&options::m_target_platform, "platform">
+			::value_name<"platform">
+			::description<"Set the target platform used for output naming.">;
+
+	using arch_option =
+		value_option<&options::m_target_arch, "arch">
+			::value_name<"arch">
+			::description<"Set the target architecture.">;
+
+	using abi_option =
+		value_option<&options::m_target_abi, "abi">
+			::value_name<"abi">
+			::description<"Set the target ABI.">;
+
+	using target_triple_option =
+		value_option<&options::m_target_triple, "target-triple">
+			::value_name<"triple">
+			::description<"Set an explicit compiler target triple.">;
+
 	using default_parser = option_parser<
 		help_option,
 		version_option,
@@ -61,7 +81,11 @@ namespace mgmake::cli {
 		backend_option,
 		build_dir_option,
 		jobs_option,
-		target_option
+		target_option,
+		platform_option,
+		arch_option,
+		abi_option,
+		target_triple_option
 	>;
 
 	[[nodiscard]] inline parse_result parse(std::span<const std::string> args) {

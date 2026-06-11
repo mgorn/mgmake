@@ -6,6 +6,7 @@
 #include "action.hxx"
 #include "backend.hxx"
 #include "value_parser.hxx"
+#include "../sys/platform.hxx"
 
 #include <format>
 #include <string>
@@ -71,6 +72,45 @@ namespace mgmake::cli {
 				"unknown action '{}'; expected one of: {}",
 				text,
 				action_kind_names::choices_string()
+			);
+		}
+	};
+
+	template <>
+	struct value_parser<sys::platform> :
+		enum_value_parser<sys::platform_parse_names, sys::platform_names>
+	{
+		[[nodiscard]] static std::string error(std::string_view text) {
+			return std::format(
+				"unknown platform '{}'; expected one of: {}",
+				text,
+				sys::platform_names::choices_string()
+			);
+		}
+	};
+
+	template <>
+	struct value_parser<sys::arch> :
+		enum_value_parser<sys::arch_parse_names, sys::arch_names>
+	{
+		[[nodiscard]] static std::string error(std::string_view text) {
+			return std::format(
+				"unknown architecture '{}'; expected one of: {}",
+				text,
+				sys::arch_names::choices_string()
+			);
+		}
+	};
+
+	template <>
+	struct value_parser<sys::abi> :
+		enum_value_parser<sys::abi_parse_names, sys::abi_names>
+	{
+		[[nodiscard]] static std::string error(std::string_view text) {
+			return std::format(
+				"unknown ABI '{}'; expected one of: {}",
+				text,
+				sys::abi_names::choices_string()
 			);
 		}
 	};

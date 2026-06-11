@@ -5,6 +5,7 @@
 
 #include "action.hxx"
 #include "backend.hxx"
+#include "../sys/platform.hxx"
 
 #include <string>
 #include <vector>
@@ -21,10 +22,24 @@ namespace mgmake::cli {
 
 		int m_jobs = 0;
 
+		sys::arch m_target_arch = sys::g_host_arch;
+		sys::platform m_target_platform = sys::g_host_platform;
+		sys::abi m_target_abi = sys::g_host_abi;
+		std::string m_target_triple{};
+
 		bool m_verbose = false;
 		bool m_dry_run = false;
 		bool m_show_help = false;
 		bool m_show_version = false;
+
+		[[nodiscard]] inline sys::target target() const {
+			return sys::target{
+				m_target_arch,
+				m_target_platform,
+				m_target_abi,
+				m_target_triple
+			};
+		}
 	};
 }
 

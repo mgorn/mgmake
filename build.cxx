@@ -38,12 +38,21 @@ int main() {
 
 int main(int argc, const char** argv) {
 	auto args = sys::args_from_utf8(argc, argv);
-	cli::options opts = cli::parse(args);
+	auto parsed = cli::parse(args);
+
+	if (!parsed) {
+		std::cerr << "mgmake: error: " << parsed.m_error << std::endl;
+		return 2;
+	}
+
+	cli::options opts = std::move(parsed.m_value);
+
 	if (opts.m_show_help) {
 		cli::print_help(args.program_name());
 		return 0;
 	}
-	build::request req{ build::tc_clang_mg, opts.m_build_dir, { "build" } };
+
+	build::request req{ build::tc_clang_mg, opts.m_build_dir, { "build" }, opts.target() };
 	auto testlib = spec::library{"testlib", spec::library::kind::interface}.add_include_dir("test");
 	auto builder = spec::executable{"build"}.add_source("build.cxx").link(testlib);
 	auto proj = spec::project{"mkmake"}.add_target(builder).add_target(testlib);

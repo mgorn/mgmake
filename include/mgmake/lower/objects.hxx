@@ -5,7 +5,7 @@
 
 #include "context.hxx"
 #include "../sys/command_line.hxx"
-#include "../sys/platform.hxx"
+#include "../build/toolchain.hxx"
 
 #include <cstddef>
 #include <filesystem>
@@ -29,18 +29,14 @@ namespace mgmake::lower {
 
 		for (const auto& source : target.m_sources) {
 			auto source_id = m_emit.source(source);
+			const std::string_view object_extension =
+				tc.dialect() == build::toolchain::dialect::msvc ? ".obj" : ".o";
 
 			std::filesystem::path object_path =
 				request().build_dir() /
 				"obj" /
 				target.m_name /
-				(std::to_string(source_index++) +
-#if defined(MGMK_PLATFORM_WINDOWS)
-					".obj"
-#else
-					".o"
-#endif
-				);
+				(std::to_string(source_index++) + std::string{ object_extension });
 
 			auto object_id = m_emit.generated(object_path);
 

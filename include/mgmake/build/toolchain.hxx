@@ -3,6 +3,8 @@
 #ifndef MGMAKE_BUILD_TOOLCHAIN_HXX
 #define MGMAKE_BUILD_TOOLCHAIN_HXX
 
+#include "../sys/platform.hxx"
+
 #include <initializer_list>
 #include <optional>
 #include <string>
@@ -19,7 +21,7 @@ namespace mgmake::build {
 
         std::string m_name; // The name of the toolchain
         dialect m_dialect = []{
-#ifdef MGMAKE_PLATFORM_WINDOWS
+#ifdef MGMK_PLATFORM_WINDOWS
             return dialect::msvc;
 #else
             return dialect::gcc;

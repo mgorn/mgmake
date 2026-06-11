@@ -5,10 +5,10 @@
 
 #include "context.hxx"
 #include "objects.hxx"
+#include "../build/artifact_names.hxx"
 #include "../detail/assert.hxx"
 #include "../spec/project.hxx"
 #include "../sys/command_line.hxx"
-#include "../sys/platform.hxx"
 
 #include <filesystem>
 #include <set>
@@ -247,24 +247,29 @@ namespace mgmake::lower {
 
 		auto object_ids = lower_objects(lib, include_dirs);
 
-		std::filesystem::path shared_path;
-
-#if defined(__APPLE__)
-		shared_path = request().build_dir() / "lib" / ("lib" + lib.m_name + ".dylib");
-#else
-		shared_path = request().build_dir() / "lib" / ("lib" + lib.m_name + ".so");
-#endif
+		const auto platform = request().target_platform();
+		std::filesystem::path shared_path =
+			request().build_dir() /
+			"lib" /
+			(
+				std::string{ build::shared_library_prefix(platform) } +
+				lib.m_name +
+				std::string{ build::shared_library_extension(platform) }
+			);
 
 		auto shared_id = m_emit.generated(shared_path);
 
 		sys::command_line command{};
 		command.m_args.emplace_back(tc.linker());
 
-#if defined(__APPLE__)
-		command.m_args.emplace_back("-dynamiclib");
-#else
-		command.m_args.emplace_back("-shared");
-#endif
+		const auto shared_flag = build::shared_library_link_flag(platform);
+
+		mgmkassert(
+			!shared_flag.empty(),
+			"mgmake lower: shared library lowering is not supported for requested target platform"
+		);
+
+		command.m_args.emplace_back(shared_flag);
 
 		for (auto object_id : object_ids) {
 			command.m_args.emplace_back(m_emit.path(object_id).string());
@@ -337,11 +342,12 @@ namespace mgmake::lower {
 		std::vector<dag::artifact::id> inputs = object_ids;
 		inputs.insert(inputs.end(), usage.m_link_inputs.begin(), usage.m_link_inputs.end());
 
-		std::filesystem::path output = request().build_dir() / exe.m_name;
-
-#if defined(MGMK_PLATFORM_WINDOWS)
-		output += ".exe";
-#endif
+		std::filesystem::path output =
+			request().build_dir() /
+			(
+				exe.m_name +
+				std::string{ build::executable_extension(request().target_platform()) }
+			);
 
 		auto output_id = m_emit.generated(output);
 

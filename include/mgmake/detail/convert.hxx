@@ -3,7 +3,12 @@
 #ifndef MGMAKE_DETAIL_CONVERT_HXX
 #define MGMAKE_DETAIL_CONVERT_HXX
 
+#include "assert.hxx"
 #include "../sys/platform.hxx"
+
+#include <limits>
+#include <string>
+#include <string_view>
 
 namespace mgmake::detail {
 #ifdef MGMK_INCLUDED_WINDOWS
