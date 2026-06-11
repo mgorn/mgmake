@@ -64,6 +64,19 @@ namespace mgmake::cli::detail {
 	template <typename T>
 	inline constexpr bool is_vector_v = vector_traits<T>::is_vector;
 
+	template <typename T>
+	struct option_value_traits {
+		using value_type = T;
+	};
+
+	template <typename T, typename Alloc>
+	struct option_value_traits<std::vector<T, Alloc>> {
+		using value_type = T;
+	};
+
+	template <typename T>
+	using option_value_t = typename option_value_traits<T>::value_type;
+
 	template <typename Parser>
 	concept has_for_each_choice = requires {
 		Parser::for_each_choice([](std::string_view) {});
@@ -118,6 +131,14 @@ namespace mgmake::cli::detail {
 
 	struct no_callback_t {};
 	inline constexpr no_callback_t no_callback{};
+
+	template <typename T>
+	inline constexpr bool is_no_field_v =
+		std::same_as<std::remove_cvref_t<T>, no_field_t>;
+
+	template <typename T>
+	inline constexpr bool is_no_callback_v =
+		std::same_as<std::remove_cvref_t<T>, no_callback_t>;
 }
 
 namespace mgmake::cli {
@@ -143,11 +164,35 @@ namespace mgmake::cli {
 		auto Callback = detail::no_callback
 	>
 	struct option_builder {
+		static constexpr auto field_value = Field;
+		static constexpr auto long_name_value = LongName;
+		static constexpr char short_name_value = ShortName;
+		static constexpr option_mode mode_value = Mode;
+		static constexpr auto value_name_value = ValueName;
+		static constexpr auto description_value = Description;
+		using choices_type = Choices;
+		static constexpr auto callback_value = Callback;
+
+		[[nodiscard]] static constexpr std::string_view long_name_view() noexcept {
+			return LongName.view();
+		}
+
+		[[nodiscard]] static constexpr std::string_view value_name_view() noexcept {
+			return ValueName.view();
+		}
+
+		[[nodiscard]] static constexpr std::string_view description_view() noexcept {
+			return Description.view();
+		}
+
 		template <auto NewField>
 		using field = option_builder<NewField, LongName, ShortName, Mode, ValueName, Description, Choices, Callback>;
 
 		template <mgmake::detail::static_string NewName>
 		using long_name = option_builder<Field, NewName, ShortName, Mode, ValueName, Description, Choices, Callback>;
+
+		template <mgmake::detail::static_string NewName>
+		using name = long_name<NewName>;
 
 		template <char NewShortName>
 		using short_name = option_builder<Field, LongName, NewShortName, Mode, ValueName, Description, Choices, Callback>;
@@ -204,7 +249,36 @@ namespace mgmake::cli {
 		typename option_builder<>::template long_name<LongName>
 			::template short_name<ShortName>
 			::template callback<Callback>;
+}
 
+namespace mgmake::cli::detail {
+	template <auto Field, option_mode Mode>
+	struct actual_option_mode {
+		static constexpr option_mode value = Mode;
+	};
+
+	template <auto Field>
+	struct actual_option_mode<Field, option_mode::deduce> {
+		static_assert(
+			!is_no_field_v<decltype(Field)>,
+			"option_mode::deduce requires a field; use .flag, .value, .append, or .callback explicitly"
+		);
+
+		using field_type = member_value_t<Field>;
+
+		static constexpr option_mode value = [] {
+			if constexpr (std::same_as<field_type, bool>) {
+				return option_mode::flag;
+			} else if constexpr (is_vector_v<field_type>) {
+				return option_mode::append;
+			} else {
+				return option_mode::value;
+			}
+		}();
+	};
+}
+
+namespace mgmake::cli {
 	template <
 		auto Field,
 		mgmake::detail::static_string LongName,
@@ -218,22 +292,34 @@ namespace mgmake::cli {
 	struct option_impl<
 		option_builder<Field, LongName, ShortName, Mode, ValueName, Description, Choices, Callback>
 	> {
+		static_assert(
+			Mode == option_mode::callback || !detail::is_no_field_v<decltype(Field)>,
+			"non-callback CLI options require a field"
+		);
+
+		static_assert(
+			Mode != option_mode::callback || !detail::is_no_callback_v<decltype(Callback)>,
+			"callback CLI options require a callback"
+		);
+
 		static option_parse_result try_parse(
 			options& opts,
 			std::span<const std::string> args,
 			std::size_t& index,
 			std::string_view arg
 		) {
-			if constexpr (Mode == option_mode::callback) {
+			constexpr option_mode actual_mode = detail::actual_option_mode<Field, Mode>::value;
+
+			if constexpr (actual_mode == option_mode::callback) {
 				return try_parse_callback(opts, arg);
-			} else if constexpr (Mode == option_mode::flag) {
+			} else if constexpr (actual_mode == option_mode::flag) {
 				return try_parse_flag(opts, arg);
-			} else if constexpr (Mode == option_mode::value) {
+			} else if constexpr (actual_mode == option_mode::value) {
 				return try_parse_value(opts, args, index, arg);
-			} else if constexpr (Mode == option_mode::append) {
+			} else if constexpr (actual_mode == option_mode::append) {
 				return try_parse_append(opts, args, index, arg);
 			} else {
-				static_assert(Mode != option_mode::deduce);
+				static_assert(actual_mode != option_mode::deduce);
 			}
 		}
 

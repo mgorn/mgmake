@@ -2044,7 +2044,6 @@ namespace mgmake::cli {
 #define MGMAKE_CLI_UTIL_HXX
 
 #include <charconv>
-#include <print>
 #include <string_view>
 
 namespace mgmake::cli {
@@ -2072,32 +2071,6 @@ namespace mgmake::cli {
 		return arg.size() >= 2 && arg[0] == '-';
 	}
 
-	inline void print_help(std::string_view program_name) {
-		if (program_name.empty()) {
-			program_name = "mgmake";
-		}
-
-		std::println("usage:");
-		std::println("  {} [command] [options] [targets...] [-- passthrough...]", program_name);
-		std::println("");
-		std::println("commands:");
-		std::println("  build       Build the project. This is the default command.");
-		std::println("  generate    Generate backend build files.");
-		std::println("  clean       Remove generated build output.");
-		std::println("  run         Build and run a target.");
-		std::println("  help        Show this help text.");
-		std::println("  version     Show version information.");
-		std::println("");
-		std::println("options:");
-		std::println("  --backend <name>       Backend to use: auto, ninja, make, direct.");
-		std::println("  --build-dir <path>     Build directory. Default: .build.");
-		std::println("  --target <name>        Target to build. Can be passed multiple times.");
-		std::println("  -j, --jobs <count>     Number of parallel jobs.");
-		std::println("  -v, --verbose          Print more detailed output.");
-		std::println("  --dry-run              Print what would happen without doing it.");
-		std::println("  -h, --help             Show this help text.");
-		std::println("  --version              Show version information.");
-	}
 }
 
 #endif
@@ -2290,6 +2263,19 @@ namespace mgmake::cli::detail {
 	template <typename T>
 	inline constexpr bool is_vector_v = vector_traits<T>::is_vector;
 
+	template <typename T>
+	struct option_value_traits {
+		using value_type = T;
+	};
+
+	template <typename T, typename Alloc>
+	struct option_value_traits<std::vector<T, Alloc>> {
+		using value_type = T;
+	};
+
+	template <typename T>
+	using option_value_t = typename option_value_traits<T>::value_type;
+
 	template <typename Parser>
 	concept has_for_each_choice = requires {
 		Parser::for_each_choice([](std::string_view) {});
@@ -2344,6 +2330,14 @@ namespace mgmake::cli::detail {
 
 	struct no_callback_t {};
 	inline constexpr no_callback_t no_callback{};
+
+	template <typename T>
+	inline constexpr bool is_no_field_v =
+		std::same_as<std::remove_cvref_t<T>, no_field_t>;
+
+	template <typename T>
+	inline constexpr bool is_no_callback_v =
+		std::same_as<std::remove_cvref_t<T>, no_callback_t>;
 }
 
 namespace mgmake::cli {
@@ -2369,11 +2363,35 @@ namespace mgmake::cli {
 		auto Callback = detail::no_callback
 	>
 	struct option_builder {
+		static constexpr auto field_value = Field;
+		static constexpr auto long_name_value = LongName;
+		static constexpr char short_name_value = ShortName;
+		static constexpr option_mode mode_value = Mode;
+		static constexpr auto value_name_value = ValueName;
+		static constexpr auto description_value = Description;
+		using choices_type = Choices;
+		static constexpr auto callback_value = Callback;
+
+		[[nodiscard]] static constexpr std::string_view long_name_view() noexcept {
+			return LongName.view();
+		}
+
+		[[nodiscard]] static constexpr std::string_view value_name_view() noexcept {
+			return ValueName.view();
+		}
+
+		[[nodiscard]] static constexpr std::string_view description_view() noexcept {
+			return Description.view();
+		}
+
 		template <auto NewField>
 		using field = option_builder<NewField, LongName, ShortName, Mode, ValueName, Description, Choices, Callback>;
 
 		template <mgmake::detail::static_string NewName>
 		using long_name = option_builder<Field, NewName, ShortName, Mode, ValueName, Description, Choices, Callback>;
+
+		template <mgmake::detail::static_string NewName>
+		using name = long_name<NewName>;
 
 		template <char NewShortName>
 		using short_name = option_builder<Field, LongName, NewShortName, Mode, ValueName, Description, Choices, Callback>;
@@ -2430,7 +2448,36 @@ namespace mgmake::cli {
 		typename option_builder<>::template long_name<LongName>
 			::template short_name<ShortName>
 			::template callback<Callback>;
+}
 
+namespace mgmake::cli::detail {
+	template <auto Field, option_mode Mode>
+	struct actual_option_mode {
+		static constexpr option_mode value = Mode;
+	};
+
+	template <auto Field>
+	struct actual_option_mode<Field, option_mode::deduce> {
+		static_assert(
+			!is_no_field_v<decltype(Field)>,
+			"option_mode::deduce requires a field; use .flag, .value, .append, or .callback explicitly"
+		);
+
+		using field_type = member_value_t<Field>;
+
+		static constexpr option_mode value = [] {
+			if constexpr (std::same_as<field_type, bool>) {
+				return option_mode::flag;
+			} else if constexpr (is_vector_v<field_type>) {
+				return option_mode::append;
+			} else {
+				return option_mode::value;
+			}
+		}();
+	};
+}
+
+namespace mgmake::cli {
 	template <
 		auto Field,
 		mgmake::detail::static_string LongName,
@@ -2444,22 +2491,34 @@ namespace mgmake::cli {
 	struct option_impl<
 		option_builder<Field, LongName, ShortName, Mode, ValueName, Description, Choices, Callback>
 	> {
+		static_assert(
+			Mode == option_mode::callback || !detail::is_no_field_v<decltype(Field)>,
+			"non-callback CLI options require a field"
+		);
+
+		static_assert(
+			Mode != option_mode::callback || !detail::is_no_callback_v<decltype(Callback)>,
+			"callback CLI options require a callback"
+		);
+
 		static option_parse_result try_parse(
 			options& opts,
 			std::span<const std::string> args,
 			std::size_t& index,
 			std::string_view arg
 		) {
-			if constexpr (Mode == option_mode::callback) {
+			constexpr option_mode actual_mode = detail::actual_option_mode<Field, Mode>::value;
+
+			if constexpr (actual_mode == option_mode::callback) {
 				return try_parse_callback(opts, arg);
-			} else if constexpr (Mode == option_mode::flag) {
+			} else if constexpr (actual_mode == option_mode::flag) {
 				return try_parse_flag(opts, arg);
-			} else if constexpr (Mode == option_mode::value) {
+			} else if constexpr (actual_mode == option_mode::value) {
 				return try_parse_value(opts, args, index, arg);
-			} else if constexpr (Mode == option_mode::append) {
+			} else if constexpr (actual_mode == option_mode::append) {
 				return try_parse_append(opts, args, index, arg);
 			} else {
-				static_assert(Mode != option_mode::deduce);
+				static_assert(actual_mode != option_mode::deduce);
 			}
 		}
 
@@ -2617,14 +2676,154 @@ namespace mgmake::cli {
 // skipped duplicate include: include/mgmake/cli/util.hxx
 
 #include <format>
+#include <print>
 #include <span>
 #include <string>
 #include <string_view>
 #include <utility>
 
+namespace mgmake::cli::detail {
+	template <typename Option>
+	[[nodiscard]] inline std::string option_usage_string() {
+		std::string result;
+
+		if constexpr (Option::short_name_value != '\0') {
+			result += "-";
+			result += Option::short_name_value;
+			result += ", ";
+		}
+
+		result += "--";
+		result += Option::long_name_view();
+
+		constexpr option_mode mode = actual_option_mode<
+			Option::field_value,
+			Option::mode_value
+		>::value;
+
+		if constexpr (mode == option_mode::value || mode == option_mode::append) {
+			result += " <";
+
+			if constexpr (!Option::value_name_value.empty()) {
+				result += Option::value_name_view();
+			} else {
+				result += "value";
+			}
+
+			result += ">";
+		}
+
+		return result;
+	}
+
+	template <typename Option>
+	[[nodiscard]] inline std::string explicit_choices_string() {
+		std::string result;
+		bool first = true;
+
+		Option::choices_type::for_each([&](std::string_view choice) {
+			if (!first) {
+				result += ", ";
+			}
+
+			result += choice;
+			first = false;
+		});
+
+		return result;
+	}
+
+	template <typename Parser>
+	[[nodiscard]] inline std::string parser_choices_string() {
+		if constexpr (has_choices_string<Parser>) {
+			return Parser::choices_string();
+		} else if constexpr (has_for_each_choice<Parser>) {
+			std::string result;
+			bool first = true;
+
+			Parser::for_each_choice([&](std::string_view choice) {
+				if (!first) {
+					result += ", ";
+				}
+
+				result += choice;
+				first = false;
+			});
+
+			return result;
+		} else {
+			return {};
+		}
+	}
+
+	template <typename Option>
+	[[nodiscard]] inline std::string option_choices_string() {
+		if constexpr (!Option::choices_type::empty()) {
+			return explicit_choices_string<Option>();
+		} else {
+			constexpr option_mode mode = actual_option_mode<
+				Option::field_value,
+				Option::mode_value
+			>::value;
+
+			if constexpr (mode == option_mode::value || mode == option_mode::append) {
+				using field_type = member_value_t<Option::field_value>;
+				using value_type = option_value_t<field_type>;
+
+				return parser_choices_string<value_parser<value_type>>();
+			} else {
+				return {};
+			}
+		}
+	}
+
+	template <typename Option>
+	inline void print_option_help_row() {
+		std::string usage = option_usage_string<Option>();
+		std::string desc = std::string{ Option::description_view() };
+		std::string choices = option_choices_string<Option>();
+
+		if (!choices.empty()) {
+			if (!desc.empty()) {
+				desc += " ";
+			}
+
+			desc += "Choices: ";
+			desc += choices;
+			desc += ".";
+		}
+
+		std::println("  {:<24} {}", usage, desc);
+	}
+}
+
 namespace mgmake::cli {
 	template <typename... Options>
 	struct option_parser {
+		static void print_options_help() {
+			(detail::print_option_help_row<Options>(), ...);
+		}
+
+		static void print_help(std::string_view program_name) {
+			if (program_name.empty()) {
+				program_name = "mgmake";
+			}
+
+			std::println("usage:");
+			std::println("  {} [command] [options] [targets...] [-- passthrough...]", program_name);
+			std::println("");
+			std::println("commands:");
+			std::println("  build       Build the project. This is the default command.");
+			std::println("  generate    Generate backend build files.");
+			std::println("  clean       Remove generated build output.");
+			std::println("  run         Build and run a target.");
+			std::println("  help        Show this help text.");
+			std::println("  version     Show version information.");
+			std::println("");
+			std::println("options:");
+			print_options_help();
+		}
+
 		[[nodiscard]] static option_parse_result try_parse_option(
 			options& opts,
 			std::span<const std::string> args,
@@ -2778,6 +2977,10 @@ namespace mgmake::cli {
 
 	inline auto parse(const sys::command_line& cmd) {
 		return parse(cmd.m_args);
+	}
+
+	inline void print_help(std::string_view program_name) {
+		default_parser::print_help(program_name);
 	}
 }
 
@@ -3756,7 +3959,6 @@ namespace mgmake::spec {
 // skipped duplicate include: include/mgmake/sys/util.hxx
 
 namespace mgmake {
-	template<typename ProjectType>
 	int entry(const sys::command_line& command_line) {
 		auto parsed = cli::parse(command_line.user_args());
 

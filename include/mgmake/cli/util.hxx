@@ -4,7 +4,6 @@
 #define MGMAKE_CLI_UTIL_HXX
 
 #include <charconv>
-#include <print>
 #include <string_view>
 
 namespace mgmake::cli {
@@ -32,32 +31,6 @@ namespace mgmake::cli {
 		return arg.size() >= 2 && arg[0] == '-';
 	}
 
-	inline void print_help(std::string_view program_name) {
-		if (program_name.empty()) {
-			program_name = "mgmake";
-		}
-
-		std::println("usage:");
-		std::println("  {} [command] [options] [targets...] [-- passthrough...]", program_name);
-		std::println("");
-		std::println("commands:");
-		std::println("  build       Build the project. This is the default command.");
-		std::println("  generate    Generate backend build files.");
-		std::println("  clean       Remove generated build output.");
-		std::println("  run         Build and run a target.");
-		std::println("  help        Show this help text.");
-		std::println("  version     Show version information.");
-		std::println("");
-		std::println("options:");
-		std::println("  --backend <name>       Backend to use: auto, ninja, make, direct.");
-		std::println("  --build-dir <path>     Build directory. Default: .build.");
-		std::println("  --target <name>        Target to build. Can be passed multiple times.");
-		std::println("  -j, --jobs <count>     Number of parallel jobs.");
-		std::println("  -v, --verbose          Print more detailed output.");
-		std::println("  --dry-run              Print what would happen without doing it.");
-		std::println("  -h, --help             Show this help text.");
-		std::println("  --version              Show version information.");
-	}
 }
 
 #endif
