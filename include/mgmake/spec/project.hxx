@@ -3,17 +3,14 @@
 #ifndef MGMK_SPEC_PROJECT_HXX
 #define MGMK_SPEC_PROJECT_HXX
 
-#include "../backend/traits.hxx"
 #include "../build/request.hxx"
 #include "../dag/graph.hxx"
-#include "../sys/command_line.hxx"
-#include "../sys/platform.hxx"
+#include "../detail/assert.hxx"
+#include "../lower/context.hxx"
 #include "executable.hxx"
 #include "library.hxx"
 
-#include <filesystem>
 #include <optional>
-#include <set>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -74,105 +71,24 @@ namespace mgmake::spec {
 			return &m_executables.at(idx);
 		}
 
-		const std::set<std::filesystem::path> collect_includes(const spec::library::id idx) const {
-			const auto& lib = m_libraries.at(idx);
-			std::set<std::filesystem::path> result;
-			for (const auto linked_library : lib.m_linked_libraries) {
-				const auto linked_index = find_library(linked_library);
-				if (linked_index.has_value())
-					result.insert_range(collect_includes(linked_index.value()));
-			}
-
-			result.insert_range(lib.include_dirs());
-
-			return result;
-		}
-		const std::set<std::filesystem::path> collect_includes(const spec::library& lib) const {
-			auto lib_idx = find_library(lib);
-			if (lib_idx.has_value())
-				return collect_includes(lib_idx.value());
-			return {};
-		}
-		const std::set<std::filesystem::path> collect_includes(const spec::executable& exe) const {
-			std::set<std::filesystem::path> include_dirs = exe.m_include_dirs;
-			for (auto& lib_name : exe.linked_libraries()) {
-				auto lib_idx = find_library(lib_name);
-				if (lib_idx.has_value())
-					include_dirs.insert_range(collect_includes(lib_idx.value()));
-			}
-			return include_dirs;
-		}
-
 		// Generate the graph from all project info
 		inline dag::graph graph(const build::request& req) const {
 			dag::graph result{};
+			lower::context ctx{result, req, *this};
 
-			std::vector<std::optional<dag::target::id>> library_target_ids(m_libraries.size());
-			std::vector<std::vector<dag::artifact::id>> library_link_outputs(m_libraries.size());
-			std::vector<unsigned char> library_states(m_libraries.size(), 0);
-
-			for (const auto& lib : m_libraries) {
-				lib.lower(
-					result,
-					req,
-					*this,
-					library_target_ids,
-					library_link_outputs,
-					library_states
-				);
+			for (spec::library::id id = 0; id < m_libraries.size(); ++id) {
+				ctx.lower_library(id);
 			}
 
-			// Lower executables.
-			for (const auto& exe : m_executables) {
-				std::set<dag::target::id> executable_dependencies{};
-				std::vector<dag::artifact::id> link_inputs{};
-
-				for (const auto& linked_library : exe.linked_libraries()) {
-					const auto linked_id = find_library(linked_library);
-
-					mgmkassert(
-						linked_id.has_value(),
-						"mgmake spec: executable '" + exe.m_name +
-							"' links unknown library '" + linked_library + "'"
-					);
-
-					const auto* lib = get_library(linked_id.value());
-
-					mgmkassert(
-						lib != nullptr,
-						"mgmake spec: failed to fetch linked library '" + linked_library + "'"
-					);
-
-					auto lib_target_id = lib->lower(
-						result,
-						req,
-						*this,
-						library_target_ids,
-						library_link_outputs,
-						library_states
-					);
-
-					executable_dependencies.emplace(lib_target_id);
-
-					for (auto artifact_id : library_link_outputs.at(linked_id.value())) {
-						link_inputs.emplace_back(artifact_id);
-					}
-				}
-
-				auto target = exe.graph(
-					result,
-					req,
-					*this,
-					link_inputs,
-					std::move(executable_dependencies)
-				);
-
-				result.create_target(std::move(target));
+			for (spec::executable::id id = 0; id < m_executables.size(); ++id) {
+				ctx.lower_executable(id);
 			}
 
 			return result;
 		}
 	};
 }
+
+#include "../lower/context_impl.hxx"
 
 #endif

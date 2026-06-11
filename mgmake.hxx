@@ -5,28 +5,28 @@
 #define MGMAKE_SINGLE_HEADER_HXX
 
 
-// ===== begin include/mgmake/mgmake.hxx =====
+// ===== begin include\mgmake\mgmake.hxx =====
 #pragma once
 
 #ifndef MGMAKE_MGMAKE_HXX
 #define MGMAKE_MGMAKE_HXX
 
 
-// ===== begin include/mgmake/backend/graphviz.hxx =====
+// ===== begin include\mgmake\backend\graphviz.hxx =====
 #pragma once
 
 #ifndef MGMAKE_BACKEND_GRAPHVIZ_HXX
 #define MGMAKE_BACKEND_GRAPHVIZ_HXX
 
 
-// ===== begin include/mgmake/build/request.hxx =====
+// ===== begin include\mgmake\build\request.hxx =====
 #pragma once
 
 #ifndef MGMAKE_BUILD_REQUEST_HXX
 #define MGMAKE_BUILD_REQUEST_HXX
 
 
-// ===== begin include/mgmake/build/toolchain.hxx =====
+// ===== begin include\mgmake\build\toolchain.hxx =====
 #pragma once
 
 #ifndef MGMAKE_BUILD_TOOLCHAIN_HXX
@@ -315,7 +315,7 @@ namespace mgmake::build {
         .linker("link");
 }
 
-#endif// ===== end include/mgmake/build/toolchain.hxx =====
+#endif// ===== end include\mgmake\build\toolchain.hxx =====
 
 
 #include <filesystem>
@@ -345,10 +345,10 @@ namespace mgmake::build {
     };
 }
 
-#endif// ===== end include/mgmake/build/request.hxx =====
+#endif// ===== end include\mgmake\build\request.hxx =====
 
 
-// ===== begin include/mgmake/dag/artifact.hxx =====
+// ===== begin include\mgmake\dag\artifact.hxx =====
 #pragma once
 
 #ifndef MGMAKE_DAG_ARTIFACT_HXX
@@ -370,17 +370,17 @@ namespace mgmake::dag {
     };
 }
 
-#endif// ===== end include/mgmake/dag/artifact.hxx =====
+#endif// ===== end include\mgmake\dag\artifact.hxx =====
 
 
-// ===== begin include/mgmake/dag/graph.hxx =====
+// ===== begin include\mgmake\dag\graph.hxx =====
 #pragma once
 
 #ifndef MGMAKE_DAG_GRAPH_HXX
 #define MGMAKE_DAG_GRAPH_HXX
 
 
-// ===== begin include/mgmake/detail/assert.hxx =====
+// ===== begin include\mgmake\detail\assert.hxx =====
 #pragma once
 
 #ifndef MGMAKE_DETAIL_ASSERT_HXX
@@ -473,33 +473,33 @@ inline void mgmk_assert_impl(
         } while (false)
 #endif
 
-#endif// ===== end include/mgmake/detail/assert.hxx =====
+#endif// ===== end include\mgmake\detail\assert.hxx =====
 
 
-// ===== begin include/mgmake/dag/action.hxx =====
+// ===== begin include\mgmake\dag\action.hxx =====
 #pragma once
 
 #ifndef MGMAKE_DAG_ACTION_HXX
 #define MGMAKE_DAG_ACTION_HXX
 
-// skipped duplicate include: include/mgmake/dag/artifact.hxx
+// skipped duplicate include: include\mgmake\dag\artifact.hxx
 
 
-// ===== begin include/mgmake/sys/command_line.hxx =====
+// ===== begin include\mgmake\sys\command_line.hxx =====
 #pragma once
 
 #ifndef MGMAKE_SYS_COMMAND_LINE_HXX
 #define MGMAKE_SYS_COMMAND_LINE_HXX
 
 
-// ===== begin include/mgmake/detail/convert.hxx =====
+// ===== begin include\mgmake\detail\convert.hxx =====
 #pragma once
 
 #ifndef MGMAKE_DETAIL_CONVERT_HXX
 #define MGMAKE_DETAIL_CONVERT_HXX
 
 
-// ===== begin include/mgmake/sys/platform.hxx =====
+// ===== begin include\mgmake\sys\platform.hxx =====
 #pragma once
 
 #ifndef MGMAKE_SYS_PLATFORM_HXX
@@ -548,7 +548,7 @@ namespace mgmake::sys {
 	}();
 }
 
-#endif// ===== end include/mgmake/sys/platform.hxx =====
+#endif// ===== end include\mgmake\sys\platform.hxx =====
 
 
 namespace mgmake::detail {
@@ -596,16 +596,16 @@ namespace mgmake::detail {
 #endif
 }
 
-#endif// ===== end include/mgmake/detail/convert.hxx =====
+#endif// ===== end include\mgmake\detail\convert.hxx =====
 
 
-// ===== begin include/mgmake/sys/util.hxx =====
+// ===== begin include\mgmake\sys\util.hxx =====
 #pragma once
 
 #ifndef MGMAKE_SYS_UTIL_HXX
 #define MGMAKE_SYS_UTIL_HXX
 
-// skipped duplicate include: include/mgmake/sys/platform.hxx
+// skipped duplicate include: include\mgmake\sys\platform.hxx
 
 #include <string>
 #include <string_view>
@@ -699,7 +699,7 @@ namespace mgmake::sys {
 #endif
 }
 
-#endif// ===== end include/mgmake/sys/util.hxx =====
+#endif// ===== end include\mgmake\sys\util.hxx =====
 
 
 #include <cstdlib>
@@ -771,7 +771,7 @@ namespace mgmake::sys {
 #endif
 }
 
-#endif// ===== end include/mgmake/sys/command_line.hxx =====
+#endif// ===== end include\mgmake\sys\command_line.hxx =====
 
 
 #include <filesystem>
@@ -795,17 +795,17 @@ namespace mgmake::dag {
     };
 }
 
-#endif// ===== end include/mgmake/dag/action.hxx =====
+#endif// ===== end include\mgmake\dag\action.hxx =====
 
-// skipped duplicate include: include/mgmake/dag/artifact.hxx
+// skipped duplicate include: include\mgmake\dag\artifact.hxx
 
-// ===== begin include/mgmake/dag/target.hxx =====
+// ===== begin include\mgmake\dag\target.hxx =====
 #pragma once
 
 #ifndef MGMAKE_DAG_TARGET_HXX
 #define MGMAKE_DAG_TARGET_HXX
 
-// skipped duplicate include: include/mgmake/dag/artifact.hxx
+// skipped duplicate include: include\mgmake\dag\artifact.hxx
 
 #include <set>
 #include <string>
@@ -830,7 +830,7 @@ namespace mgmake::dag {
     };
 }
 
-#endif// ===== end include/mgmake/dag/target.hxx =====
+#endif// ===== end include\mgmake\dag\target.hxx =====
 
 
 #include <utility>
@@ -888,7 +888,7 @@ namespace mgmake::dag {
     };
 }
 
-#endif// ===== end include/mgmake/dag/graph.hxx =====
+#endif// ===== end include\mgmake\dag\graph.hxx =====
 
 
 #include <filesystem>
@@ -1083,18 +1083,18 @@ namespace mgmake::backend {
     };
 }
 
-#endif// ===== end include/mgmake/backend/graphviz.hxx =====
+#endif// ===== end include\mgmake\backend\graphviz.hxx =====
 
 
-// ===== begin include/mgmake/backend/ninja.hxx =====
+// ===== begin include\mgmake\backend\ninja.hxx =====
 #pragma once
 
 #ifndef MGMAKE_BACKEND_NINJA_HXX
 #define MGMAKE_BACKEND_NINJA_HXX
 
-// skipped duplicate include: include/mgmake/build/request.hxx
-// skipped duplicate include: include/mgmake/dag/graph.hxx
-// skipped duplicate include: include/mgmake/sys/util.hxx
+// skipped duplicate include: include\mgmake\build\request.hxx
+// skipped duplicate include: include\mgmake\dag\graph.hxx
+// skipped duplicate include: include\mgmake\sys\util.hxx
 
 #include <cstdlib>
 #include <expected>
@@ -1336,16 +1336,16 @@ namespace mgmake::backend {
     };
 }
 
-#endif// ===== end include/mgmake/backend/ninja.hxx =====
+#endif// ===== end include\mgmake\backend\ninja.hxx =====
 
 
-// ===== begin include/mgmake/backend/traits.hxx =====
+// ===== begin include\mgmake\backend\traits.hxx =====
 #pragma once
 
 #ifndef MGMAKE_BACKEND_TRAITS_HXX
 #define MGMAKE_BACKEND_TRAITS_HXX
 
-// skipped duplicate include: include/mgmake/dag/graph.hxx
+// skipped duplicate include: include\mgmake\dag\graph.hxx
 
 namespace mgmake::backend {
     // Generates graph output (graph.dot, build.ninja)
@@ -1358,12 +1358,12 @@ namespace mgmake::backend {
     };
 }
 
-#endif// ===== end include/mgmake/backend/traits.hxx =====
+#endif// ===== end include\mgmake\backend\traits.hxx =====
 
-// skipped duplicate include: include/mgmake/build/request.hxx
-// skipped duplicate include: include/mgmake/build/toolchain.hxx
+// skipped duplicate include: include\mgmake\build\request.hxx
+// skipped duplicate include: include\mgmake\build\toolchain.hxx
 
-// ===== begin include/mgmake/cli/action.hxx =====
+// ===== begin include\mgmake\cli\action.hxx =====
 #pragma once
 
 #ifndef MGMAKE_CLI_ACTION_HXX
@@ -1435,10 +1435,10 @@ namespace mgmake::cli {
 	}
 }
 
-#endif// ===== end include/mgmake/cli/action.hxx =====
+#endif// ===== end include\mgmake\cli\action.hxx =====
 
 
-// ===== begin include/mgmake/cli/backend.hxx =====
+// ===== begin include\mgmake\cli\backend.hxx =====
 #pragma once
 
 #ifndef MGMAKE_CLI_BACKEND_HXX
@@ -1502,17 +1502,17 @@ namespace mgmake::cli {
 	}
 }
 
-#endif// ===== end include/mgmake/cli/backend.hxx =====
+#endif// ===== end include\mgmake\cli\backend.hxx =====
 
 
-// ===== begin include/mgmake/cli/options.hxx =====
+// ===== begin include\mgmake\cli\options.hxx =====
 #pragma once
 
 #ifndef MGMAKE_CLI_OPTIONS_HXX
 #define MGMAKE_CLI_OPTIONS_HXX
 
-// skipped duplicate include: include/mgmake/cli/action.hxx
-// skipped duplicate include: include/mgmake/cli/backend.hxx
+// skipped duplicate include: include\mgmake\cli\action.hxx
+// skipped duplicate include: include\mgmake\cli\backend.hxx
 
 #include <string>
 #include <vector>
@@ -1536,18 +1536,18 @@ namespace mgmake::cli {
 	};
 }
 
-#endif// ===== end include/mgmake/cli/options.hxx =====
+#endif// ===== end include\mgmake\cli\options.hxx =====
 
 
-// ===== begin include/mgmake/cli/parse.hxx =====
+// ===== begin include\mgmake\cli\parse.hxx =====
 #pragma once
 
 #ifndef MGMAKE_CLI_PARSE_HXX
 #define MGMAKE_CLI_PARSE_HXX
 
-// skipped duplicate include: include/mgmake/cli/options.hxx
+// skipped duplicate include: include\mgmake\cli\options.hxx
 
-// ===== begin include/mgmake/cli/util.hxx =====
+// ===== begin include\mgmake\cli\util.hxx =====
 #pragma once
 
 #ifndef MGMAKE_CLI_UTIL_HXX
@@ -1631,7 +1631,7 @@ namespace mgmake::cli {
 	}
 }
 
-#endif// ===== end include/mgmake/cli/util.hxx =====
+#endif// ===== end include\mgmake\cli\util.hxx =====
 
 
 #include <format>
@@ -1874,16 +1874,16 @@ namespace mgmake::cli {
 	}
 }
 
-#endif// ===== end include/mgmake/cli/parse.hxx =====
+#endif// ===== end include\mgmake\cli\parse.hxx =====
 
-// skipped duplicate include: include/mgmake/cli/util.hxx
-// skipped duplicate include: include/mgmake/dag/action.hxx
-// skipped duplicate include: include/mgmake/dag/artifact.hxx
-// skipped duplicate include: include/mgmake/dag/graph.hxx
-// skipped duplicate include: include/mgmake/dag/target.hxx
-// skipped duplicate include: include/mgmake/detail/convert.hxx
+// skipped duplicate include: include\mgmake\cli\util.hxx
+// skipped duplicate include: include\mgmake\dag\action.hxx
+// skipped duplicate include: include\mgmake\dag\artifact.hxx
+// skipped duplicate include: include\mgmake\dag\graph.hxx
+// skipped duplicate include: include\mgmake\dag\target.hxx
+// skipped duplicate include: include\mgmake\detail\convert.hxx
 
-// ===== begin include/mgmake/detail/static_string.hxx =====
+// ===== begin include\mgmake\detail\static_string.hxx =====
 #pragma once
 
 #ifndef MGMAKE_DETAIL_STATIC_STRING_HXX
@@ -1928,29 +1928,155 @@ namespace mgmake::detail {
 	}
 }
 
-#endif// ===== end include/mgmake/detail/static_string.hxx =====
+#endif// ===== end include\mgmake\detail\static_string.hxx =====
 
 
-// ===== begin include/mgmake/spec/executable.hxx =====
+// ===== begin include\mgmake\lower\target.hxx =====
+#pragma once
+
+#ifndef MGMK_LOWER_TARGET_HXX
+#define MGMK_LOWER_TARGET_HXX
+
+// skipped duplicate include: include\mgmake\dag\artifact.hxx
+// skipped duplicate include: include\mgmake\dag\target.hxx
+
+#include <filesystem>
+#include <optional>
+#include <set>
+#include <vector>
+
+namespace mgmake::lower {
+	struct target {
+		std::optional<dag::target::id> m_dag_target;
+		std::vector<dag::artifact::id> m_linkable_artifacts;
+		std::set<std::filesystem::path> m_include_dirs;
+	};
+}
+
+#endif
+// ===== end include\mgmake\lower\target.hxx =====
+
+
+// ===== begin include\mgmake\lower\usage.hxx =====
+#pragma once
+
+#ifndef MGMK_LOWER_USAGE_HXX
+#define MGMK_LOWER_USAGE_HXX
+
+// skipped duplicate include: include\mgmake\dag\artifact.hxx
+// skipped duplicate include: include\mgmake\dag\target.hxx
+
+#include <filesystem>
+#include <set>
+#include <vector>
+
+namespace mgmake::lower {
+	struct usage {
+		std::set<std::filesystem::path> m_include_dirs;
+		std::vector<dag::artifact::id> m_link_inputs;
+		std::set<dag::target::id> m_target_dependencies;
+	};
+}
+
+#endif
+// ===== end include\mgmake\lower\usage.hxx =====
+
+
+// ===== begin include\mgmake\lower\emitter.hxx =====
+#pragma once
+
+#ifndef MGMK_LOWER_EMITTER_HXX
+#define MGMK_LOWER_EMITTER_HXX
+
+// skipped duplicate include: include\mgmake\build\request.hxx
+// skipped duplicate include: include\mgmake\dag\action.hxx
+// skipped duplicate include: include\mgmake\dag\artifact.hxx
+// skipped duplicate include: include\mgmake\dag\graph.hxx
+// skipped duplicate include: include\mgmake\dag\target.hxx
+// skipped duplicate include: include\mgmake\sys\command_line.hxx
+
+#include <filesystem>
+#include <string>
+#include <utility>
+#include <vector>
+
+namespace mgmake::lower {
+	struct emitter {
+		dag::graph& m_graph;
+		const build::request& m_req;
+
+		emitter(dag::graph& graph, const build::request& req)
+			: m_graph{graph}
+			, m_req{req} {}
+
+		dag::artifact::id source(const std::filesystem::path& path) {
+			return m_graph.create_artifact(dag::artifact::kind::source, path);
+		}
+
+		dag::artifact::id generated(const std::filesystem::path& path) {
+			return m_graph.create_artifact(dag::artifact::kind::generated, path);
+		}
+
+		const std::filesystem::path& path(dag::artifact::id id) const {
+			return m_graph.artifact(id).m_path;
+		}
+
+		dag::action::id action(
+			std::string name,
+			std::string description,
+			std::vector<dag::artifact::id> inputs,
+			std::vector<dag::artifact::id> outputs,
+			sys::command_line command
+		) {
+			return m_graph.create_action(
+				std::move(name),
+				std::move(description),
+				std::move(inputs),
+				std::move(outputs),
+				false,
+				std::move(command),
+				std::filesystem::path{}
+			);
+		}
+
+		dag::target::id target(dag::target target) {
+			return m_graph.create_target(std::move(target));
+		}
+	};
+}
+
+#endif
+// ===== end include\mgmake\lower\emitter.hxx =====
+
+
+// ===== begin include\mgmake\lower\context.hxx =====
+#pragma once
+
+#ifndef MGMK_LOWER_CONTEXT_HXX
+#define MGMK_LOWER_CONTEXT_HXX
+
+// skipped duplicate include: include\mgmake\lower\emitter.hxx
+// skipped duplicate include: include\mgmake\lower\target.hxx
+// skipped duplicate include: include\mgmake\lower\usage.hxx
+// skipped duplicate include: include\mgmake\build\request.hxx
+
+// ===== begin include\mgmake\spec\executable.hxx =====
 #pragma once
 
 #ifndef MGMK_SPEC_EXECUTABLE_HXX
 #define MGMK_SPEC_EXECUTABLE_HXX
 
-// skipped duplicate include: include/mgmake/build/request.hxx
-// skipped duplicate include: include/mgmake/dag/graph.hxx
-// skipped duplicate include: include/mgmake/dag/target.hxx
 
-// ===== begin include/mgmake/spec/target.hxx =====
+// ===== begin include\mgmake\spec\target.hxx =====
 #pragma once
 
 #ifndef MGMK_SPEC_TARGET_HXX
 #define MGMK_SPEC_TARGET_HXX
 
-// skipped duplicate include: include/mgmake/dag/artifact.hxx
-// skipped duplicate include: include/mgmake/dag/target.hxx
-
 #include <filesystem>
+#include <set>
+#include <string>
+#include <string_view>
 
 namespace mgmake::spec {
 	template<typename target_t>
@@ -2002,67 +2128,30 @@ namespace mgmake::spec {
 	};
 }
 
-#endif// ===== end include/mgmake/spec/target.hxx =====
+#endif
+// ===== end include\mgmake\spec\target.hxx =====
 
 
-#include <set>
-#include <string_view>
 #include <vector>
 
 namespace mgmake::spec {
-	struct project;
-
 	struct executable : public target<executable> {
 		using id = std::vector<executable>::size_type;
-
-		dag::target graph(
-			dag::graph& result,
-			const build::request& req,
-			const spec::project& proj,
-			const std::vector<dag::artifact::id>& link_inputs,
-			std::set<dag::target::id> target_dependencies
-		) const;
 	};
 }
 
 #endif
-// ===== end include/mgmake/spec/executable.hxx =====
+// ===== end include\mgmake\spec\executable.hxx =====
 
 
-// ===== begin include/mgmake/spec/executable_impl.hxx =====
-#pragma once
-
-#ifndef MGMK_SPEC_EXECUTABLE_IMPL_HXX
-#define MGMK_SPEC_EXECUTABLE_IMPL_HXX
-
-// skipped duplicate include: include/mgmake/spec/executable.hxx
-
-// ===== begin include/mgmake/spec/project.hxx =====
-#pragma once
-
-#ifndef MGMK_SPEC_PROJECT_HXX
-#define MGMK_SPEC_PROJECT_HXX
-
-// skipped duplicate include: include/mgmake/backend/traits.hxx
-// skipped duplicate include: include/mgmake/build/request.hxx
-// skipped duplicate include: include/mgmake/dag/graph.hxx
-// skipped duplicate include: include/mgmake/sys/command_line.hxx
-// skipped duplicate include: include/mgmake/sys/platform.hxx
-// skipped duplicate include: include/mgmake/spec/executable.hxx
-
-// ===== begin include/mgmake/spec/library.hxx =====
+// ===== begin include\mgmake\spec\library.hxx =====
 #pragma once
 
 #ifndef MGMK_SPEC_LIBRARY_HXX
 #define MGMK_SPEC_LIBRARY_HXX
 
-// skipped duplicate include: include/mgmake/build/request.hxx
-// skipped duplicate include: include/mgmake/dag/graph.hxx
-// skipped duplicate include: include/mgmake/dag/target.hxx
-// skipped duplicate include: include/mgmake/spec/target.hxx
+// skipped duplicate include: include\mgmake\spec\target.hxx
 
-#include <optional>
-#include <set>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -2080,33 +2169,129 @@ namespace mgmake::spec {
 		} m_kind;
 
 		library(std::string_view name, kind k) : target<library>{ std::string{ name } }, m_kind{k} {}
-
-		dag::target graph(
-			dag::graph& result,
-			const build::request& req,
-			const spec::project& proj,
-			const std::vector<dag::artifact::id>& link_inputs,
-			std::set<dag::target::id> target_dependencies
-		) const;
-
-		dag::target::id lower(
-			dag::graph& result,
-			const build::request& req,
-			const spec::project& proj,
-			std::vector<std::optional<dag::target::id>>& library_target_ids,
-			std::vector<std::vector<dag::artifact::id>>& library_link_outputs,
-			std::vector<unsigned char>& library_states
-		) const;
 	};
 }
 
 #endif
-// ===== end include/mgmake/spec/library.hxx =====
+// ===== end include\mgmake\spec\library.hxx =====
 
 
 #include <filesystem>
 #include <optional>
 #include <set>
+#include <string>
+#include <string_view>
+#include <vector>
+
+namespace mgmake::spec {
+	struct project;
+}
+
+namespace mgmake::lower {
+	struct context {
+		lower::emitter m_emit;
+		const spec::project& m_project;
+
+		context(
+			dag::graph& graph,
+			const build::request& req,
+			const spec::project& project
+		);
+
+		dag::graph& graph() {
+			return m_emit.m_graph;
+		}
+
+		const build::request& request() const {
+			return m_emit.m_req;
+		}
+
+		const build::toolchain& toolchain() const {
+			return m_emit.m_req.toolchain();
+		}
+
+		const lower::target& lower_library(spec::library::id id);
+		void lower_executable(spec::executable::id id);
+
+		lower::usage use_libraries(
+			const std::set<std::string>& libraries,
+			std::string_view owner_name
+		);
+
+		template<typename target_t>
+		std::vector<dag::artifact::id> lower_objects(
+			const target_t& target,
+			const std::set<std::filesystem::path>& include_dirs
+		);
+
+	private:
+		void lower_interface_library(
+			const spec::library& lib,
+			lower::usage usage,
+			lower::target& lowered
+		);
+
+		void lower_static_library(
+			const spec::library& lib,
+			lower::usage usage,
+			lower::target& lowered
+		);
+
+		void lower_shared_library(
+			const spec::library& lib,
+			lower::usage usage,
+			lower::target& lowered
+		);
+
+		std::vector<std::optional<lower::target>> m_libraries;
+		std::set<spec::library::id> m_active_libraries;
+	};
+}
+
+#endif
+// ===== end include\mgmake\lower\context.hxx =====
+
+// skipped duplicate include: include\mgmake\spec\executable.hxx
+
+// ===== begin include\mgmake\spec\executable_impl.hxx =====
+#pragma once
+
+#ifndef MGMK_SPEC_EXECUTABLE_IMPL_HXX
+#define MGMK_SPEC_EXECUTABLE_IMPL_HXX
+
+// skipped duplicate include: include\mgmake\spec\executable.hxx
+
+#endif
+// ===== end include\mgmake\spec\executable_impl.hxx =====
+
+// skipped duplicate include: include\mgmake\spec\library.hxx
+
+// ===== begin include\mgmake\spec\library_impl.hxx =====
+#pragma once
+
+#ifndef MGMK_SPEC_LIBRARY_IMPL_HXX
+#define MGMK_SPEC_LIBRARY_IMPL_HXX
+
+// skipped duplicate include: include\mgmake\spec\library.hxx
+
+#endif
+// ===== end include\mgmake\spec\library_impl.hxx =====
+
+
+// ===== begin include\mgmake\spec\project.hxx =====
+#pragma once
+
+#ifndef MGMK_SPEC_PROJECT_HXX
+#define MGMK_SPEC_PROJECT_HXX
+
+// skipped duplicate include: include\mgmake\build\request.hxx
+// skipped duplicate include: include\mgmake\dag\graph.hxx
+// skipped duplicate include: include\mgmake\detail\assert.hxx
+// skipped duplicate include: include\mgmake\lower\context.hxx
+// skipped duplicate include: include\mgmake\spec\executable.hxx
+// skipped duplicate include: include\mgmake\spec\library.hxx
+
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -2167,100 +2352,17 @@ namespace mgmake::spec {
 			return &m_executables.at(idx);
 		}
 
-		const std::set<std::filesystem::path> collect_includes(const spec::library::id idx) const {
-			const auto& lib = m_libraries.at(idx);
-			std::set<std::filesystem::path> result;
-			for (const auto linked_library : lib.m_linked_libraries) {
-				const auto linked_index = find_library(linked_library);
-				if (linked_index.has_value())
-					result.insert_range(collect_includes(linked_index.value()));
-			}
-
-			result.insert_range(lib.include_dirs());
-
-			return result;
-		}
-		const std::set<std::filesystem::path> collect_includes(const spec::library& lib) const {
-			auto lib_idx = find_library(lib);
-			if (lib_idx.has_value())
-				return collect_includes(lib_idx.value());
-			return {};
-		}
-		const std::set<std::filesystem::path> collect_includes(const spec::executable& exe) const {
-			std::set<std::filesystem::path> include_dirs = exe.m_include_dirs;
-			for (auto& lib_name : exe.linked_libraries()) {
-				auto lib_idx = find_library(lib_name);
-				if (lib_idx.has_value())
-					include_dirs.insert_range(collect_includes(lib_idx.value()));
-			}
-			return include_dirs;
-		}
-
 		// Generate the graph from all project info
 		inline dag::graph graph(const build::request& req) const {
 			dag::graph result{};
+			lower::context ctx{result, req, *this};
 
-			std::vector<std::optional<dag::target::id>> library_target_ids(m_libraries.size());
-			std::vector<std::vector<dag::artifact::id>> library_link_outputs(m_libraries.size());
-			std::vector<unsigned char> library_states(m_libraries.size(), 0);
-
-			for (const auto& lib : m_libraries) {
-				lib.lower(
-					result,
-					req,
-					*this,
-					library_target_ids,
-					library_link_outputs,
-					library_states
-				);
+			for (spec::library::id id = 0; id < m_libraries.size(); ++id) {
+				ctx.lower_library(id);
 			}
 
-			// Lower executables.
-			for (const auto& exe : m_executables) {
-				std::set<dag::target::id> executable_dependencies{};
-				std::vector<dag::artifact::id> link_inputs{};
-
-				for (const auto& linked_library : exe.linked_libraries()) {
-					const auto linked_id = find_library(linked_library);
-
-					mgmkassert(
-						linked_id.has_value(),
-						"mgmake spec: executable '" + exe.m_name +
-							"' links unknown library '" + linked_library + "'"
-					);
-
-					const auto* lib = get_library(linked_id.value());
-
-					mgmkassert(
-						lib != nullptr,
-						"mgmake spec: failed to fetch linked library '" + linked_library + "'"
-					);
-
-					auto lib_target_id = lib->lower(
-						result,
-						req,
-						*this,
-						library_target_ids,
-						library_link_outputs,
-						library_states
-					);
-
-					executable_dependencies.emplace(lib_target_id);
-
-					for (auto artifact_id : library_link_outputs.at(linked_id.value())) {
-						link_inputs.emplace_back(artifact_id);
-					}
-				}
-
-				auto target = exe.graph(
-					result,
-					req,
-					*this,
-					link_inputs,
-					std::move(executable_dependencies)
-				);
-
-				result.create_target(std::move(target));
+			for (spec::executable::id id = 0; id < m_executables.size(); ++id) {
+				ctx.lower_executable(id);
 			}
 
 			return result;
@@ -2268,131 +2370,39 @@ namespace mgmake::spec {
 	};
 }
 
-#endif
-// ===== end include/mgmake/spec/project.hxx =====
 
-
-#include <set>
-#include <string_view>
-#include <vector>
-
-namespace mgmake::spec {
-	inline dag::target spec::executable::graph(
-		dag::graph& result,
-		const build::request& req,
-		const spec::project& proj,
-		const std::vector<dag::artifact::id>& link_inputs,
-		std::set<dag::target::id> target_dependencies
-	) const {
-		const auto& tc = req.toolchain();
-
-		mgmkassert(not m_name.empty(), "mgmake spec: executable target has no name");
-		mgmkassert(not m_sources.empty(), "mgmake spec: executable target '" + m_name + "' has no sources");
-
-		std::vector<dag::artifact::id> inputs{};
-		inputs.reserve(m_sources.size() + link_inputs.size());
-
-		for (const auto& source : m_sources) {
-			inputs.emplace_back(result.create_artifact(
-				dag::artifact::kind::source,
-				source
-			));
-		}
-
-		inputs.insert(inputs.end(), link_inputs.begin(), link_inputs.end());
-
-		std::filesystem::path output = req.build_dir() / m_name;
-
-#if defined(MGMK_PLATFORM_WINDOWS)
-		output += ".exe";
-#endif
-
-		auto output_id = result.create_artifact(
-			dag::artifact::kind::generated,
-			output
-		);
-
-		std::set<std::filesystem::path> include_dirs = proj.collect_includes(*this);
-
-		sys::command_line command{};
-		command.m_args.emplace_back(tc.cxx());
-
-		for (const auto& include_dir : include_dirs) {
-			switch (tc.dialect()) {
-				case build::toolchain::dialect::gcc:
-					command.m_args.emplace_back(std::string{"-I"} + include_dir.string());
-					break;
-
-				case build::toolchain::dialect::msvc:
-					command.m_args.emplace_back(std::string{"/I"} + include_dir.string());
-					break;
-			}
-		}
-
-		for (const auto& source : m_sources) {
-			command.m_args.emplace_back(source.string());
-		}
-
-		for (auto link_input : link_inputs) {
-			command.m_args.emplace_back(result.artifact(link_input).m_path.string());
-		}
-
-		for (const auto& flag : tc.link_flags()) {
-			command.m_args.emplace_back(flag);
-		}
-
-		command.m_args.emplace_back("-o");
-		command.m_args.emplace_back(output.string());
-
-		result.create_action(
-			std::string{"Build executable "} + m_name,
-			std::string{"Builds executable target '"} + m_name + "'.",
-			std::move(inputs),
-			std::vector<dag::artifact::id>{ output_id },
-			false,
-			std::move(command),
-			std::filesystem::path{}
-		);
-
-		return dag::target{
-			m_name,
-			{ output_id },
-			std::move(target_dependencies)
-		};
-	}
-}
-
-#endif
-// ===== end include/mgmake/spec/executable_impl.hxx =====
-
-// skipped duplicate include: include/mgmake/spec/library.hxx
-
-// ===== begin include/mgmake/spec/library_impl.hxx =====
+// ===== begin include\mgmake\lower\context_impl.hxx =====
 #pragma once
 
-#ifndef MGMK_SPEC_LIBRARY_IMPL_HXX
-#define MGMK_SPEC_LIBRARY_IMPL_HXX
+#ifndef MGMK_LOWER_CONTEXT_IMPL_HXX
+#define MGMK_LOWER_CONTEXT_IMPL_HXX
 
-// skipped duplicate include: include/mgmake/spec/library.hxx
-// skipped duplicate include: include/mgmake/spec/project.hxx
+// skipped duplicate include: include\mgmake\lower\context.hxx
 
+// ===== begin include\mgmake\lower\objects.hxx =====
+#pragma once
+
+#ifndef MGMK_LOWER_OBJECTS_HXX
+#define MGMK_LOWER_OBJECTS_HXX
+
+// skipped duplicate include: include\mgmake\lower\context.hxx
+// skipped duplicate include: include\mgmake\sys\command_line.hxx
+// skipped duplicate include: include\mgmake\sys\platform.hxx
+
+#include <cstddef>
 #include <filesystem>
-#include <optional>
 #include <set>
 #include <string>
-#include <string_view>
 #include <utility>
 #include <vector>
 
-namespace mgmake::spec {
+namespace mgmake::lower {
 	template<typename target_t>
-	inline std::vector<dag::artifact::id> graph_objects(
-		dag::graph& result,
-		const build::request& req,
+	inline std::vector<dag::artifact::id> context::lower_objects(
 		const target_t& target,
 		const std::set<std::filesystem::path>& include_dirs
 	) {
-		const auto& tc = req.toolchain();
+		const auto& tc = toolchain();
 
 		std::vector<dag::artifact::id> object_ids{};
 		object_ids.reserve(target.m_sources.size());
@@ -2400,13 +2410,10 @@ namespace mgmake::spec {
 		std::size_t source_index = 0;
 
 		for (const auto& source : target.m_sources) {
-			auto source_id = result.create_artifact(
-				dag::artifact::kind::source,
-				source
-			);
+			auto source_id = m_emit.source(source);
 
 			std::filesystem::path object_path =
-				req.build_dir() /
+				request().build_dir() /
 				"obj" /
 				target.m_name /
 				(std::to_string(source_index++) +
@@ -2417,10 +2424,7 @@ namespace mgmake::spec {
 #endif
 				);
 
-			auto object_id = result.create_artifact(
-				dag::artifact::kind::generated,
-				object_path
-			);
+			auto object_id = m_emit.generated(object_path);
 
 			sys::command_line command{};
 			command.m_args.emplace_back(tc.cxx());
@@ -2460,14 +2464,12 @@ namespace mgmake::spec {
 					break;
 			}
 
-			result.create_action(
+			m_emit.action(
 				std::string{"Compile "} + source.string(),
 				std::string{"Compiles source file '"} + source.string() + "' for target '" + target.m_name + "'.",
-				std::vector<dag::artifact::id>{ source_id },
-				std::vector<dag::artifact::id>{ object_id },
-				false,
-				std::move(command),
-				std::filesystem::path{}
+				{ source_id },
+				{ object_id },
+				std::move(command)
 			);
 
 			object_ids.emplace_back(object_id);
@@ -2475,316 +2477,413 @@ namespace mgmake::spec {
 
 		return object_ids;
 	}
+}
 
-	inline dag::target::id spec::library::lower(
-		dag::graph& result,
+#endif
+// ===== end include\mgmake\lower\objects.hxx =====
+
+// skipped duplicate include: include\mgmake\detail\assert.hxx
+// skipped duplicate include: include\mgmake\spec\project.hxx
+// skipped duplicate include: include\mgmake\sys\command_line.hxx
+// skipped duplicate include: include\mgmake\sys\platform.hxx
+
+#include <filesystem>
+#include <set>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+namespace mgmake::lower {
+	inline context::context(
+		dag::graph& graph,
 		const build::request& req,
-		const spec::project& proj,
-		std::vector<std::optional<dag::target::id>>& library_target_ids,
-		std::vector<std::vector<dag::artifact::id>>& library_link_outputs,
-		std::vector<unsigned char>& library_states
-	) const {
-		const auto this_id = proj.find_library(m_name);
+		const spec::project& project
+	)
+		: m_emit{graph, req}
+		, m_project{project}
+		, m_libraries(project.m_libraries.size()) {}
 
-		mgmkassert(
-			this_id.has_value(),
-			"mgmake spec: cannot lower library '" + m_name + "' because it is not part of the project"
-		);
+	inline lower::usage context::use_libraries(
+		const std::set<std::string>& libraries,
+		std::string_view owner_name
+	) {
+		lower::usage result{};
 
-		const auto id = this_id.value();
-
-		mgmkassert(
-			id < library_target_ids.size(),
-			"mgmake spec: invalid library target cache size"
-		);
-
-		mgmkassert(
-			id < library_link_outputs.size(),
-			"mgmake spec: invalid library link output cache size"
-		);
-
-		mgmkassert(
-			id < library_states.size(),
-			"mgmake spec: invalid library state cache size"
-		);
-
-		if (library_states.at(id) == 2) {
-			return library_target_ids.at(id).value();
-		}
-
-		mgmkassert(
-			library_states.at(id) != 1,
-			"mgmake spec: cyclic library dependency involving '" + m_name + "'"
-		);
-
-		library_states.at(id) = 1;
-
-		std::set<dag::target::id> target_dependencies{};
-		std::vector<dag::artifact::id> link_inputs{};
-
-		for (const auto& linked_library : linked_libraries()) {
-			const auto linked_id = proj.find_library(linked_library);
+		for (const auto& library_name : libraries) {
+			const auto linked_id = m_project.find_library(library_name);
 
 			mgmkassert(
 				linked_id.has_value(),
-				"mgmake spec: library '" + m_name +
-					"' links unknown library '" + linked_library + "'"
+				"mgmake lower: target '" + std::string{owner_name} +
+					"' links unknown library '" + library_name + "'"
 			);
 
-			const auto* dep = proj.get_library(linked_id.value());
+			const lower::target& dep = lower_library(linked_id.value());
 
-			mgmkassert(
-				dep != nullptr,
-				"mgmake spec: failed to fetch linked library '" + linked_library + "'"
-			);
-
-			auto dep_target_id = dep->lower(
-				result,
-				req,
-				proj,
-				library_target_ids,
-				library_link_outputs,
-				library_states
-			);
-
-			target_dependencies.emplace(dep_target_id);
-
-			for (auto artifact_id : library_link_outputs.at(linked_id.value())) {
-				link_inputs.emplace_back(artifact_id);
+			if (dep.m_dag_target.has_value()) {
+				result.m_target_dependencies.emplace(dep.m_dag_target.value());
 			}
+
+			result.m_link_inputs.insert(
+				result.m_link_inputs.end(),
+				dep.m_linkable_artifacts.begin(),
+				dep.m_linkable_artifacts.end()
+			);
+
+			result.m_include_dirs.insert_range(dep.m_include_dirs);
 		}
 
-		auto target = graph(
-			result,
-			req,
-			proj,
-			link_inputs,
-			std::move(target_dependencies)
-		);
-
-		auto own_outputs = target.m_outputs;
-
-		auto target_id = result.create_target(std::move(target));
-
-		library_target_ids.at(id) = target_id;
-
-		for (auto artifact_id : own_outputs) {
-			library_link_outputs.at(id).emplace_back(artifact_id);
-		}
-
-		for (auto artifact_id : link_inputs) {
-			library_link_outputs.at(id).emplace_back(artifact_id);
-		}
-
-		library_states.at(id) = 2;
-
-		return target_id;
+		return result;
 	}
 
-	inline dag::target spec::library::graph(
-		dag::graph& result,
-		const build::request& req,
-		const spec::project& proj,
-		const std::vector<dag::artifact::id>& link_inputs,
-		std::set<dag::target::id> target_dependencies
-	) const {
-		const auto& tc = req.toolchain();
+	inline const lower::target& context::lower_library(spec::library::id id) {
+		mgmkassert(
+			id < m_libraries.size(),
+			"mgmake lower: invalid library id"
+		);
 
-		mgmkassert(not m_name.empty(), "mgmake spec: library target has no name");
+		if (m_libraries.at(id).has_value()) {
+			return m_libraries.at(id).value();
+		}
 
-		switch (m_kind) {
-			case spec::library::kind::interface: {
-				(void)result;
-				(void)req;
-				(void)proj;
-				(void)link_inputs;
+		const auto& lib = m_project.m_libraries.at(id);
 
-				mgmkassert(
-					m_sources.empty(),
-					"mgmake spec: interface library '" + m_name + "' cannot have sources"
-				);
+		mgmkassert(not lib.m_name.empty(), "mgmake lower: library target has no name");
 
-				return dag::target{
-					m_name,
-					{},
-					std::move(target_dependencies)
-				};
-			}
+		mgmkassert(
+			not m_active_libraries.contains(id),
+			"mgmake lower: cyclic library dependency involving '" + lib.m_name + "'"
+		);
 
-			case spec::library::kind::static_lib: {
-				(void)link_inputs;
+		m_active_libraries.emplace(id);
 
-				mgmkassert(
-					not m_sources.empty(),
-					"mgmake spec: static library '" + m_name + "' has no sources"
-				);
+		lower::usage usage = use_libraries(
+			lib.linked_libraries(),
+			lib.m_name
+		);
 
-				auto object_ids = graph_objects(
-					result,
-					req,
-					*this,
-					proj.collect_includes(*this)
-				);
+		lower::target lowered{};
 
-				std::filesystem::path archive_path;
+		switch (lib.m_kind) {
+			case spec::library::kind::interface:
+				lower_interface_library(lib, std::move(usage), lowered);
+				break;
 
-				switch (tc.dialect()) {
-					case build::toolchain::dialect::gcc:
-						archive_path = req.build_dir() / "lib" / ("lib" + m_name + ".a");
-						break;
+			case spec::library::kind::static_lib:
+				lower_static_library(lib, std::move(usage), lowered);
+				break;
 
-					case build::toolchain::dialect::msvc:
-						archive_path = req.build_dir() / "lib" / (m_name + ".lib");
-						break;
+			case spec::library::kind::shared_lib:
+				lower_shared_library(lib, std::move(usage), lowered);
+				break;
+		}
+
+		m_active_libraries.erase(id);
+		m_libraries.at(id) = std::move(lowered);
+
+		return m_libraries.at(id).value();
+	}
+
+	inline void context::lower_interface_library(
+		const spec::library& lib,
+		lower::usage usage,
+		lower::target& lowered
+	) {
+		mgmkassert(
+			lib.m_sources.empty(),
+			"mgmake lower: interface library '" + lib.m_name + "' cannot have sources"
+		);
+
+		auto include_dirs = lib.include_dirs();
+		include_dirs.insert_range(usage.m_include_dirs);
+
+		dag::target dag_target{
+			lib.m_name,
+			{},
+			std::move(usage.m_target_dependencies)
+		};
+
+		lowered.m_dag_target = m_emit.target(std::move(dag_target));
+		lowered.m_include_dirs = std::move(include_dirs);
+	}
+
+	inline void context::lower_static_library(
+		const spec::library& lib,
+		lower::usage usage,
+		lower::target& lowered
+	) {
+		const auto& tc = toolchain();
+
+		mgmkassert(
+			not lib.m_sources.empty(),
+			"mgmake lower: static library '" + lib.m_name + "' has no sources"
+		);
+
+		auto include_dirs = lib.include_dirs();
+		include_dirs.insert_range(usage.m_include_dirs);
+
+		auto object_ids = lower_objects(lib, include_dirs);
+
+		std::filesystem::path archive_path;
+
+		switch (tc.dialect()) {
+			case build::toolchain::dialect::gcc:
+				archive_path = request().build_dir() / "lib" / ("lib" + lib.m_name + ".a");
+				break;
+
+			case build::toolchain::dialect::msvc:
+				archive_path = request().build_dir() / "lib" / (lib.m_name + ".lib");
+				break;
+		}
+
+		auto archive_id = m_emit.generated(archive_path);
+
+		sys::command_line command{};
+		command.m_args.emplace_back(tc.ar());
+
+		switch (tc.dialect()) {
+			case build::toolchain::dialect::gcc: {
+				if (tc.archive_flags().empty()) {
+					command.m_args.emplace_back("rcs");
+				}
+				else {
+					for (const auto& flag : tc.archive_flags()) {
+						command.m_args.emplace_back(flag);
+					}
 				}
 
-				auto archive_id = result.create_artifact(
-					dag::artifact::kind::generated,
-					archive_path
-				);
-
-				sys::command_line command{};
-				command.m_args.emplace_back(tc.ar());
-
-				switch (tc.dialect()) {
-					case build::toolchain::dialect::gcc: {
-						if (tc.archive_flags().empty()) {
-							command.m_args.emplace_back("rcs");
-						}
-						else {
-							for (const auto& flag : tc.archive_flags()) {
-								command.m_args.emplace_back(flag);
-							}
-						}
-
-						command.m_args.emplace_back(archive_path.string());
-
-						for (auto object_id : object_ids) {
-							command.m_args.emplace_back(result.artifact(object_id).m_path.string());
-						}
-
-						break;
-					}
-
-					case build::toolchain::dialect::msvc: {
-						for (const auto& flag : tc.archive_flags()) {
-							command.m_args.emplace_back(flag);
-						}
-
-						command.m_args.emplace_back(std::string{"/OUT:"} + archive_path.string());
-
-						for (auto object_id : object_ids) {
-							command.m_args.emplace_back(result.artifact(object_id).m_path.string());
-						}
-
-						break;
-					}
-				}
-
-				result.create_action(
-					std::string{"Build static library "} + m_name,
-					std::string{"Builds static library target '"} + m_name + "'.",
-					object_ids,
-					std::vector<dag::artifact::id>{ archive_id },
-					false,
-					std::move(command),
-					std::filesystem::path{}
-				);
-
-				return dag::target{
-					m_name,
-					{ archive_id },
-					std::move(target_dependencies)
-				};
-			}
-
-			case spec::library::kind::shared_lib: {
-				mgmkassert(
-					not m_sources.empty(),
-					"mgmake spec: shared library '" + m_name + "' has no sources"
-				);
-
-				mgmkassert(
-					tc.dialect() == build::toolchain::dialect::gcc,
-					"mgmake spec: shared library lowering is currently only implemented for GCC-like toolchains"
-				);
-
-				auto object_ids = graph_objects(
-					result,
-					req,
-					*this,
-					proj.collect_includes(*this)
-				);
-
-				std::filesystem::path shared_path;
-
-#if defined(__APPLE__)
-				shared_path = req.build_dir() / "lib" / ("lib" + m_name + ".dylib");
-#else
-				shared_path = req.build_dir() / "lib" / ("lib" + m_name + ".so");
-#endif
-
-				auto shared_id = result.create_artifact(
-					dag::artifact::kind::generated,
-					shared_path
-				);
-
-				sys::command_line command{};
-				command.m_args.emplace_back(tc.linker());
-
-#if defined(__APPLE__)
-				command.m_args.emplace_back("-dynamiclib");
-#else
-				command.m_args.emplace_back("-shared");
-#endif
+				command.m_args.emplace_back(archive_path.string());
 
 				for (auto object_id : object_ids) {
-					command.m_args.emplace_back(result.artifact(object_id).m_path.string());
+					command.m_args.emplace_back(m_emit.path(object_id).string());
 				}
 
-				for (auto link_input : link_inputs) {
-					command.m_args.emplace_back(result.artifact(link_input).m_path.string());
-				}
+				break;
+			}
 
-				for (const auto& flag : tc.link_flags()) {
+			case build::toolchain::dialect::msvc: {
+				for (const auto& flag : tc.archive_flags()) {
 					command.m_args.emplace_back(flag);
 				}
 
-				command.m_args.emplace_back("-o");
-				command.m_args.emplace_back(shared_path.string());
+				command.m_args.emplace_back(std::string{"/OUT:"} + archive_path.string());
 
-				std::vector<dag::artifact::id> inputs = object_ids;
-				inputs.insert(inputs.end(), link_inputs.begin(), link_inputs.end());
+				for (auto object_id : object_ids) {
+					command.m_args.emplace_back(m_emit.path(object_id).string());
+				}
 
-				result.create_action(
-					std::string{"Build shared library "} + m_name,
-					std::string{"Builds shared library target '"} + m_name + "'.",
-					std::move(inputs),
-					std::vector<dag::artifact::id>{ shared_id },
-					false,
-					std::move(command),
-					std::filesystem::path{}
-				);
-
-				return dag::target{
-					m_name,
-					{ shared_id },
-					std::move(target_dependencies)
-				};
+				break;
 			}
 		}
 
-		std::unreachable();
+		m_emit.action(
+			std::string{"Build static library "} + lib.m_name,
+			std::string{"Builds static library target '"} + lib.m_name + "'.",
+			object_ids,
+			{ archive_id },
+			std::move(command)
+		);
+
+		dag::target dag_target{
+			lib.m_name,
+			{ archive_id },
+			std::move(usage.m_target_dependencies)
+		};
+
+		lowered.m_dag_target = m_emit.target(std::move(dag_target));
+		lowered.m_linkable_artifacts.emplace_back(archive_id);
+		lowered.m_linkable_artifacts.insert(
+			lowered.m_linkable_artifacts.end(),
+			usage.m_link_inputs.begin(),
+			usage.m_link_inputs.end()
+		);
+		lowered.m_include_dirs = std::move(include_dirs);
+	}
+
+	inline void context::lower_shared_library(
+		const spec::library& lib,
+		lower::usage usage,
+		lower::target& lowered
+	) {
+		const auto& tc = toolchain();
+
+		mgmkassert(
+			not lib.m_sources.empty(),
+			"mgmake lower: shared library '" + lib.m_name + "' has no sources"
+		);
+
+		mgmkassert(
+			tc.dialect() == build::toolchain::dialect::gcc,
+			"mgmake lower: shared library lowering is currently only implemented for GCC-like toolchains"
+		);
+
+		auto include_dirs = lib.include_dirs();
+		include_dirs.insert_range(usage.m_include_dirs);
+
+		auto object_ids = lower_objects(lib, include_dirs);
+
+		std::filesystem::path shared_path;
+
+#if defined(__APPLE__)
+		shared_path = request().build_dir() / "lib" / ("lib" + lib.m_name + ".dylib");
+#else
+		shared_path = request().build_dir() / "lib" / ("lib" + lib.m_name + ".so");
+#endif
+
+		auto shared_id = m_emit.generated(shared_path);
+
+		sys::command_line command{};
+		command.m_args.emplace_back(tc.linker());
+
+#if defined(__APPLE__)
+		command.m_args.emplace_back("-dynamiclib");
+#else
+		command.m_args.emplace_back("-shared");
+#endif
+
+		for (auto object_id : object_ids) {
+			command.m_args.emplace_back(m_emit.path(object_id).string());
+		}
+
+		for (auto link_input : usage.m_link_inputs) {
+			command.m_args.emplace_back(m_emit.path(link_input).string());
+		}
+
+		for (const auto& flag : tc.link_flags()) {
+			command.m_args.emplace_back(flag);
+		}
+
+		command.m_args.emplace_back("-o");
+		command.m_args.emplace_back(shared_path.string());
+
+		std::vector<dag::artifact::id> inputs = object_ids;
+		inputs.insert(inputs.end(), usage.m_link_inputs.begin(), usage.m_link_inputs.end());
+
+		m_emit.action(
+			std::string{"Build shared library "} + lib.m_name,
+			std::string{"Builds shared library target '"} + lib.m_name + "'.",
+			std::move(inputs),
+			{ shared_id },
+			std::move(command)
+		);
+
+		dag::target dag_target{
+			lib.m_name,
+			{ shared_id },
+			std::move(usage.m_target_dependencies)
+		};
+
+		lowered.m_dag_target = m_emit.target(std::move(dag_target));
+		lowered.m_linkable_artifacts.emplace_back(shared_id);
+		lowered.m_linkable_artifacts.insert(
+			lowered.m_linkable_artifacts.end(),
+			usage.m_link_inputs.begin(),
+			usage.m_link_inputs.end()
+		);
+		lowered.m_include_dirs = std::move(include_dirs);
+	}
+
+	inline void context::lower_executable(spec::executable::id id) {
+		mgmkassert(
+			id < m_project.m_executables.size(),
+			"mgmake lower: invalid executable id"
+		);
+
+		const auto& exe = m_project.m_executables.at(id);
+		const auto& tc = toolchain();
+
+		mgmkassert(not exe.m_name.empty(), "mgmake lower: executable target has no name");
+		mgmkassert(
+			not exe.m_sources.empty(),
+			"mgmake lower: executable target '" + exe.m_name + "' has no sources"
+		);
+
+		lower::usage usage = use_libraries(
+			exe.linked_libraries(),
+			exe.m_name
+		);
+
+		auto include_dirs = exe.include_dirs();
+		include_dirs.insert_range(usage.m_include_dirs);
+
+		std::vector<dag::artifact::id> inputs{};
+		inputs.reserve(exe.m_sources.size() + usage.m_link_inputs.size());
+
+		for (const auto& source : exe.m_sources) {
+			inputs.emplace_back(m_emit.source(source));
+		}
+
+		inputs.insert(inputs.end(), usage.m_link_inputs.begin(), usage.m_link_inputs.end());
+
+		std::filesystem::path output = request().build_dir() / exe.m_name;
+
+#if defined(MGMK_PLATFORM_WINDOWS)
+		output += ".exe";
+#endif
+
+		auto output_id = m_emit.generated(output);
+
+		sys::command_line command{};
+		command.m_args.emplace_back(tc.cxx());
+
+		for (const auto& include_dir : include_dirs) {
+			switch (tc.dialect()) {
+				case build::toolchain::dialect::gcc:
+					command.m_args.emplace_back(std::string{"-I"} + include_dir.string());
+					break;
+
+				case build::toolchain::dialect::msvc:
+					command.m_args.emplace_back(std::string{"/I"} + include_dir.string());
+					break;
+			}
+		}
+
+		for (const auto& source : exe.m_sources) {
+			command.m_args.emplace_back(source.string());
+		}
+
+		for (auto link_input : usage.m_link_inputs) {
+			command.m_args.emplace_back(m_emit.path(link_input).string());
+		}
+
+		for (const auto& flag : tc.link_flags()) {
+			command.m_args.emplace_back(flag);
+		}
+
+		command.m_args.emplace_back("-o");
+		command.m_args.emplace_back(output.string());
+
+		m_emit.action(
+			std::string{"Build executable "} + exe.m_name,
+			std::string{"Builds executable target '"} + exe.m_name + "'.",
+			std::move(inputs),
+			{ output_id },
+			std::move(command)
+		);
+
+		dag::target dag_target{
+			exe.m_name,
+			{ output_id },
+			std::move(usage.m_target_dependencies)
+		};
+
+		m_emit.target(std::move(dag_target));
 	}
 }
 
 #endif
-// ===== end include/mgmake/spec/library_impl.hxx =====
+// ===== end include\mgmake\lower\context_impl.hxx =====
 
-// skipped duplicate include: include/mgmake/spec/project.hxx
-// skipped duplicate include: include/mgmake/sys/command_line.hxx
-// skipped duplicate include: include/mgmake/sys/platform.hxx
-// skipped duplicate include: include/mgmake/sys/util.hxx
+
+#endif
+// ===== end include\mgmake\spec\project.hxx =====
+
+// skipped duplicate include: include\mgmake\lower\objects.hxx
+// skipped duplicate include: include\mgmake\lower\context_impl.hxx
+// skipped duplicate include: include\mgmake\sys\command_line.hxx
+// skipped duplicate include: include\mgmake\sys\platform.hxx
+// skipped duplicate include: include\mgmake\sys\util.hxx
 
 namespace mgmake {
 	template<typename ProjectType>
@@ -2835,7 +2934,8 @@ int main(int argc, char** argv) { \
 #define MGMK_BUILD_ENTRY MGMAKE_BUILD_ENTRY
 #define MGMK_ENTRY MGMK_BUILD_ENTRY
 
-#endif// ===== end include/mgmake/mgmake.hxx =====
+#endif
+// ===== end include\mgmake\mgmake.hxx =====
 
 
 #endif // MGMAKE_SINGLE_HEADER_HXX

@@ -3,10 +3,10 @@
 #ifndef MGMK_SPEC_TARGET_HXX
 #define MGMK_SPEC_TARGET_HXX
 
-#include "../dag/artifact.hxx"
-#include "../dag/target.hxx"
-
 #include <filesystem>
+#include <set>
+#include <string>
+#include <string_view>
 
 namespace mgmake::spec {
 	template<typename target_t>

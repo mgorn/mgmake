@@ -1,0 +1,100 @@
+#pragma once
+
+#ifndef MGMK_LOWER_OBJECTS_HXX
+#define MGMK_LOWER_OBJECTS_HXX
+
+#include "context.hxx"
+#include "../sys/command_line.hxx"
+#include "../sys/platform.hxx"
+
+#include <cstddef>
+#include <filesystem>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
+
+namespace mgmake::lower {
+	template<typename target_t>
+	inline std::vector<dag::artifact::id> context::lower_objects(
+		const target_t& target,
+		const std::set<std::filesystem::path>& include_dirs
+	) {
+		const auto& tc = toolchain();
+
+		std::vector<dag::artifact::id> object_ids{};
+		object_ids.reserve(target.m_sources.size());
+
+		std::size_t source_index = 0;
+
+		for (const auto& source : target.m_sources) {
+			auto source_id = m_emit.source(source);
+
+			std::filesystem::path object_path =
+				request().build_dir() /
+				"obj" /
+				target.m_name /
+				(std::to_string(source_index++) +
+#if defined(MGMK_PLATFORM_WINDOWS)
+					".obj"
+#else
+					".o"
+#endif
+				);
+
+			auto object_id = m_emit.generated(object_path);
+
+			sys::command_line command{};
+			command.m_args.emplace_back(tc.cxx());
+
+			for (const auto& flag : tc.compile_flags()) {
+				command.m_args.emplace_back(flag);
+			}
+
+			for (const auto& flag : tc.cxx_flags()) {
+				command.m_args.emplace_back(flag);
+			}
+
+			for (const auto& include_dir : include_dirs) {
+				switch (tc.dialect()) {
+					case build::toolchain::dialect::gcc:
+						command.m_args.emplace_back(std::string{"-I"} + include_dir.string());
+						break;
+
+					case build::toolchain::dialect::msvc:
+						command.m_args.emplace_back(std::string{"/I"} + include_dir.string());
+						break;
+				}
+			}
+
+			switch (tc.dialect()) {
+				case build::toolchain::dialect::gcc:
+					command.m_args.emplace_back("-c");
+					command.m_args.emplace_back(source.string());
+					command.m_args.emplace_back("-o");
+					command.m_args.emplace_back(object_path.string());
+					break;
+
+				case build::toolchain::dialect::msvc:
+					command.m_args.emplace_back("/c");
+					command.m_args.emplace_back(source.string());
+					command.m_args.emplace_back(std::string{"/Fo"} + object_path.string());
+					break;
+			}
+
+			m_emit.action(
+				std::string{"Compile "} + source.string(),
+				std::string{"Compiles source file '"} + source.string() + "' for target '" + target.m_name + "'.",
+				{ source_id },
+				{ object_id },
+				std::move(command)
+			);
+
+			object_ids.emplace_back(object_id);
+		}
+
+		return object_ids;
+	}
+}
+
+#endif
