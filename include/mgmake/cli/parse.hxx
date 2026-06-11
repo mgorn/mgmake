@@ -69,7 +69,7 @@ namespace mgmake::cli {
 	}
 
 	inline auto parse(const sys::command_line& cmd) {
-		return parse(cmd.m_args);
+		return parse(cmd.user_args());
 	}
 
 	inline void print_help(std::string_view program_name) {

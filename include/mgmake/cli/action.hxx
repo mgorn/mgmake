@@ -7,6 +7,7 @@
 
 #include <optional>
 #include <string_view>
+#include <utility>
 
 namespace mgmake::cli {
 	enum struct action_kind {
@@ -51,8 +52,69 @@ namespace mgmake::cli {
 		"action_kind_parse_names must not contain duplicate or empty names"
 	);
 
+	template <
+		action_kind Action,
+		detail::static_string Description
+	>
+	struct action_help_entry {
+		static constexpr action_kind m_action = Action;
+		static constexpr auto m_description = Description;
+
+		[[nodiscard]] static constexpr action_kind action() noexcept {
+			return m_action;
+		}
+
+		[[nodiscard]] static constexpr std::string_view description() noexcept {
+			return m_description.view();
+		}
+	};
+
+	template <typename... Entries>
+	struct action_help_table {
+		template <typename Fn>
+		static constexpr void for_each(Fn&& fn) {
+			(fn(
+				Entries::action(),
+				action_name(Entries::action()),
+				Entries::description()
+			), ...);
+		}
+	};
+
+	using action_help_entries = action_help_table<
+		action_help_entry<
+			action_kind::build,
+			"Build the project. This is the default command."
+		>,
+		action_help_entry<
+			action_kind::generate,
+			"Generate backend build files."
+		>,
+		action_help_entry<
+			action_kind::clean,
+			"Remove generated build output."
+		>,
+		action_help_entry<
+			action_kind::run,
+			"Build and run a target."
+		>,
+		action_help_entry<
+			action_kind::help,
+			"Show this help text."
+		>,
+		action_help_entry<
+			action_kind::version,
+			"Show version information."
+		>
+	>;
+
 	[[nodiscard]] inline constexpr std::string_view action_name(action_kind action) noexcept {
 		return action_kind_names::to_string(action);
+	}
+
+	template <typename Fn>
+	inline constexpr void for_each_action_help(Fn&& fn) {
+		action_help_entries::for_each(std::forward<Fn>(fn));
 	}
 
 	[[nodiscard]] inline constexpr std::optional<action_kind> action_from_string(

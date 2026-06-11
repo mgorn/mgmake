@@ -127,6 +127,16 @@ namespace mgmake::cli::detail {
 
 		std::println("  {:<24} {}", usage, desc);
 	}
+
+	inline void print_commands_help() {
+		for_each_action_help([](
+			[[maybe_unused]] action_kind action,
+			std::string_view name,
+			std::string_view description
+		) {
+			std::println("  {:<10} {}", name, description);
+		});
+	}
 }
 
 namespace mgmake::cli {
@@ -145,12 +155,7 @@ namespace mgmake::cli {
 			std::println("  {} [command] [options] [targets...] [-- passthrough...]", program_name);
 			std::println("");
 			std::println("commands:");
-			std::println("  build       Build the project. This is the default command.");
-			std::println("  generate    Generate backend build files.");
-			std::println("  clean       Remove generated build output.");
-			std::println("  run         Build and run a target.");
-			std::println("  help        Show this help text.");
-			std::println("  version     Show version information.");
+			detail::print_commands_help();
 			std::println("");
 			std::println("options:");
 			print_options_help();
