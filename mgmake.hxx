@@ -2197,8 +2197,12 @@ namespace mgmake::lower {
 			const spec::project& project
 		);
 
-		dag::graph& graph() {
-			return m_emit.m_graph;
+		lower::emitter& emit() {
+			return m_emit;
+		}
+
+		const lower::emitter& emit() const {
+			return m_emit;
 		}
 
 		const build::request& request() const {
@@ -2300,6 +2304,7 @@ namespace mgmake::spec {
 		inline constexpr project& add_target(const spec::executable& exe) {
 			mgmkassert(not exe.m_name.empty(), "mgmake spec: executable target has no name");
             mgmkassert(not find_library(exe.m_name).has_value(), "mgmake spec: target name conflict '" + exe.m_name + "'");
+            mgmkassert(not find_executable(exe.m_name).has_value(), "mgmake spec: target name conflict '" + exe.m_name + "'");
 
 			m_executables.emplace_back(exe);
 			return *this;
@@ -2325,15 +2330,15 @@ namespace mgmake::spec {
                 }
             }
             return std::nullopt;
-        }
+		}
 		const spec::library* get_library(const spec::library::id idx) const {
-			if (idx > m_libraries.size())
+			if (idx >= m_libraries.size())
 				return nullptr;
 			return &m_libraries.at(idx);
 		}
 
 		const std::optional<spec::executable::id> find_executable(std::string_view name) const {
-            for (spec::library::id idx = 0; idx < m_executables.size(); idx++) {
+            for (spec::executable::id idx = 0; idx < m_executables.size(); idx++) {
 				const auto& exe = m_executables.at(idx);
                 if (exe.m_name == name) {
                     return idx;
@@ -2342,7 +2347,7 @@ namespace mgmake::spec {
             return std::nullopt;
         }
 		const spec::executable* get_executable(const spec::executable::id idx) const {
-			if (idx > m_executables.size())
+			if (idx >= m_executables.size())
 				return nullptr;
 			return &m_executables.at(idx);
 		}
@@ -2795,13 +2800,8 @@ namespace mgmake::lower {
 		auto include_dirs = exe.include_dirs();
 		include_dirs.insert_range(usage.m_include_dirs);
 
-		std::vector<dag::artifact::id> inputs{};
-		inputs.reserve(exe.m_sources.size() + usage.m_link_inputs.size());
-
-		for (const auto& source : exe.m_sources) {
-			inputs.emplace_back(m_emit.source(source));
-		}
-
+		auto object_ids = lower_objects(exe, include_dirs);
+		std::vector<dag::artifact::id> inputs = object_ids;
 		inputs.insert(inputs.end(), usage.m_link_inputs.begin(), usage.m_link_inputs.end());
 
 		std::filesystem::path output = request().build_dir() / exe.m_name;
@@ -2815,20 +2815,8 @@ namespace mgmake::lower {
 		sys::command_line command{};
 		command.m_args.emplace_back(tc.cxx());
 
-		for (const auto& include_dir : include_dirs) {
-			switch (tc.dialect()) {
-				case build::toolchain::dialect::gcc:
-					command.m_args.emplace_back(std::string{"-I"} + include_dir.string());
-					break;
-
-				case build::toolchain::dialect::msvc:
-					command.m_args.emplace_back(std::string{"/I"} + include_dir.string());
-					break;
-			}
-		}
-
-		for (const auto& source : exe.m_sources) {
-			command.m_args.emplace_back(source.string());
+		for (auto object_id : object_ids) {
+			command.m_args.emplace_back(m_emit.path(object_id).string());
 		}
 
 		for (auto link_input : usage.m_link_inputs) {
@@ -2839,8 +2827,16 @@ namespace mgmake::lower {
 			command.m_args.emplace_back(flag);
 		}
 
-		command.m_args.emplace_back("-o");
-		command.m_args.emplace_back(output.string());
+		switch (tc.dialect()) {
+			case build::toolchain::dialect::gcc:
+				command.m_args.emplace_back("-o");
+				command.m_args.emplace_back(output.string());
+				break;
+
+			case build::toolchain::dialect::msvc:
+				command.m_args.emplace_back(std::string{"/Fe"} + output.string());
+				break;
+		}
 
 		m_emit.action(
 			std::string{"Build executable "} + exe.m_name,

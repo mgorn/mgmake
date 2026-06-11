@@ -333,13 +333,8 @@ namespace mgmake::lower {
 		auto include_dirs = exe.include_dirs();
 		include_dirs.insert_range(usage.m_include_dirs);
 
-		std::vector<dag::artifact::id> inputs{};
-		inputs.reserve(exe.m_sources.size() + usage.m_link_inputs.size());
-
-		for (const auto& source : exe.m_sources) {
-			inputs.emplace_back(m_emit.source(source));
-		}
-
+		auto object_ids = lower_objects(exe, include_dirs);
+		std::vector<dag::artifact::id> inputs = object_ids;
 		inputs.insert(inputs.end(), usage.m_link_inputs.begin(), usage.m_link_inputs.end());
 
 		std::filesystem::path output = request().build_dir() / exe.m_name;
@@ -353,20 +348,8 @@ namespace mgmake::lower {
 		sys::command_line command{};
 		command.m_args.emplace_back(tc.cxx());
 
-		for (const auto& include_dir : include_dirs) {
-			switch (tc.dialect()) {
-				case build::toolchain::dialect::gcc:
-					command.m_args.emplace_back(std::string{"-I"} + include_dir.string());
-					break;
-
-				case build::toolchain::dialect::msvc:
-					command.m_args.emplace_back(std::string{"/I"} + include_dir.string());
-					break;
-			}
-		}
-
-		for (const auto& source : exe.m_sources) {
-			command.m_args.emplace_back(source.string());
+		for (auto object_id : object_ids) {
+			command.m_args.emplace_back(m_emit.path(object_id).string());
 		}
 
 		for (auto link_input : usage.m_link_inputs) {
@@ -377,8 +360,16 @@ namespace mgmake::lower {
 			command.m_args.emplace_back(flag);
 		}
 
-		command.m_args.emplace_back("-o");
-		command.m_args.emplace_back(output.string());
+		switch (tc.dialect()) {
+			case build::toolchain::dialect::gcc:
+				command.m_args.emplace_back("-o");
+				command.m_args.emplace_back(output.string());
+				break;
+
+			case build::toolchain::dialect::msvc:
+				command.m_args.emplace_back(std::string{"/Fe"} + output.string());
+				break;
+		}
 
 		m_emit.action(
 			std::string{"Build executable "} + exe.m_name,

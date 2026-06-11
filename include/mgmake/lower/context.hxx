@@ -33,8 +33,12 @@ namespace mgmake::lower {
 			const spec::project& project
 		);
 
-		dag::graph& graph() {
-			return m_emit.m_graph;
+		lower::emitter& emit() {
+			return m_emit;
+		}
+
+		const lower::emitter& emit() const {
+			return m_emit;
 		}
 
 		const build::request& request() const {

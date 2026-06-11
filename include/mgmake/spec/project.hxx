@@ -23,6 +23,7 @@ namespace mgmake::spec {
 		inline constexpr project& add_target(const spec::executable& exe) {
 			mgmkassert(not exe.m_name.empty(), "mgmake spec: executable target has no name");
             mgmkassert(not find_library(exe.m_name).has_value(), "mgmake spec: target name conflict '" + exe.m_name + "'");
+            mgmkassert(not find_executable(exe.m_name).has_value(), "mgmake spec: target name conflict '" + exe.m_name + "'");
 
 			m_executables.emplace_back(exe);
 			return *this;
@@ -48,15 +49,15 @@ namespace mgmake::spec {
                 }
             }
             return std::nullopt;
-        }
+		}
 		const spec::library* get_library(const spec::library::id idx) const {
-			if (idx > m_libraries.size())
+			if (idx >= m_libraries.size())
 				return nullptr;
 			return &m_libraries.at(idx);
 		}
 
 		const std::optional<spec::executable::id> find_executable(std::string_view name) const {
-            for (spec::library::id idx = 0; idx < m_executables.size(); idx++) {
+            for (spec::executable::id idx = 0; idx < m_executables.size(); idx++) {
 				const auto& exe = m_executables.at(idx);
                 if (exe.m_name == name) {
                     return idx;
@@ -65,7 +66,7 @@ namespace mgmake::spec {
             return std::nullopt;
         }
 		const spec::executable* get_executable(const spec::executable::id idx) const {
-			if (idx > m_executables.size())
+			if (idx >= m_executables.size())
 				return nullptr;
 			return &m_executables.at(idx);
 		}
