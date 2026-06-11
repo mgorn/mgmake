@@ -29,7 +29,6 @@ namespace mgmake::build {
 		detail::enum_entry<sys::platform::windows, ".dll">,
 		detail::enum_entry<sys::platform::linux, ".so">,
 		detail::enum_entry<sys::platform::macos, ".dylib">,
-		detail::enum_entry<sys::platform::wasm, ".wasm">,
 		detail::enum_entry<sys::platform::other_posix, ".so">
 	>;
 

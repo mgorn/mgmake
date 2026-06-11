@@ -56,7 +56,7 @@ namespace mgmake::cli {
 	using platform_option =
 		value_option<&options::m_target_platform, "platform">
 			::value_name<"platform">
-			::description<"Set the target platform used for output naming.">;
+			::description<"Set the target platform used for artifact naming.">;
 
 	using arch_option =
 		value_option<&options::m_target_arch, "arch">
@@ -71,7 +71,7 @@ namespace mgmake::cli {
 	using target_triple_option =
 		value_option<&options::m_target_triple, "target-triple">
 			::value_name<"triple">
-			::description<"Set an explicit compiler target triple.">;
+			::description<"Set an explicit compiler target triple for target-aware toolchains.">;
 
 	using default_parser = option_parser<
 		help_option,

@@ -631,6 +631,10 @@ namespace mgmake::sys {
 		return abi::msvc;
 #elif defined(__ANDROID__)
 		return abi::android;
+#elif defined(__APPLE__)
+		return abi::none;
+#elif defined(__EMSCRIPTEN__)
+		return abi::none;
 #elif defined(__MUSL__)
 		return abi::musl;
 #elif defined(__GNUC__) || defined(__clang__)
@@ -1113,6 +1117,12 @@ namespace mgmake::build {
             msvc // Windows-like arguments (typically with a '/' slash)
         };
 
+        enum struct target_mode {
+            implicit,
+            clang_target,
+            custom
+        };
+
         std::string m_name; // The name of the toolchain
         dialect m_dialect = []{
 #ifdef MGMK_PLATFORM_WINDOWS
@@ -1121,6 +1131,7 @@ namespace mgmake::build {
             return dialect::gcc;
 #endif
         }();
+        target_mode m_target_mode = target_mode::implicit;
 
         std::string m_cc;
         std::string m_cxx;
@@ -1133,7 +1144,7 @@ namespace mgmake::build {
         std::vector<std::string> m_archive_flags;
         std::vector<std::string> m_link_flags;
 
-        std::optional<std::string> m_arch_triple;
+        std::optional<std::string> m_target_triple;
         std::optional<std::string> m_sysroot;
 
        [[nodiscard]] inline constexpr std::string_view name() const {
@@ -1149,6 +1160,14 @@ namespace mgmake::build {
         }
         inline constexpr auto& dialect(enum dialect value) noexcept {
             m_dialect = value;
+            return *this;
+        }
+
+        [[nodiscard]] inline constexpr target_mode target_selection() const noexcept {
+            return m_target_mode;
+        }
+        inline constexpr auto& target_selection(target_mode mode) noexcept {
+            m_target_mode = mode;
             return *this;
         }
 
@@ -1318,20 +1337,16 @@ namespace mgmake::build {
             return *this;
         }
 
-        // arch_triple
-        [[nodiscard]] inline constexpr const std::optional<std::string>& arch_triple() const noexcept {
-            return m_arch_triple;
+        // target_triple
+        [[nodiscard]] inline constexpr const std::optional<std::string>& target_triple() const noexcept {
+            return m_target_triple;
         }
-        inline constexpr auto& arch_triple(std::string_view triple) {
-            m_arch_triple = std::string { triple };
+        inline constexpr auto& target_triple(std::string triple) {
+            m_target_triple = std::move(triple);
             return *this;
         }
-        inline constexpr auto& arch_triple(std::optional<std::string> triple) {
-            m_arch_triple = std::move(triple);
-            return *this;
-        }
-        inline constexpr auto& clear_arch_triple() noexcept {
-            m_arch_triple.reset();
+        inline constexpr auto& clear_target_triple() noexcept {
+            m_target_triple.reset();
             return *this;
         }
 
@@ -1358,14 +1373,16 @@ namespace mgmake::build {
         .cc("clang-mg")
         .cxx("clang-mg++")
         .ar("llvm-ar")
-        .linker("clang-mg++");
+        .linker("clang-mg++")
+        .target_selection(build::toolchain::target_mode::clang_target);
 
     static constexpr auto tc_clang = build::toolchain{"clang"}
         .dialect(build::toolchain::dialect::gcc)
         .cc("clang")
         .cxx("clang++")
         .ar("llvm-ar")
-        .linker("clang++");
+        .linker("clang++")
+        .target_selection(build::toolchain::target_mode::clang_target);
 
     static constexpr auto tc_gcc = build::toolchain{"gcc"}
         .dialect(build::toolchain::dialect::gcc)
@@ -1479,7 +1496,6 @@ namespace mgmake::build {
 		detail::enum_entry<sys::platform::windows, ".dll">,
 		detail::enum_entry<sys::platform::linux, ".so">,
 		detail::enum_entry<sys::platform::macos, ".dylib">,
-		detail::enum_entry<sys::platform::wasm, ".wasm">,
 		detail::enum_entry<sys::platform::other_posix, ".so">
 	>;
 
@@ -1522,6 +1538,64 @@ namespace mgmake::build {
 
 #endif
 // ===== end include/mgmake/build/artifact_names.hxx =====
+
+
+// ===== begin include/mgmake/build/target.hxx =====
+#pragma once
+
+#ifndef MGMAKE_BUILD_TARGET_HXX
+#define MGMAKE_BUILD_TARGET_HXX
+
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/build/toolchain.hxx
+// skipped duplicate include: include/mgmake/detail/assert.hxx
+// skipped duplicate include: include/mgmake/sys/command_line.hxx
+// skipped duplicate include: include/mgmake/sys/platform.hxx
+
+#include <string>
+
+namespace mgmake::build {
+	[[nodiscard]] inline std::string effective_target_triple(
+		const toolchain& tc,
+		const request& req
+	) {
+		if (tc.target_triple().has_value()) {
+			return *tc.target_triple();
+		}
+
+		return sys::triple(req.target());
+	}
+
+	inline void append_target_args(
+		sys::command_line& command,
+		const toolchain& tc,
+		const request& req
+	) {
+		switch (tc.target_selection()) {
+			case toolchain::target_mode::implicit:
+			case toolchain::target_mode::custom:
+				return;
+
+			case toolchain::target_mode::clang_target: {
+				const auto triple = effective_target_triple(tc, req);
+
+				mgmkassert(
+					!triple.empty(),
+					"mgmake build: clang target mode requires a non-empty target triple"
+				);
+
+				command.m_args.emplace_back("-target");
+				command.m_args.emplace_back(triple);
+				return;
+			}
+		}
+
+		mgmkassert(false, "mgmake build: unknown toolchain target mode");
+	}
+}
+
+#endif
+// ===== end include/mgmake/build/target.hxx =====
 
 
 // ===== begin include/mgmake/cli/action.hxx =====
@@ -2849,7 +2923,7 @@ namespace mgmake::cli {
 	using platform_option =
 		value_option<&options::m_target_platform, "platform">
 			::value_name<"platform">
-			::description<"Set the target platform used for output naming.">;
+			::description<"Set the target platform used for artifact naming.">;
 
 	using arch_option =
 		value_option<&options::m_target_arch, "arch">
@@ -2864,7 +2938,7 @@ namespace mgmake::cli {
 	using target_triple_option =
 		value_option<&options::m_target_triple, "target-triple">
 			::value_name<"triple">
-			::description<"Set an explicit compiler target triple.">;
+			::description<"Set an explicit compiler target triple for target-aware toolchains.">;
 
 	using default_parser = option_parser<
 		help_option,
@@ -3981,8 +4055,9 @@ namespace mgmake::lower {
 #define MGMK_LOWER_OBJECTS_HXX
 
 // skipped duplicate include: include/mgmake/lower/context.hxx
-// skipped duplicate include: include/mgmake/sys/command_line.hxx
+// skipped duplicate include: include/mgmake/build/target.hxx
 // skipped duplicate include: include/mgmake/build/toolchain.hxx
+// skipped duplicate include: include/mgmake/sys/command_line.hxx
 
 #include <cstddef>
 #include <filesystem>
@@ -4019,6 +4094,8 @@ namespace mgmake::lower {
 
 			sys::command_line command{};
 			command.m_args.emplace_back(tc.cxx());
+
+			build::append_target_args(command, tc, request());
 
 			for (const auto& flag : tc.compile_flags()) {
 				command.m_args.emplace_back(flag);
@@ -4083,6 +4160,7 @@ namespace mgmake::lower {
 // skipped duplicate include: include/mgmake/lower/context.hxx
 // skipped duplicate include: include/mgmake/lower/objects.hxx
 // skipped duplicate include: include/mgmake/build/artifact_names.hxx
+// skipped duplicate include: include/mgmake/build/target.hxx
 // skipped duplicate include: include/mgmake/detail/assert.hxx
 // skipped duplicate include: include/mgmake/spec/project.hxx
 // skipped duplicate include: include/mgmake/sys/command_line.hxx
@@ -4339,6 +4417,8 @@ namespace mgmake::lower {
 		sys::command_line command{};
 		command.m_args.emplace_back(tc.linker());
 
+		build::append_target_args(command, tc, request());
+
 		const auto shared_flag = build::shared_library_link_flag(platform);
 
 		mgmkassert(
@@ -4430,6 +4510,8 @@ namespace mgmake::lower {
 
 		sys::command_line command{};
 		command.m_args.emplace_back(tc.cxx());
+
+		build::append_target_args(command, tc, request());
 
 		for (auto object_id : object_ids) {
 			command.m_args.emplace_back(m_emit.path(object_id).string());

@@ -136,6 +136,10 @@ namespace mgmake::sys {
 		return abi::msvc;
 #elif defined(__ANDROID__)
 		return abi::android;
+#elif defined(__APPLE__)
+		return abi::none;
+#elif defined(__EMSCRIPTEN__)
+		return abi::none;
 #elif defined(__MUSL__)
 		return abi::musl;
 #elif defined(__GNUC__) || defined(__clang__)

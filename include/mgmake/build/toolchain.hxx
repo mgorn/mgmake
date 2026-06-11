@@ -19,6 +19,12 @@ namespace mgmake::build {
             msvc // Windows-like arguments (typically with a '/' slash)
         };
 
+        enum struct target_mode {
+            implicit,
+            clang_target,
+            custom
+        };
+
         std::string m_name; // The name of the toolchain
         dialect m_dialect = []{
 #ifdef MGMK_PLATFORM_WINDOWS
@@ -27,6 +33,7 @@ namespace mgmake::build {
             return dialect::gcc;
 #endif
         }();
+        target_mode m_target_mode = target_mode::implicit;
 
         std::string m_cc;
         std::string m_cxx;
@@ -39,7 +46,7 @@ namespace mgmake::build {
         std::vector<std::string> m_archive_flags;
         std::vector<std::string> m_link_flags;
 
-        std::optional<std::string> m_arch_triple;
+        std::optional<std::string> m_target_triple;
         std::optional<std::string> m_sysroot;
 
        [[nodiscard]] inline constexpr std::string_view name() const {
@@ -55,6 +62,14 @@ namespace mgmake::build {
         }
         inline constexpr auto& dialect(enum dialect value) noexcept {
             m_dialect = value;
+            return *this;
+        }
+
+        [[nodiscard]] inline constexpr target_mode target_selection() const noexcept {
+            return m_target_mode;
+        }
+        inline constexpr auto& target_selection(target_mode mode) noexcept {
+            m_target_mode = mode;
             return *this;
         }
 
@@ -224,20 +239,16 @@ namespace mgmake::build {
             return *this;
         }
 
-        // arch_triple
-        [[nodiscard]] inline constexpr const std::optional<std::string>& arch_triple() const noexcept {
-            return m_arch_triple;
+        // target_triple
+        [[nodiscard]] inline constexpr const std::optional<std::string>& target_triple() const noexcept {
+            return m_target_triple;
         }
-        inline constexpr auto& arch_triple(std::string_view triple) {
-            m_arch_triple = std::string { triple };
+        inline constexpr auto& target_triple(std::string triple) {
+            m_target_triple = std::move(triple);
             return *this;
         }
-        inline constexpr auto& arch_triple(std::optional<std::string> triple) {
-            m_arch_triple = std::move(triple);
-            return *this;
-        }
-        inline constexpr auto& clear_arch_triple() noexcept {
-            m_arch_triple.reset();
+        inline constexpr auto& clear_target_triple() noexcept {
+            m_target_triple.reset();
             return *this;
         }
 
@@ -264,14 +275,16 @@ namespace mgmake::build {
         .cc("clang-mg")
         .cxx("clang-mg++")
         .ar("llvm-ar")
-        .linker("clang-mg++");
+        .linker("clang-mg++")
+        .target_selection(build::toolchain::target_mode::clang_target);
 
     static constexpr auto tc_clang = build::toolchain{"clang"}
         .dialect(build::toolchain::dialect::gcc)
         .cc("clang")
         .cxx("clang++")
         .ar("llvm-ar")
-        .linker("clang++");
+        .linker("clang++")
+        .target_selection(build::toolchain::target_mode::clang_target);
 
     static constexpr auto tc_gcc = build::toolchain{"gcc"}
         .dialect(build::toolchain::dialect::gcc)

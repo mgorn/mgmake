@@ -4,8 +4,9 @@
 #define MGMK_LOWER_OBJECTS_HXX
 
 #include "context.hxx"
-#include "../sys/command_line.hxx"
+#include "../build/target.hxx"
 #include "../build/toolchain.hxx"
+#include "../sys/command_line.hxx"
 
 #include <cstddef>
 #include <filesystem>
@@ -42,6 +43,8 @@ namespace mgmake::lower {
 
 			sys::command_line command{};
 			command.m_args.emplace_back(tc.cxx());
+
+			build::append_target_args(command, tc, request());
 
 			for (const auto& flag : tc.compile_flags()) {
 				command.m_args.emplace_back(flag);

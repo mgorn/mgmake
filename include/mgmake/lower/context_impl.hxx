@@ -6,6 +6,7 @@
 #include "context.hxx"
 #include "objects.hxx"
 #include "../build/artifact_names.hxx"
+#include "../build/target.hxx"
 #include "../detail/assert.hxx"
 #include "../spec/project.hxx"
 #include "../sys/command_line.hxx"
@@ -262,6 +263,8 @@ namespace mgmake::lower {
 		sys::command_line command{};
 		command.m_args.emplace_back(tc.linker());
 
+		build::append_target_args(command, tc, request());
+
 		const auto shared_flag = build::shared_library_link_flag(platform);
 
 		mgmkassert(
@@ -353,6 +356,8 @@ namespace mgmake::lower {
 
 		sys::command_line command{};
 		command.m_args.emplace_back(tc.cxx());
+
+		build::append_target_args(command, tc, request());
 
 		for (auto object_id : object_ids) {
 			command.m_args.emplace_back(m_emit.path(object_id).string());

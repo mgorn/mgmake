@@ -13,6 +13,7 @@
 #include "build/toolchain.hxx"
 #include "build/request.hxx"
 #include "build/artifact_names.hxx"
+#include "build/target.hxx"
 #include "cli/action.hxx"
 #include "cli/backend.hxx"
 #include "cli/options.hxx"
