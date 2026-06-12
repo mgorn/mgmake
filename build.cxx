@@ -1,20 +1,21 @@
 #include "mgmake.hxx"
 
-auto project() -> mgmk::spec::project {
-	auto testlib =
-		mgmk::spec::library{
-			"testlib",
-			mgmk::spec::library::kind::interface
-		}.add_include_dir("test");
+using namespace mgmk;
+using namespace mgmk::spec;
 
-	auto builder =
-		mgmk::spec::executable{"build"}
-			.add_source("build.cxx")
-			.link(testlib);
+project proj() {
+	auto testlib = library{"testlib", library::kind::interface}
+		.add_include_dir("test");
 
-	return mgmk::spec::project{"mkmake"}
+	auto builder = executable{"build"}
+		.add_source("build.cxx")
+		.link(testlib);
+
+	return project{"mkmake"}
 		.add_target(testlib)
 		.add_target(builder);
 }
 
-MGMK_ENTRY(project);
+MGMK_ENTRY(proj);
+
+
