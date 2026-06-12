@@ -3,67 +3,54 @@
 #ifndef MGMAKE_DETAIL_ASSERT_HXX
 #define MGMAKE_DETAIL_ASSERT_HXX
 
-#include <cstdio>
 #include <cstdlib>
+#include <iostream>
 #include <source_location>
 #include <string_view>
 
-#if defined(_MSC_VER)
-    #include <intrin.h>
-#endif
-
 namespace mgmake::detail {
-
-inline void debug_break() {
-#if defined(_MSC_VER)
-    __debugbreak();
-#elif defined(__clang__) || defined(__GNUC__)
-    __builtin_trap();
-#else
-    std::abort();
-#endif
-}
 
 [[noreturn]] inline void assertion_failed(
     std::string_view condition,
     std::string_view message,
     std::source_location location = std::source_location::current()
 ) {
-    std::fprintf(
-        stderr,
-        "\nmgmake assertion failed\n"
-        "  condition: %.*s\n"
-        "  message:   %.*s\n"
-        "  location:  %s:%u:%u\n"
-        "  function:  %s\n\n",
-        static_cast<int>(condition.size()),
-        condition.data(),
-        static_cast<int>(message.size()),
-        message.data(),
-        location.file_name(),
-        location.line(),
-        location.column(),
-        location.function_name()
-    );
+    std::cerr
+        << "mgmake assertion failed\n"
+        << "  condition: " << condition << "\n"
+        << "  message: " << message << "\n"
+        << "  file: " << location.file_name() << "\n"
+        << "  line: " << location.line() << "\n"
+        << "  function: " << location.function_name() << "\n";
 
-    debug_break();
-
-    // In case the platform/debugger allows execution to continue.
     std::abort();
 }
 
 inline void mgmk_assert_impl(
-    bool condition,
-    std::string_view condition_text,
-    std::string_view message,
-    std::source_location location = std::source_location::current()
+    const bool condition,
+    const std::string_view condition_text,
+    const std::string_view message,
+    const std::source_location location = std::source_location::current()
 ) {
     if (!condition) {
         assertion_failed(condition_text, message, location);
     }
 }
 
+struct constexpr_assertion_failure {};
+
+template<typename message_t>
+[[noreturn]] consteval void constexpr_assert_failed(
+    const char*,
+    const message_t&
+) {
+    throw constexpr_assertion_failure{};
+}
+
 } // namespace mgmake::detail
+
+#define mgmkstaticassert(condition, message) \
+    static_assert(static_cast<bool>(condition), message)
 
 #ifndef MGMK_ENABLE_ASSERTS
     #ifndef NDEBUG
@@ -76,12 +63,21 @@ inline void mgmk_assert_impl(
 #if MGMK_ENABLE_ASSERTS
     #define mgmkassert(condition, message)                                      \
         do {                                                                    \
-            ::mgmake::detail::mgmk_assert_impl(                                 \
-                static_cast<bool>(condition),                                   \
-                #condition,                                                     \
-                message,                                                        \
-                std::source_location::current()                                 \
-            );                                                                  \
+            if (!(condition)) {                                                 \
+                if consteval {                                                  \
+                    ::mgmake::detail::constexpr_assert_failed(                  \
+                        #condition,                                             \
+                        message                                                 \
+                    );                                                          \
+                } else {                                                        \
+                    ::mgmake::detail::mgmk_assert_impl(                         \
+                        false,                                                  \
+                        #condition,                                             \
+                        message,                                                \
+                        std::source_location::current()                         \
+                    );                                                          \
+                }                                                               \
+            }                                                                   \
         } while (false)
 #else
     #define mgmkassert(condition, message)                                      \

@@ -3,6 +3,8 @@
 #ifndef MGMK_SPEC_TARGET_HXX
 #define MGMK_SPEC_TARGET_HXX
 
+#include "../detail/assert.hxx"
+
 #include <filesystem>
 #include <set>
 #include <string>
@@ -21,6 +23,11 @@ namespace mgmake::spec {
 		}
 
 		inline constexpr auto& add_source(const std::filesystem::path& file) {
+			mgmkassert(
+				not file.empty(),
+				"mgmake spec: target '" + m_name + "' cannot add an empty source path"
+			);
+
 			m_sources.emplace(file);
 			return self();
 		}
@@ -29,6 +36,11 @@ namespace mgmake::spec {
 		}
 
 		inline constexpr auto& add_include_dir(const std::filesystem::path& file) {
+			mgmkassert(
+				not file.empty(),
+				"mgmake spec: target '" + m_name + "' cannot add an empty include directory"
+			);
+
 			m_include_dirs.emplace(file);
 			return self();
 		}
@@ -37,6 +49,15 @@ namespace mgmake::spec {
 		}
 
 		inline constexpr auto& link(std::string_view lib) {
+			mgmkassert(
+				not lib.empty(),
+				"mgmake spec: target '" + m_name + "' cannot link an empty library name"
+			);
+			mgmkassert(
+				lib != m_name,
+				"mgmake spec: target '" + m_name + "' cannot link itself"
+			);
+
 			m_linked_libraries.emplace(lib);
 			return self();
 		}

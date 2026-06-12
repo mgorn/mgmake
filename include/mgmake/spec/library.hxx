@@ -21,7 +21,26 @@ namespace mgmake::spec {
 			interface
 		} m_kind;
 
-		library(std::string_view name, kind k) : target<library>{ std::string{ name } }, m_kind{k} {}
+		inline constexpr library(std::string_view name, kind k)
+			: target<library>{ std::string{ name } }, m_kind{k} {
+			mgmkassert(not m_name.empty(), "mgmake spec: library target has no name");
+			mgmkassert(
+				m_kind == kind::static_lib ||
+					m_kind == kind::shared_lib ||
+					m_kind == kind::interface,
+				"mgmake spec: invalid library kind"
+			);
+		}
+
+		inline constexpr auto& add_source(const std::filesystem::path& file) {
+			mgmkassert(
+				m_kind != kind::interface,
+				"mgmake spec: interface library '" + m_name + "' cannot have sources"
+			);
+
+			target<library>::add_source(file);
+			return *this;
+		}
 	};
 }
 

@@ -402,67 +402,54 @@ namespace mgmake::detail {
 #ifndef MGMAKE_DETAIL_ASSERT_HXX
 #define MGMAKE_DETAIL_ASSERT_HXX
 
-#include <cstdio>
 #include <cstdlib>
+#include <iostream>
 #include <source_location>
 #include <string_view>
 
-#if defined(_MSC_VER)
-    #include <intrin.h>
-#endif
-
 namespace mgmake::detail {
-
-inline void debug_break() {
-#if defined(_MSC_VER)
-    __debugbreak();
-#elif defined(__clang__) || defined(__GNUC__)
-    __builtin_trap();
-#else
-    std::abort();
-#endif
-}
 
 [[noreturn]] inline void assertion_failed(
     std::string_view condition,
     std::string_view message,
     std::source_location location = std::source_location::current()
 ) {
-    std::fprintf(
-        stderr,
-        "\nmgmake assertion failed\n"
-        "  condition: %.*s\n"
-        "  message:   %.*s\n"
-        "  location:  %s:%u:%u\n"
-        "  function:  %s\n\n",
-        static_cast<int>(condition.size()),
-        condition.data(),
-        static_cast<int>(message.size()),
-        message.data(),
-        location.file_name(),
-        location.line(),
-        location.column(),
-        location.function_name()
-    );
+    std::cerr
+        << "mgmake assertion failed\n"
+        << "  condition: " << condition << "\n"
+        << "  message: " << message << "\n"
+        << "  file: " << location.file_name() << "\n"
+        << "  line: " << location.line() << "\n"
+        << "  function: " << location.function_name() << "\n";
 
-    debug_break();
-
-    // In case the platform/debugger allows execution to continue.
     std::abort();
 }
 
 inline void mgmk_assert_impl(
-    bool condition,
-    std::string_view condition_text,
-    std::string_view message,
-    std::source_location location = std::source_location::current()
+    const bool condition,
+    const std::string_view condition_text,
+    const std::string_view message,
+    const std::source_location location = std::source_location::current()
 ) {
     if (!condition) {
         assertion_failed(condition_text, message, location);
     }
 }
 
+struct constexpr_assertion_failure {};
+
+template<typename message_t>
+[[noreturn]] consteval void constexpr_assert_failed(
+    const char*,
+    const message_t&
+) {
+    throw constexpr_assertion_failure{};
+}
+
 } // namespace mgmake::detail
+
+#define mgmkstaticassert(condition, message) \
+    static_assert(static_cast<bool>(condition), message)
 
 #ifndef MGMK_ENABLE_ASSERTS
     #ifndef NDEBUG
@@ -475,12 +462,21 @@ inline void mgmk_assert_impl(
 #if MGMK_ENABLE_ASSERTS
     #define mgmkassert(condition, message)                                      \
         do {                                                                    \
-            ::mgmake::detail::mgmk_assert_impl(                                 \
-                static_cast<bool>(condition),                                   \
-                #condition,                                                     \
-                message,                                                        \
-                std::source_location::current()                                 \
-            );                                                                  \
+            if (!(condition)) {                                                 \
+                if consteval {                                                  \
+                    ::mgmake::detail::constexpr_assert_failed(                  \
+                        #condition,                                             \
+                        message                                                 \
+                    );                                                          \
+                } else {                                                        \
+                    ::mgmake::detail::mgmk_assert_impl(                         \
+                        false,                                                  \
+                        #condition,                                             \
+                        message,                                                \
+                        std::source_location::current()                         \
+                    );                                                          \
+                }                                                               \
+            }                                                                   \
         } while (false)
 #else
     #define mgmkassert(condition, message)                                      \
@@ -489,7 +485,8 @@ inline void mgmk_assert_impl(
         } while (false)
 #endif
 
-#endif// ===== end include/mgmake/detail/assert.hxx =====
+#endif
+// ===== end include/mgmake/detail/assert.hxx =====
 
 
 // ===== begin include/mgmake/sys/platform.hxx =====
@@ -3641,6 +3638,8 @@ namespace mgmake::backend {
 #ifndef MGMK_SPEC_TARGET_HXX
 #define MGMK_SPEC_TARGET_HXX
 
+// skipped duplicate include: include/mgmake/detail/assert.hxx
+
 #include <filesystem>
 #include <set>
 #include <string>
@@ -3659,6 +3658,11 @@ namespace mgmake::spec {
 		}
 
 		inline constexpr auto& add_source(const std::filesystem::path& file) {
+			mgmkassert(
+				not file.empty(),
+				"mgmake spec: target '" + m_name + "' cannot add an empty source path"
+			);
+
 			m_sources.emplace(file);
 			return self();
 		}
@@ -3667,6 +3671,11 @@ namespace mgmake::spec {
 		}
 
 		inline constexpr auto& add_include_dir(const std::filesystem::path& file) {
+			mgmkassert(
+				not file.empty(),
+				"mgmake spec: target '" + m_name + "' cannot add an empty include directory"
+			);
+
 			m_include_dirs.emplace(file);
 			return self();
 		}
@@ -3675,6 +3684,15 @@ namespace mgmake::spec {
 		}
 
 		inline constexpr auto& link(std::string_view lib) {
+			mgmkassert(
+				not lib.empty(),
+				"mgmake spec: target '" + m_name + "' cannot link an empty library name"
+			);
+			mgmkassert(
+				lib != m_name,
+				"mgmake spec: target '" + m_name + "' cannot link itself"
+			);
+
 			m_linked_libraries.emplace(lib);
 			return self();
 		}
@@ -3700,11 +3718,18 @@ namespace mgmake::spec {
 // ===== end include/mgmake/spec/target.hxx =====
 
 
+#include <string>
+#include <string_view>
 #include <vector>
 
 namespace mgmake::spec {
 	struct executable : public target<executable> {
 		using id = std::vector<executable>::size_type;
+
+		inline constexpr executable(std::string_view name)
+			: target<executable>{ std::string{ name } } {
+			mgmkassert(not m_name.empty(), "mgmake spec: executable target has no name");
+		}
 	};
 }
 
@@ -3748,7 +3773,26 @@ namespace mgmake::spec {
 			interface
 		} m_kind;
 
-		library(std::string_view name, kind k) : target<library>{ std::string{ name } }, m_kind{k} {}
+		inline constexpr library(std::string_view name, kind k)
+			: target<library>{ std::string{ name } }, m_kind{k} {
+			mgmkassert(not m_name.empty(), "mgmake spec: library target has no name");
+			mgmkassert(
+				m_kind == kind::static_lib ||
+					m_kind == kind::shared_lib ||
+					m_kind == kind::interface,
+				"mgmake spec: invalid library kind"
+			);
+		}
+
+		inline constexpr auto& add_source(const std::filesystem::path& file) {
+			mgmkassert(
+				m_kind != kind::interface,
+				"mgmake spec: interface library '" + m_name + "' cannot have sources"
+			);
+
+			target<library>::add_source(file);
+			return *this;
+		}
 	};
 }
 
@@ -3781,6 +3825,7 @@ namespace mgmake::spec {
 // skipped duplicate include: include/mgmake/spec/library.hxx
 
 #include <optional>
+#include <set>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -3791,10 +3836,18 @@ namespace mgmake::spec {
 		std::vector<spec::executable> m_executables;
 		std::vector<spec::library> m_libraries;
 
+		inline constexpr project(std::string_view name)
+			: m_name{name} {
+			mgmkassert(not m_name.empty(), "mgmake spec: project has no name");
+		}
+
 		inline constexpr project& add_target(const spec::executable& exe) {
 			mgmkassert(not exe.m_name.empty(), "mgmake spec: executable target has no name");
             mgmkassert(not find_library(exe.m_name).has_value(), "mgmake spec: target name conflict '" + exe.m_name + "'");
             mgmkassert(not find_executable(exe.m_name).has_value(), "mgmake spec: target name conflict '" + exe.m_name + "'");
+			mgmkassert(not exe.m_sources.empty(), "mgmake spec: executable target '" + exe.m_name + "' has no sources");
+
+			assert_known_libraries_for(exe.m_linked_libraries, exe.m_name);
 
 			m_executables.emplace_back(exe);
 			return *this;
@@ -3802,11 +3855,37 @@ namespace mgmake::spec {
 		inline constexpr project& add_target(const spec::library& lib) {
 			mgmkassert(not lib.m_name.empty(), "mgmake spec: library target has no name");
             mgmkassert(not find_executable(lib.m_name).has_value(), "mgmake spec: target name conflict '" + lib.m_name + "'");
+			mgmkassert(not find_library(lib.m_name).has_value(), "mgmake spec: target name conflict '" + lib.m_name + "'");
 
-			// Skip if the library was already added
-			if (find_library(lib.m_name).has_value()) {
-                return *this;
-            }
+			switch (lib.m_kind) {
+				case spec::library::kind::interface:
+					mgmkassert(
+						lib.m_sources.empty(),
+						"mgmake spec: interface library '" + lib.m_name + "' cannot have sources"
+					);
+					break;
+
+				case spec::library::kind::static_lib:
+					mgmkassert(
+						not lib.m_sources.empty(),
+						"mgmake spec: static library '" + lib.m_name + "' has no sources"
+					);
+					break;
+
+				case spec::library::kind::shared_lib:
+					mgmkassert(
+						not lib.m_sources.empty(),
+						"mgmake spec: shared library '" + lib.m_name + "' has no sources"
+					);
+					break;
+
+				default:
+					mgmkassert(false, "mgmake spec: invalid library kind for target '" + lib.m_name + "'");
+					break;
+			}
+
+			assert_known_libraries_for(lib.m_linked_libraries, lib.m_name);
+			assert_library_link_closure_is_acyclic(lib);
 
 			m_libraries.emplace_back(lib);
 			return *this;
@@ -3843,6 +3922,80 @@ namespace mgmake::spec {
 		}
 
 		dag::graph graph(const build::request& req) const;
+
+	private:
+		inline constexpr void assert_known_libraries_for(
+			const std::set<std::string>& libraries,
+			std::string_view owner_name
+		) const {
+			for (const auto& library_name : libraries) {
+				mgmkassert(
+					find_library(library_name).has_value(),
+					"mgmake spec: target '" + std::string{owner_name} +
+						"' links unknown library '" + library_name + "'"
+				);
+			}
+		}
+
+		inline constexpr bool library_stack_contains(
+			const std::vector<std::string_view>& stack,
+			std::string_view name
+		) const {
+			for (const auto existing : stack) {
+				if (existing == name) {
+					return true;
+				}
+			}
+
+			return false;
+		}
+
+		inline constexpr void assert_library_link_closure_is_acyclic(
+			std::string_view library_name,
+			const std::set<std::string>& linked_libraries,
+			std::vector<std::string_view>& active_libraries
+		) const {
+			mgmkassert(
+				not library_stack_contains(active_libraries, library_name),
+				"mgmake spec: cyclic library dependency involving '" + std::string{library_name} + "'"
+			);
+
+			active_libraries.emplace_back(library_name);
+
+			for (const auto& linked_name : linked_libraries) {
+				mgmkassert(
+					not library_stack_contains(active_libraries, linked_name),
+					"mgmake spec: cyclic library dependency involving '" + linked_name + "'"
+				);
+
+				const auto linked_id = find_library(linked_name);
+				mgmkassert(
+					linked_id.has_value(),
+					"mgmake spec: library '" + std::string{library_name} +
+						"' links unknown library '" + linked_name + "'"
+				);
+
+				const auto& linked_library = m_libraries.at(linked_id.value());
+				assert_library_link_closure_is_acyclic(
+					linked_library.m_name,
+					linked_library.m_linked_libraries,
+					active_libraries
+				);
+			}
+
+			active_libraries.pop_back();
+		}
+
+		inline constexpr void assert_library_link_closure_is_acyclic(
+			const spec::library& lib
+		) const {
+			std::vector<std::string_view> active_libraries{};
+			assert_library_link_closure_is_acyclic(
+				lib.m_name,
+				lib.m_linked_libraries,
+				active_libraries
+			);
+		}
 	};
 }
 

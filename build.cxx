@@ -55,7 +55,7 @@ int main(int argc, const char** argv) {
 	build::request req{ build::tc_clang_mg, opts.m_build_dir, opts.targets(), opts.target_platform() };
 	auto testlib = spec::library{"testlib", spec::library::kind::interface}.add_include_dir("test");
 	auto builder = spec::executable{"build"}.add_source("build.cxx").link(testlib);
-	auto proj = spec::project{"mkmake"}.add_target(builder).add_target(testlib);
+	auto proj = spec::project{"mkmake"}.add_target(testlib).add_target(builder);
 	auto graph = proj.graph(req);
 
 	backend::graphviz viz;
