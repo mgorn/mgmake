@@ -556,14 +556,14 @@ namespace mgmake::sys {
 	};
 
 	enum struct platform {
-		unknown,
+		p_unknown,
 
-		windows,
-		linux,
-		macos,
-		wasm,
-		freestanding,
-		other_posix,
+		p_windows,
+		p_linux,
+		p_macos,
+		p_wasm,
+		p_freestanding,
+		p_other_posix,
 
 		count
 	};
@@ -583,7 +583,7 @@ namespace mgmake::sys {
 
 	struct target {
 		arch m_arch = arch::unknown;
-		platform m_platform = platform::unknown;
+		platform m_platform = platform::p_unknown;
 		abi m_abi = abi::unknown;
 		std::string m_triple{};
 	};
@@ -612,17 +612,17 @@ namespace mgmake::sys {
 
 	static constexpr platform g_host_platform = [] constexpr {
 #if defined(MGMK_PLATFORM_WINDOWS)
-		return platform::windows;
+		return platform::p_windows;
 #elif defined(MGMK_PLATFORM_WASM)
-		return platform::wasm;
+		return platform::p_wasm;
 #elif defined(MGMK_PLATFORM_MACOS)
-		return platform::macos;
+		return platform::p_macos;
 #elif defined(MGMK_PLATFORM_LINUX)
-		return platform::linux;
+		return platform::p_linux;
 #elif defined(MGMK_PLATFORM_OTHER_POSIX)
-		return platform::other_posix;
+		return platform::p_other_posix;
 #else
-		return platform::unknown;
+		return platform::p_unknown;
 #endif
 	}();
 
@@ -666,13 +666,13 @@ namespace mgmake::sys {
 
 	using platform_names = detail::enum_table<
 		platform,
-		detail::enum_entry<platform::unknown, "unknown">,
-		detail::enum_entry<platform::windows, "windows">,
-		detail::enum_entry<platform::linux, "linux">,
-		detail::enum_entry<platform::macos, "macos">,
-		detail::enum_entry<platform::wasm, "wasm">,
-		detail::enum_entry<platform::freestanding, "freestanding">,
-		detail::enum_entry<platform::other_posix, "other-posix">
+		detail::enum_entry<platform::p_unknown, "unknown">,
+		detail::enum_entry<platform::p_windows, "windows">,
+		detail::enum_entry<platform::p_linux, "linux">,
+		detail::enum_entry<platform::p_macos, "macos">,
+		detail::enum_entry<platform::p_wasm, "wasm">,
+		detail::enum_entry<platform::p_freestanding, "freestanding">,
+		detail::enum_entry<platform::p_other_posix, "other-posix">
 	>;
 
 	using abi_names = detail::enum_table<
@@ -726,24 +726,24 @@ namespace mgmake::sys {
 		platform,
 		detail::enum_entry<g_host_platform, "host">,
 		detail::enum_entry<g_host_platform, "native">,
-		detail::enum_entry<platform::unknown, "unknown">,
-		detail::enum_entry<platform::windows, "windows">,
-		detail::enum_entry<platform::windows, "win">,
-		detail::enum_entry<platform::windows, "win32">,
-		detail::enum_entry<platform::windows, "win64">,
-		detail::enum_entry<platform::linux, "linux">,
-		detail::enum_entry<platform::macos, "macos">,
-		detail::enum_entry<platform::macos, "mac">,
-		detail::enum_entry<platform::macos, "darwin">,
-		detail::enum_entry<platform::macos, "osx">,
-		detail::enum_entry<platform::wasm, "wasm">,
-		detail::enum_entry<platform::wasm, "webassembly">,
-		detail::enum_entry<platform::wasm, "emscripten">,
-		detail::enum_entry<platform::freestanding, "freestanding">,
-		detail::enum_entry<platform::freestanding, "none">,
-		detail::enum_entry<platform::other_posix, "posix">,
-		detail::enum_entry<platform::other_posix, "unix">,
-		detail::enum_entry<platform::other_posix, "other-posix">
+		detail::enum_entry<platform::p_unknown, "unknown">,
+		detail::enum_entry<platform::p_windows, "windows">,
+		detail::enum_entry<platform::p_windows, "win">,
+		detail::enum_entry<platform::p_windows, "win32">,
+		detail::enum_entry<platform::p_windows, "win64">,
+		detail::enum_entry<platform::p_linux, "linux">,
+		detail::enum_entry<platform::p_macos, "macos">,
+		detail::enum_entry<platform::p_macos, "mac">,
+		detail::enum_entry<platform::p_macos, "darwin">,
+		detail::enum_entry<platform::p_macos, "osx">,
+		detail::enum_entry<platform::p_wasm, "wasm">,
+		detail::enum_entry<platform::p_wasm, "webassembly">,
+		detail::enum_entry<platform::p_wasm, "emscripten">,
+		detail::enum_entry<platform::p_freestanding, "freestanding">,
+		detail::enum_entry<platform::p_freestanding, "none">,
+		detail::enum_entry<platform::p_other_posix, "posix">,
+		detail::enum_entry<platform::p_other_posix, "unix">,
+		detail::enum_entry<platform::p_other_posix, "other-posix">
 	>;
 
 	using abi_parse_names = detail::enum_table<
@@ -796,13 +796,13 @@ namespace mgmake::sys {
 
 	using platform_triple_names = detail::enum_table<
 		platform,
-		detail::enum_entry<platform::unknown, "unknown">,
-		detail::enum_entry<platform::windows, "windows">,
-		detail::enum_entry<platform::linux, "linux">,
-		detail::enum_entry<platform::macos, "darwin">,
-		detail::enum_entry<platform::wasm, "unknown">,
-		detail::enum_entry<platform::freestanding, "none">,
-		detail::enum_entry<platform::other_posix, "unknown">
+		detail::enum_entry<platform::p_unknown, "unknown">,
+		detail::enum_entry<platform::p_windows, "windows">,
+		detail::enum_entry<platform::p_linux, "linux">,
+		detail::enum_entry<platform::p_macos, "darwin">,
+		detail::enum_entry<platform::p_wasm, "unknown">,
+		detail::enum_entry<platform::p_freestanding, "none">,
+		detail::enum_entry<platform::p_other_posix, "unknown">
 	>;
 
 	using abi_triple_names = detail::enum_table<
@@ -1478,8 +1478,8 @@ namespace mgmake::build {
 namespace mgmake::build {
 	using executable_extensions = detail::enum_table<
 		sys::platform,
-		detail::enum_entry<sys::platform::windows, ".exe">,
-		detail::enum_entry<sys::platform::wasm, ".wasm">
+		detail::enum_entry<sys::platform::p_windows, ".exe">,
+		detail::enum_entry<sys::platform::p_wasm, ".wasm">
 	>;
 
 	static_assert(executable_extensions::has_no_empty_names());
@@ -1493,10 +1493,10 @@ namespace mgmake::build {
 
 	using shared_library_extensions = detail::enum_table<
 		sys::platform,
-		detail::enum_entry<sys::platform::windows, ".dll">,
-		detail::enum_entry<sys::platform::linux, ".so">,
-		detail::enum_entry<sys::platform::macos, ".dylib">,
-		detail::enum_entry<sys::platform::other_posix, ".so">
+		detail::enum_entry<sys::platform::p_windows, ".dll">,
+		detail::enum_entry<sys::platform::p_linux, ".so">,
+		detail::enum_entry<sys::platform::p_macos, ".dylib">,
+		detail::enum_entry<sys::platform::p_other_posix, ".so">
 	>;
 
 	static_assert(shared_library_extensions::has_no_empty_names());
@@ -1510,10 +1510,10 @@ namespace mgmake::build {
 
 	using shared_library_link_flags = detail::enum_table<
 		sys::platform,
-		detail::enum_entry<sys::platform::windows, "-shared">,
-		detail::enum_entry<sys::platform::linux, "-shared">,
-		detail::enum_entry<sys::platform::macos, "-dynamiclib">,
-		detail::enum_entry<sys::platform::other_posix, "-shared">
+		detail::enum_entry<sys::platform::p_windows, "-shared">,
+		detail::enum_entry<sys::platform::p_linux, "-shared">,
+		detail::enum_entry<sys::platform::p_macos, "-dynamiclib">,
+		detail::enum_entry<sys::platform::p_other_posix, "-shared">
 	>;
 
 	static_assert(shared_library_link_flags::has_no_empty_names());
@@ -1529,9 +1529,9 @@ namespace mgmake::build {
 		sys::platform platform
 	) noexcept {
 		return (
-			platform == sys::platform::linux
-			|| platform == sys::platform::macos
-			|| platform == sys::platform::other_posix
+			platform == sys::platform::p_linux
+			|| platform == sys::platform::p_macos
+			|| platform == sys::platform::p_other_posix
 		) ? "lib" : "";
 	}
 }
@@ -1844,7 +1844,11 @@ namespace mgmake::cli {
 		bool m_show_help = false;
 		bool m_show_version = false;
 
-		[[nodiscard]] inline sys::target target() const {
+		inline constexpr const std::vector<std::string>& targets() const {
+			return m_targets;
+		}
+		
+		[[nodiscard]] inline sys::target target_platform() const {
 			return sys::target{
 				m_target_arch,
 				m_target_platform,
@@ -3603,6 +3607,10 @@ namespace mgmake::backend {
 			command.m_args.emplace_back("-f");
 			command.m_args.emplace_back(output_path.string());
 
+			for (const auto& target : req.m_targets) {
+				command.m_args.emplace_back(target);
+			}
+
 			const auto exit_code = command.invoke();
 
 			if (exit_code != 0) {
@@ -3616,7 +3624,8 @@ namespace mgmake::backend {
     };
 }
 
-#endif// ===== end include/mgmake/backend/ninja.hxx =====
+#endif
+// ===== end include/mgmake/backend/ninja.hxx =====
 
 
 // ===== begin include/mgmake/spec/executable.hxx =====

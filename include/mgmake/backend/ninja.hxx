@@ -238,6 +238,10 @@ namespace mgmake::backend {
 			command.m_args.emplace_back("-f");
 			command.m_args.emplace_back(output_path.string());
 
+			for (const auto& target : req.m_targets) {
+				command.m_args.emplace_back(target);
+			}
+
 			const auto exit_code = command.invoke();
 
 			if (exit_code != 0) {

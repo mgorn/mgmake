@@ -32,7 +32,11 @@ namespace mgmake::cli {
 		bool m_show_help = false;
 		bool m_show_version = false;
 
-		[[nodiscard]] inline sys::target target() const {
+		inline constexpr const std::vector<std::string>& targets() const {
+			return m_targets;
+		}
+		
+		[[nodiscard]] inline sys::target target_platform() const {
 			return sys::target{
 				m_target_arch,
 				m_target_platform,

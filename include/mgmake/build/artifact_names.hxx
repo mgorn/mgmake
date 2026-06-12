@@ -11,8 +11,8 @@
 namespace mgmake::build {
 	using executable_extensions = detail::enum_table<
 		sys::platform,
-		detail::enum_entry<sys::platform::windows, ".exe">,
-		detail::enum_entry<sys::platform::wasm, ".wasm">
+		detail::enum_entry<sys::platform::p_windows, ".exe">,
+		detail::enum_entry<sys::platform::p_wasm, ".wasm">
 	>;
 
 	static_assert(executable_extensions::has_no_empty_names());
@@ -26,10 +26,10 @@ namespace mgmake::build {
 
 	using shared_library_extensions = detail::enum_table<
 		sys::platform,
-		detail::enum_entry<sys::platform::windows, ".dll">,
-		detail::enum_entry<sys::platform::linux, ".so">,
-		detail::enum_entry<sys::platform::macos, ".dylib">,
-		detail::enum_entry<sys::platform::other_posix, ".so">
+		detail::enum_entry<sys::platform::p_windows, ".dll">,
+		detail::enum_entry<sys::platform::p_linux, ".so">,
+		detail::enum_entry<sys::platform::p_macos, ".dylib">,
+		detail::enum_entry<sys::platform::p_other_posix, ".so">
 	>;
 
 	static_assert(shared_library_extensions::has_no_empty_names());
@@ -43,10 +43,10 @@ namespace mgmake::build {
 
 	using shared_library_link_flags = detail::enum_table<
 		sys::platform,
-		detail::enum_entry<sys::platform::windows, "-shared">,
-		detail::enum_entry<sys::platform::linux, "-shared">,
-		detail::enum_entry<sys::platform::macos, "-dynamiclib">,
-		detail::enum_entry<sys::platform::other_posix, "-shared">
+		detail::enum_entry<sys::platform::p_windows, "-shared">,
+		detail::enum_entry<sys::platform::p_linux, "-shared">,
+		detail::enum_entry<sys::platform::p_macos, "-dynamiclib">,
+		detail::enum_entry<sys::platform::p_other_posix, "-shared">
 	>;
 
 	static_assert(shared_library_link_flags::has_no_empty_names());
@@ -62,9 +62,9 @@ namespace mgmake::build {
 		sys::platform platform
 	) noexcept {
 		return (
-			platform == sys::platform::linux
-			|| platform == sys::platform::macos
-			|| platform == sys::platform::other_posix
+			platform == sys::platform::p_linux
+			|| platform == sys::platform::p_macos
+			|| platform == sys::platform::p_other_posix
 		) ? "lib" : "";
 	}
 }

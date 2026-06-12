@@ -61,14 +61,14 @@ namespace mgmake::sys {
 	};
 
 	enum struct platform {
-		unknown,
+		p_unknown,
 
-		windows,
-		linux,
-		macos,
-		wasm,
-		freestanding,
-		other_posix,
+		p_windows,
+		p_linux,
+		p_macos,
+		p_wasm,
+		p_freestanding,
+		p_other_posix,
 
 		count
 	};
@@ -88,7 +88,7 @@ namespace mgmake::sys {
 
 	struct target {
 		arch m_arch = arch::unknown;
-		platform m_platform = platform::unknown;
+		platform m_platform = platform::p_unknown;
 		abi m_abi = abi::unknown;
 		std::string m_triple{};
 	};
@@ -117,17 +117,17 @@ namespace mgmake::sys {
 
 	static constexpr platform g_host_platform = [] constexpr {
 #if defined(MGMK_PLATFORM_WINDOWS)
-		return platform::windows;
+		return platform::p_windows;
 #elif defined(MGMK_PLATFORM_WASM)
-		return platform::wasm;
+		return platform::p_wasm;
 #elif defined(MGMK_PLATFORM_MACOS)
-		return platform::macos;
+		return platform::p_macos;
 #elif defined(MGMK_PLATFORM_LINUX)
-		return platform::linux;
+		return platform::p_linux;
 #elif defined(MGMK_PLATFORM_OTHER_POSIX)
-		return platform::other_posix;
+		return platform::p_other_posix;
 #else
-		return platform::unknown;
+		return platform::p_unknown;
 #endif
 	}();
 
@@ -171,13 +171,13 @@ namespace mgmake::sys {
 
 	using platform_names = detail::enum_table<
 		platform,
-		detail::enum_entry<platform::unknown, "unknown">,
-		detail::enum_entry<platform::windows, "windows">,
-		detail::enum_entry<platform::linux, "linux">,
-		detail::enum_entry<platform::macos, "macos">,
-		detail::enum_entry<platform::wasm, "wasm">,
-		detail::enum_entry<platform::freestanding, "freestanding">,
-		detail::enum_entry<platform::other_posix, "other-posix">
+		detail::enum_entry<platform::p_unknown, "unknown">,
+		detail::enum_entry<platform::p_windows, "windows">,
+		detail::enum_entry<platform::p_linux, "linux">,
+		detail::enum_entry<platform::p_macos, "macos">,
+		detail::enum_entry<platform::p_wasm, "wasm">,
+		detail::enum_entry<platform::p_freestanding, "freestanding">,
+		detail::enum_entry<platform::p_other_posix, "other-posix">
 	>;
 
 	using abi_names = detail::enum_table<
@@ -231,24 +231,24 @@ namespace mgmake::sys {
 		platform,
 		detail::enum_entry<g_host_platform, "host">,
 		detail::enum_entry<g_host_platform, "native">,
-		detail::enum_entry<platform::unknown, "unknown">,
-		detail::enum_entry<platform::windows, "windows">,
-		detail::enum_entry<platform::windows, "win">,
-		detail::enum_entry<platform::windows, "win32">,
-		detail::enum_entry<platform::windows, "win64">,
-		detail::enum_entry<platform::linux, "linux">,
-		detail::enum_entry<platform::macos, "macos">,
-		detail::enum_entry<platform::macos, "mac">,
-		detail::enum_entry<platform::macos, "darwin">,
-		detail::enum_entry<platform::macos, "osx">,
-		detail::enum_entry<platform::wasm, "wasm">,
-		detail::enum_entry<platform::wasm, "webassembly">,
-		detail::enum_entry<platform::wasm, "emscripten">,
-		detail::enum_entry<platform::freestanding, "freestanding">,
-		detail::enum_entry<platform::freestanding, "none">,
-		detail::enum_entry<platform::other_posix, "posix">,
-		detail::enum_entry<platform::other_posix, "unix">,
-		detail::enum_entry<platform::other_posix, "other-posix">
+		detail::enum_entry<platform::p_unknown, "unknown">,
+		detail::enum_entry<platform::p_windows, "windows">,
+		detail::enum_entry<platform::p_windows, "win">,
+		detail::enum_entry<platform::p_windows, "win32">,
+		detail::enum_entry<platform::p_windows, "win64">,
+		detail::enum_entry<platform::p_linux, "linux">,
+		detail::enum_entry<platform::p_macos, "macos">,
+		detail::enum_entry<platform::p_macos, "mac">,
+		detail::enum_entry<platform::p_macos, "darwin">,
+		detail::enum_entry<platform::p_macos, "osx">,
+		detail::enum_entry<platform::p_wasm, "wasm">,
+		detail::enum_entry<platform::p_wasm, "webassembly">,
+		detail::enum_entry<platform::p_wasm, "emscripten">,
+		detail::enum_entry<platform::p_freestanding, "freestanding">,
+		detail::enum_entry<platform::p_freestanding, "none">,
+		detail::enum_entry<platform::p_other_posix, "posix">,
+		detail::enum_entry<platform::p_other_posix, "unix">,
+		detail::enum_entry<platform::p_other_posix, "other-posix">
 	>;
 
 	using abi_parse_names = detail::enum_table<
@@ -301,13 +301,13 @@ namespace mgmake::sys {
 
 	using platform_triple_names = detail::enum_table<
 		platform,
-		detail::enum_entry<platform::unknown, "unknown">,
-		detail::enum_entry<platform::windows, "windows">,
-		detail::enum_entry<platform::linux, "linux">,
-		detail::enum_entry<platform::macos, "darwin">,
-		detail::enum_entry<platform::wasm, "unknown">,
-		detail::enum_entry<platform::freestanding, "none">,
-		detail::enum_entry<platform::other_posix, "unknown">
+		detail::enum_entry<platform::p_unknown, "unknown">,
+		detail::enum_entry<platform::p_windows, "windows">,
+		detail::enum_entry<platform::p_linux, "linux">,
+		detail::enum_entry<platform::p_macos, "darwin">,
+		detail::enum_entry<platform::p_wasm, "unknown">,
+		detail::enum_entry<platform::p_freestanding, "none">,
+		detail::enum_entry<platform::p_other_posix, "unknown">
 	>;
 
 	using abi_triple_names = detail::enum_table<
