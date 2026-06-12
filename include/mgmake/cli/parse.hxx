@@ -38,6 +38,11 @@ namespace mgmake::cli {
 			::value_name<"name">
 			::description<"Select a build backend to use.">;
 
+	using toolchain_option =
+		value_option<&options::m_toolchain, "toolchain">
+			::value_name<"name">
+			::description<"Select a compiler toolchain preset.">;
+
 	using build_dir_option =
 		value_option<&options::m_build_dir, "build-dir">
 			::value_name<"path">
@@ -79,6 +84,7 @@ namespace mgmake::cli {
 		verbose_option,
 		dry_run_option,
 		backend_option,
+		toolchain_option,
 		build_dir_option,
 		jobs_option,
 		target_option,

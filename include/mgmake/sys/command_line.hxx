@@ -46,8 +46,14 @@ namespace mgmake::sys {
 		}
 	};
 
-	inline constexpr command_line args_from_utf8(int argc, const char** argv) {
+	inline constexpr command_line args_from_utf8(int argc, const char* const* argv) {
 		command_line result;
+
+		if (argc <= 0 || argv == nullptr) {
+			return result;
+		}
+
+		result.m_args.reserve(static_cast<std::size_t>(argc));
 
 		for (int i = 0; i < argc; ++i) {
 			result.m_args.emplace_back(argv[i] ? argv[i] : "");
@@ -57,19 +63,24 @@ namespace mgmake::sys {
 	}
 
 #ifdef MGMK_INCLUDED_WINDOWS
-	inline constexpr command_line args_from_wide(int argc, const wchar_t** argv) {
+	inline constexpr command_line args_from_wide(int argc, const wchar_t* const* argv) {
 		command_line result;
+
 		if (argc <= 0 || argv == nullptr) {
 			return result;
 		}
+
 		result.m_args.reserve(static_cast<std::size_t>(argc));
+
 		for (int i = 0; i < argc; ++i) {
 			if (argv[i] == nullptr) {
 				result.m_args.emplace_back();
 				continue;
 			}
+
 			result.m_args.emplace_back(detail::wide_to_utf8(argv[i]));
 		}
+
 		return result;
 	}
 #endif

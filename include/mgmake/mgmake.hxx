@@ -11,12 +11,16 @@
 #include "sys/command_line.hxx"
 #include "sys/util.hxx"
 #include "build/toolchain.hxx"
+#include "build/toolchain_registry.hxx"
 #include "build/request.hxx"
+#include "build/request_from_options.hxx"
 #include "build/artifact_names.hxx"
 #include "build/target.hxx"
+#include "build/clean.hxx"
 #include "cli/action.hxx"
 #include "cli/backend.hxx"
 #include "cli/options.hxx"
+#include "cli/help.hxx"
 #include "cli/parse_result.hxx"
 #include "cli/option_parse_result.hxx"
 #include "cli/value_parser.hxx"
@@ -32,6 +36,9 @@
 #include "backend/traits.hxx"
 #include "backend/graphviz.hxx"
 #include "backend/ninja.hxx"
+#include "backend/registry.hxx"
+#include "backend/capabilities.hxx"
+#include "backend/execute.hxx"
 #include "spec/executable.hxx"
 #include "spec/executable_impl.hxx"
 #include "spec/library.hxx"
@@ -44,53 +51,9 @@
 #include "lower/objects.hxx"
 #include "lower/context_impl.hxx"
 #include "spec/project_impl.hxx"
-
-namespace mgmake {
-	int entry(const sys::command_line& command_line) {
-		auto parsed = cli::parse(command_line.user_args());
-
-		if (!parsed) {
-			std::println(stderr, "mgmake: error: {}", parsed.m_error);
-			std::println(stderr, "try '{} help'", command_line.program_name());
-			return 2;
-		}
-
-		const cli::options& opts = parsed.m_value;
-
-		if (opts.m_show_help) {
-			cli::print_help(command_line.program_name());
-			return 0;
-		}
-
-		std::println("action: {}", cli::action_name(opts.m_action));
-		std::println("backend: {}", cli::backend_name(opts.m_backend));
-		std::println("build dir: {}", opts.m_build_dir);
-
-		for (const auto& target : opts.m_targets) {
-			std::println("target: {}", target);
-		}
-
-		return 0;
-	}
-}
-namespace mgmk = mgmake;
-
-#if defined(MGMK_PLATFORM_WINDOWS) and defined(WIN32_LEAN_AND_MEAN)
-#define MGMAKE_BUILD_ENTRY(ProjectType) \
-int wmain(int argc, wchar_t** argv) { \
-    auto args = ::mgmk::sys::args_from_wide(argc, argv); \
-    return ::mgmk::entry<ProjectType>(args); \
-}
-#else
-#define MGMAKE_BUILD_ENTRY(ProjectType) \
-int main(int argc, char** argv) { \
-    auto args = ::mgmk::sys::args_from_utf8(argc, argv); \
-    return ::mgmk::entry<ProjectType>(args); \
-}
-#endif
-
-// Short-hand
-#define MGMK_BUILD_ENTRY MGMAKE_BUILD_ENTRY
-#define MGMK_ENTRY MGMK_BUILD_ENTRY
+#include "detail/project_factory.hxx"
+#include "entry/exit_code.hxx"
+#include "entry/entry.hxx"
+#include "entry/macro.hxx"
 
 #endif

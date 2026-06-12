@@ -1059,8 +1059,14 @@ namespace mgmake::sys {
 		}
 	};
 
-	inline constexpr command_line args_from_utf8(int argc, const char** argv) {
+	inline constexpr command_line args_from_utf8(int argc, const char* const* argv) {
 		command_line result;
+
+		if (argc <= 0 || argv == nullptr) {
+			return result;
+		}
+
+		result.m_args.reserve(static_cast<std::size_t>(argc));
 
 		for (int i = 0; i < argc; ++i) {
 			result.m_args.emplace_back(argv[i] ? argv[i] : "");
@@ -1070,25 +1076,31 @@ namespace mgmake::sys {
 	}
 
 #ifdef MGMK_INCLUDED_WINDOWS
-	inline constexpr command_line args_from_wide(int argc, const wchar_t** argv) {
+	inline constexpr command_line args_from_wide(int argc, const wchar_t* const* argv) {
 		command_line result;
+
 		if (argc <= 0 || argv == nullptr) {
 			return result;
 		}
+
 		result.m_args.reserve(static_cast<std::size_t>(argc));
+
 		for (int i = 0; i < argc; ++i) {
 			if (argv[i] == nullptr) {
 				result.m_args.emplace_back();
 				continue;
 			}
+
 			result.m_args.emplace_back(detail::wide_to_utf8(argv[i]));
 		}
+
 		return result;
 	}
 #endif
 }
 
-#endif// ===== end include/mgmake/sys/command_line.hxx =====
+#endif
+// ===== end include/mgmake/sys/command_line.hxx =====
 
 // skipped duplicate include: include/mgmake/sys/util.hxx
 
@@ -1400,6 +1412,83 @@ namespace mgmake::build {
 // ===== end include/mgmake/build/toolchain.hxx =====
 
 
+// ===== begin include/mgmake/build/toolchain_registry.hxx =====
+#pragma once
+
+#ifndef MGMAKE_BUILD_TOOLCHAIN_REGISTRY_HXX
+#define MGMAKE_BUILD_TOOLCHAIN_REGISTRY_HXX
+
+// skipped duplicate include: include/mgmake/build/toolchain.hxx
+
+#include <concepts>
+#include <initializer_list>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+namespace mgmake::build {
+	struct toolchain_registry {
+		std::vector<toolchain> m_toolchains{};
+
+		constexpr toolchain_registry() = default;
+
+		constexpr toolchain_registry(std::initializer_list<toolchain> toolchains)
+			: m_toolchains{ toolchains } {}
+
+		constexpr explicit toolchain_registry(std::vector<toolchain> toolchains)
+			: m_toolchains{ std::move(toolchains) } {}
+
+		[[nodiscard]] constexpr const toolchain* find(std::string_view name) const noexcept {
+			for (const auto& tc : m_toolchains) {
+				if (tc.m_name == name) {
+					return &tc;
+				}
+			}
+
+			return nullptr;
+		}
+
+		[[nodiscard]] constexpr toolchain_registry emplace(toolchain tc) const {
+			auto result = *this;
+			result.m_toolchains.emplace_back(std::move(tc));
+			return result;
+		}
+
+		[[nodiscard]] constexpr std::string choices_string() const {
+			std::string result;
+
+			for (std::size_t i = 0; i < m_toolchains.size(); ++i) {
+				if (i != 0) {
+					result += ", ";
+				}
+
+				result += m_toolchains[i].m_name;
+			}
+
+			return result;
+		}
+	};
+
+	template <typename Registry>
+	concept toolchain_registry_like =
+		requires(const Registry& registry, std::string_view name) {
+			{ registry.find(name) } -> std::same_as<const toolchain*>;
+			{ registry.choices_string() } -> std::convertible_to<std::string>;
+		};
+
+	inline const auto default_toolchains = toolchain_registry{
+		tc_clang_mg,
+		tc_clang,
+		tc_gcc,
+		tc_msvc
+	};
+}
+
+#endif
+// ===== end include/mgmake/build/toolchain_registry.hxx =====
+
+
 // ===== begin include/mgmake/build/request.hxx =====
 #pragma once
 
@@ -1461,138 +1550,20 @@ namespace mgmake::build {
 // ===== end include/mgmake/build/request.hxx =====
 
 
-// ===== begin include/mgmake/build/artifact_names.hxx =====
+// ===== begin include/mgmake/build/request_from_options.hxx =====
 #pragma once
 
-#ifndef MGMAKE_BUILD_ARTIFACT_NAMES_HXX
-#define MGMAKE_BUILD_ARTIFACT_NAMES_HXX
-
-// skipped duplicate include: include/mgmake/detail/enum_string.hxx
-// skipped duplicate include: include/mgmake/sys/platform.hxx
-
-#include <string_view>
-
-namespace mgmake::build {
-	using executable_extensions = detail::enum_table<
-		sys::platform,
-		detail::enum_entry<sys::platform::p_windows, ".exe">,
-		detail::enum_entry<sys::platform::p_wasm, ".wasm">
-	>;
-
-	static_assert(executable_extensions::has_no_empty_names());
-	static_assert(executable_extensions::has_no_duplicate_values());
-
-	[[nodiscard]] inline constexpr std::string_view executable_extension(
-		sys::platform platform
-	) noexcept {
-		return executable_extensions::to_string(platform, "");
-	}
-
-	using shared_library_extensions = detail::enum_table<
-		sys::platform,
-		detail::enum_entry<sys::platform::p_windows, ".dll">,
-		detail::enum_entry<sys::platform::p_linux, ".so">,
-		detail::enum_entry<sys::platform::p_macos, ".dylib">,
-		detail::enum_entry<sys::platform::p_other_posix, ".so">
-	>;
-
-	static_assert(shared_library_extensions::has_no_empty_names());
-	static_assert(shared_library_extensions::has_no_duplicate_values());
-
-	[[nodiscard]] inline constexpr std::string_view shared_library_extension(
-		sys::platform platform
-	) noexcept {
-		return shared_library_extensions::to_string(platform, "");
-	}
-
-	using shared_library_link_flags = detail::enum_table<
-		sys::platform,
-		detail::enum_entry<sys::platform::p_windows, "-shared">,
-		detail::enum_entry<sys::platform::p_linux, "-shared">,
-		detail::enum_entry<sys::platform::p_macos, "-dynamiclib">,
-		detail::enum_entry<sys::platform::p_other_posix, "-shared">
-	>;
-
-	static_assert(shared_library_link_flags::has_no_empty_names());
-	static_assert(shared_library_link_flags::has_no_duplicate_values());
-
-	[[nodiscard]] inline constexpr std::string_view shared_library_link_flag(
-		sys::platform platform
-	) noexcept {
-		return shared_library_link_flags::to_string(platform, "");
-	}
-
-	[[nodiscard]] inline constexpr std::string_view shared_library_prefix(
-		sys::platform platform
-	) noexcept {
-		return (
-			platform == sys::platform::p_linux
-			|| platform == sys::platform::p_macos
-			|| platform == sys::platform::p_other_posix
-		) ? "lib" : "";
-	}
-}
-
-#endif
-// ===== end include/mgmake/build/artifact_names.hxx =====
-
-
-// ===== begin include/mgmake/build/target.hxx =====
-#pragma once
-
-#ifndef MGMAKE_BUILD_TARGET_HXX
-#define MGMAKE_BUILD_TARGET_HXX
+#ifndef MGMAKE_BUILD_REQUEST_FROM_OPTIONS_HXX
+#define MGMAKE_BUILD_REQUEST_FROM_OPTIONS_HXX
 
 // skipped duplicate include: include/mgmake/build/request.hxx
-// skipped duplicate include: include/mgmake/build/toolchain.hxx
-// skipped duplicate include: include/mgmake/detail/assert.hxx
-// skipped duplicate include: include/mgmake/sys/command_line.hxx
-// skipped duplicate include: include/mgmake/sys/platform.hxx
+// skipped duplicate include: include/mgmake/build/toolchain_registry.hxx
 
-#include <string>
+// ===== begin include/mgmake/cli/options.hxx =====
+#pragma once
 
-namespace mgmake::build {
-	[[nodiscard]] inline std::string effective_target_triple(
-		const toolchain& tc,
-		const request& req
-	) {
-		if (tc.target_triple().has_value()) {
-			return *tc.target_triple();
-		}
-
-		return sys::triple(req.target());
-	}
-
-	inline void append_target_args(
-		sys::command_line& command,
-		const toolchain& tc,
-		const request& req
-	) {
-		switch (tc.target_selection()) {
-			case toolchain::target_mode::implicit:
-			case toolchain::target_mode::custom:
-				return;
-
-			case toolchain::target_mode::clang_target: {
-				const auto triple = effective_target_triple(tc, req);
-
-				mgmkassert(
-					!triple.empty(),
-					"mgmake build: clang target mode requires a non-empty target triple"
-				);
-
-				command.m_args.emplace_back("-target");
-				command.m_args.emplace_back(triple);
-				return;
-			}
-		}
-
-		mgmkassert(false, "mgmake build: unknown toolchain target mode");
-	}
-}
-
-#endif
-// ===== end include/mgmake/build/target.hxx =====
+#ifndef MGMAKE_CLI_OPTIONS_HXX
+#define MGMAKE_CLI_OPTIONS_HXX
 
 
 // ===== begin include/mgmake/cli/action.hxx =====
@@ -1805,15 +1776,6 @@ namespace mgmake::cli {
 #endif
 // ===== end include/mgmake/cli/backend.hxx =====
 
-
-// ===== begin include/mgmake/cli/options.hxx =====
-#pragma once
-
-#ifndef MGMAKE_CLI_OPTIONS_HXX
-#define MGMAKE_CLI_OPTIONS_HXX
-
-// skipped duplicate include: include/mgmake/cli/action.hxx
-// skipped duplicate include: include/mgmake/cli/backend.hxx
 // skipped duplicate include: include/mgmake/sys/platform.hxx
 
 #include <string>
@@ -1824,6 +1786,7 @@ namespace mgmake::cli {
 		action_kind m_action = action_kind::build;
 		backend_kind m_backend = backend_kind::automatic;
 
+		std::string m_toolchain = "clang-mg";
 		std::string m_build_dir = ".build";
 
 		std::vector<std::string> m_targets;
@@ -1860,49 +1823,248 @@ namespace mgmake::cli {
 // ===== end include/mgmake/cli/options.hxx =====
 
 
-// ===== begin include/mgmake/cli/parse_result.hxx =====
-#pragma once
-
-#ifndef MGMAKE_CLI_PARSE_RESULT_HXX
-#define MGMAKE_CLI_PARSE_RESULT_HXX
-
-// skipped duplicate include: include/mgmake/cli/options.hxx
-
+#include <expected>
+#include <filesystem>
+#include <format>
 #include <string>
-#include <utility>
 
-namespace mgmake::cli {
-	struct parse_result {
-		bool m_ok = false;
-		options m_value{};
-		std::string m_error{};
+namespace mgmake::build {
+	template <toolchain_registry_like Toolchains>
+	[[nodiscard]] inline std::expected<request, std::string> request_from_options(
+		const cli::options& opts,
+		const Toolchains& toolchains
+	) {
+		const auto* selected_toolchain = toolchains.find(opts.m_toolchain);
 
-		[[nodiscard]] operator bool() const {
-			return m_ok;
+		if (selected_toolchain == nullptr) {
+			return std::unexpected{
+				std::format(
+					"mgmake: unknown toolchain '{}'; expected one of: {}",
+					opts.m_toolchain,
+					toolchains.choices_string()
+				)
+			};
 		}
 
-		[[nodiscard]] operator options() const {
-			return m_value;
+		request result{};
+
+		result.m_tc = *selected_toolchain;
+
+		if (!opts.m_target_triple.empty()) {
+			result.m_tc.target_triple(opts.m_target_triple);
 		}
 
-		static parse_result success(options opts) {
-			parse_result result;
-			result.m_ok = true;
-			result.m_value = std::move(opts);
-			return result;
-		}
+		result.m_build_dir = std::filesystem::path{ opts.m_build_dir };
+		result.m_targets = opts.m_targets;
+		result.m_target = opts.target_platform();
 
-		static parse_result failure(std::string message) {
-			parse_result result;
-			result.m_ok = false;
-			result.m_error = std::move(message);
-			return result;
-		}
-	};
+		return result;
+	}
 }
 
 #endif
-// ===== end include/mgmake/cli/parse_result.hxx =====
+// ===== end include/mgmake/build/request_from_options.hxx =====
+
+
+// ===== begin include/mgmake/build/artifact_names.hxx =====
+#pragma once
+
+#ifndef MGMAKE_BUILD_ARTIFACT_NAMES_HXX
+#define MGMAKE_BUILD_ARTIFACT_NAMES_HXX
+
+// skipped duplicate include: include/mgmake/detail/enum_string.hxx
+// skipped duplicate include: include/mgmake/sys/platform.hxx
+
+#include <string_view>
+
+namespace mgmake::build {
+	using executable_extensions = detail::enum_table<
+		sys::platform,
+		detail::enum_entry<sys::platform::p_windows, ".exe">,
+		detail::enum_entry<sys::platform::p_wasm, ".wasm">
+	>;
+
+	static_assert(executable_extensions::has_no_empty_names());
+	static_assert(executable_extensions::has_no_duplicate_values());
+
+	[[nodiscard]] inline constexpr std::string_view executable_extension(
+		sys::platform platform
+	) noexcept {
+		return executable_extensions::to_string(platform, "");
+	}
+
+	using shared_library_extensions = detail::enum_table<
+		sys::platform,
+		detail::enum_entry<sys::platform::p_windows, ".dll">,
+		detail::enum_entry<sys::platform::p_linux, ".so">,
+		detail::enum_entry<sys::platform::p_macos, ".dylib">,
+		detail::enum_entry<sys::platform::p_other_posix, ".so">
+	>;
+
+	static_assert(shared_library_extensions::has_no_empty_names());
+	static_assert(shared_library_extensions::has_no_duplicate_values());
+
+	[[nodiscard]] inline constexpr std::string_view shared_library_extension(
+		sys::platform platform
+	) noexcept {
+		return shared_library_extensions::to_string(platform, "");
+	}
+
+	using shared_library_link_flags = detail::enum_table<
+		sys::platform,
+		detail::enum_entry<sys::platform::p_windows, "-shared">,
+		detail::enum_entry<sys::platform::p_linux, "-shared">,
+		detail::enum_entry<sys::platform::p_macos, "-dynamiclib">,
+		detail::enum_entry<sys::platform::p_other_posix, "-shared">
+	>;
+
+	static_assert(shared_library_link_flags::has_no_empty_names());
+	static_assert(shared_library_link_flags::has_no_duplicate_values());
+
+	[[nodiscard]] inline constexpr std::string_view shared_library_link_flag(
+		sys::platform platform
+	) noexcept {
+		return shared_library_link_flags::to_string(platform, "");
+	}
+
+	[[nodiscard]] inline constexpr std::string_view shared_library_prefix(
+		sys::platform platform
+	) noexcept {
+		return (
+			platform == sys::platform::p_linux
+			|| platform == sys::platform::p_macos
+			|| platform == sys::platform::p_other_posix
+		) ? "lib" : "";
+	}
+}
+
+#endif
+// ===== end include/mgmake/build/artifact_names.hxx =====
+
+
+// ===== begin include/mgmake/build/target.hxx =====
+#pragma once
+
+#ifndef MGMAKE_BUILD_TARGET_HXX
+#define MGMAKE_BUILD_TARGET_HXX
+
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/build/toolchain.hxx
+// skipped duplicate include: include/mgmake/detail/assert.hxx
+// skipped duplicate include: include/mgmake/sys/command_line.hxx
+// skipped duplicate include: include/mgmake/sys/platform.hxx
+
+#include <string>
+
+namespace mgmake::build {
+	[[nodiscard]] inline std::string effective_target_triple(
+		const toolchain& tc,
+		const request& req
+	) {
+		if (tc.target_triple().has_value()) {
+			return *tc.target_triple();
+		}
+
+		return sys::triple(req.target());
+	}
+
+	inline void append_target_args(
+		sys::command_line& command,
+		const toolchain& tc,
+		const request& req
+	) {
+		switch (tc.target_selection()) {
+			case toolchain::target_mode::implicit:
+			case toolchain::target_mode::custom:
+				return;
+
+			case toolchain::target_mode::clang_target: {
+				const auto triple = effective_target_triple(tc, req);
+
+				mgmkassert(
+					!triple.empty(),
+					"mgmake build: clang target mode requires a non-empty target triple"
+				);
+
+				command.m_args.emplace_back("-target");
+				command.m_args.emplace_back(triple);
+				return;
+			}
+		}
+
+		mgmkassert(false, "mgmake build: unknown toolchain target mode");
+	}
+}
+
+#endif
+// ===== end include/mgmake/build/target.hxx =====
+
+
+// ===== begin include/mgmake/build/clean.hxx =====
+#pragma once
+
+#ifndef MGMAKE_BUILD_CLEAN_HXX
+#define MGMAKE_BUILD_CLEAN_HXX
+
+// skipped duplicate include: include/mgmake/build/request.hxx
+
+#include <expected>
+#include <filesystem>
+#include <string>
+
+namespace mgmake::build {
+	[[nodiscard]] inline std::expected<void, std::string> clean(
+		const build::request& req
+	) {
+		std::error_code ec;
+		std::filesystem::remove_all(req.build_dir(), ec);
+
+		if (ec) {
+			return std::unexpected{
+				"mgmake: failed to clean build directory '" +
+				req.build_dir().string() +
+				"': " +
+				ec.message()
+			};
+		}
+
+		return {};
+	}
+}
+
+#endif
+// ===== end include/mgmake/build/clean.hxx =====
+
+// skipped duplicate include: include/mgmake/cli/action.hxx
+// skipped duplicate include: include/mgmake/cli/backend.hxx
+// skipped duplicate include: include/mgmake/cli/options.hxx
+
+// ===== begin include/mgmake/cli/help.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CLI_HELP_HXX
+#define MGMAKE_CLI_HELP_HXX
+
+
+// ===== begin include/mgmake/cli/parse.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CLI_PARSE_HXX
+#define MGMAKE_CLI_PARSE_HXX
+
+
+// ===== begin include/mgmake/cli/option_parser.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CLI_OPTION_PARSER_HXX
+#define MGMAKE_CLI_OPTION_PARSER_HXX
+
+
+// ===== begin include/mgmake/cli/option_builder.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CLI_OPTION_BUILDER_HXX
+#define MGMAKE_CLI_OPTION_BUILDER_HXX
 
 
 // ===== begin include/mgmake/cli/option_parse_result.hxx =====
@@ -1944,6 +2106,7 @@ namespace mgmake::cli {
 #endif
 // ===== end include/mgmake/cli/option_parse_result.hxx =====
 
+// skipped duplicate include: include/mgmake/cli/options.hxx
 
 // ===== begin include/mgmake/cli/value_parser.hxx =====
 #pragma once
@@ -2151,17 +2314,6 @@ namespace mgmake::cli {
 #endif
 // ===== end include/mgmake/cli/enum_value_parser.hxx =====
 
-
-// ===== begin include/mgmake/cli/option_builder.hxx =====
-#pragma once
-
-#ifndef MGMAKE_CLI_OPTION_BUILDER_HXX
-#define MGMAKE_CLI_OPTION_BUILDER_HXX
-
-// skipped duplicate include: include/mgmake/cli/option_parse_result.hxx
-// skipped duplicate include: include/mgmake/cli/options.hxx
-// skipped duplicate include: include/mgmake/cli/value_parser.hxx
-// skipped duplicate include: include/mgmake/cli/enum_value_parser.hxx
 // skipped duplicate include: include/mgmake/cli/util.hxx
 // skipped duplicate include: include/mgmake/detail/static_string.hxx
 
@@ -2621,14 +2773,50 @@ namespace mgmake::cli {
 // ===== end include/mgmake/cli/option_builder.hxx =====
 
 
-// ===== begin include/mgmake/cli/option_parser.hxx =====
+// ===== begin include/mgmake/cli/parse_result.hxx =====
 #pragma once
 
-#ifndef MGMAKE_CLI_OPTION_PARSER_HXX
-#define MGMAKE_CLI_OPTION_PARSER_HXX
+#ifndef MGMAKE_CLI_PARSE_RESULT_HXX
+#define MGMAKE_CLI_PARSE_RESULT_HXX
 
-// skipped duplicate include: include/mgmake/cli/option_builder.hxx
-// skipped duplicate include: include/mgmake/cli/parse_result.hxx
+// skipped duplicate include: include/mgmake/cli/options.hxx
+
+#include <string>
+#include <utility>
+
+namespace mgmake::cli {
+	struct parse_result {
+		bool m_ok = false;
+		options m_value{};
+		std::string m_error{};
+
+		[[nodiscard]] operator bool() const {
+			return m_ok;
+		}
+
+		[[nodiscard]] operator options() const {
+			return m_value;
+		}
+
+		static parse_result success(options opts) {
+			parse_result result;
+			result.m_ok = true;
+			result.m_value = std::move(opts);
+			return result;
+		}
+
+		static parse_result failure(std::string message) {
+			parse_result result;
+			result.m_ok = false;
+			result.m_error = std::move(message);
+			return result;
+		}
+	};
+}
+
+#endif
+// ===== end include/mgmake/cli/parse_result.hxx =====
+
 // skipped duplicate include: include/mgmake/cli/util.hxx
 
 #include <format>
@@ -2864,14 +3052,6 @@ namespace mgmake::cli {
 #endif
 // ===== end include/mgmake/cli/option_parser.hxx =====
 
-
-// ===== begin include/mgmake/cli/parse.hxx =====
-#pragma once
-
-#ifndef MGMAKE_CLI_PARSE_HXX
-#define MGMAKE_CLI_PARSE_HXX
-
-// skipped duplicate include: include/mgmake/cli/option_parser.hxx
 // skipped duplicate include: include/mgmake/sys/command_line.hxx
 
 namespace mgmake::cli {
@@ -2905,6 +3085,11 @@ namespace mgmake::cli {
 		value_option<&options::m_backend, "backend">
 			::value_name<"name">
 			::description<"Select a build backend to use.">;
+
+	using toolchain_option =
+		value_option<&options::m_toolchain, "toolchain">
+			::value_name<"name">
+			::description<"Select a compiler toolchain preset.">;
 
 	using build_dir_option =
 		value_option<&options::m_build_dir, "build-dir">
@@ -2947,6 +3132,7 @@ namespace mgmake::cli {
 		verbose_option,
 		dry_run_option,
 		backend_option,
+		toolchain_option,
 		build_dir_option,
 		jobs_option,
 		target_option,
@@ -2972,6 +3158,35 @@ namespace mgmake::cli {
 #endif
 // ===== end include/mgmake/cli/parse.hxx =====
 
+// skipped duplicate include: include/mgmake/build/toolchain_registry.hxx
+
+#include <print>
+#include <string_view>
+
+namespace mgmake::cli {
+	template <build::toolchain_registry_like Toolchains>
+	inline void print_help(
+		std::string_view program_name,
+		const Toolchains& toolchains
+	) {
+		print_help(program_name);
+
+		std::println("");
+		std::println("Available toolchains:");
+		std::println("  {}", toolchains.choices_string());
+	}
+}
+
+#endif
+// ===== end include/mgmake/cli/help.hxx =====
+
+// skipped duplicate include: include/mgmake/cli/parse_result.hxx
+// skipped duplicate include: include/mgmake/cli/option_parse_result.hxx
+// skipped duplicate include: include/mgmake/cli/value_parser.hxx
+// skipped duplicate include: include/mgmake/cli/enum_value_parser.hxx
+// skipped duplicate include: include/mgmake/cli/option_builder.hxx
+// skipped duplicate include: include/mgmake/cli/option_parser.hxx
+// skipped duplicate include: include/mgmake/cli/parse.hxx
 // skipped duplicate include: include/mgmake/cli/util.hxx
 
 // ===== begin include/mgmake/dag/action.hxx =====
@@ -3142,20 +3357,27 @@ namespace mgmake::dag {
 #ifndef MGMAKE_BACKEND_TRAITS_HXX
 #define MGMAKE_BACKEND_TRAITS_HXX
 
+// skipped duplicate include: include/mgmake/build/request.hxx
 // skipped duplicate include: include/mgmake/dag/graph.hxx
 
+#include <expected>
+#include <string>
+
 namespace mgmake::backend {
-    // Generates graph output (graph.dot, build.ninja)
-    trait generator {
-        void generate(const dag::graph& graph, const build::request& req) const;
-    };
-    // Actually builds the program from the graph (invokes compiler, runs ninja)
-    trait builder {
-        void build(const dag::graph& graph, const build::request& req) const;
-    };
+	trait generate_backend {
+		void generate(const dag::graph& graph, const build::request& req) const;
+	};
+
+	trait build_backend {
+		std::expected<void, std::string> build(
+			const dag::graph& graph,
+			const build::request& req
+		) const;
+	};
 }
 
-#endif// ===== end include/mgmake/backend/traits.hxx =====
+#endif
+// ===== end include/mgmake/backend/traits.hxx =====
 
 
 // ===== begin include/mgmake/backend/graphviz.hxx =====
@@ -3623,6 +3845,231 @@ namespace mgmake::backend {
 
 #endif
 // ===== end include/mgmake/backend/ninja.hxx =====
+
+
+// ===== begin include/mgmake/backend/registry.hxx =====
+#pragma once
+
+#ifndef MGMAKE_BACKEND_REGISTRY_HXX
+#define MGMAKE_BACKEND_REGISTRY_HXX
+
+// skipped duplicate include: include/mgmake/backend/graphviz.hxx
+// skipped duplicate include: include/mgmake/backend/ninja.hxx
+// skipped duplicate include: include/mgmake/cli/backend.hxx
+
+#include <type_traits>
+
+namespace mgmake::backend {
+	template <cli::backend_kind Kind>
+	struct for_kind {
+		using type = void;
+	};
+
+	template <>
+	struct for_kind<cli::backend_kind::automatic> {
+		using type = backend::ninja;
+	};
+
+	template <>
+	struct for_kind<cli::backend_kind::ninja> {
+		using type = backend::ninja;
+	};
+
+	template <>
+	struct for_kind<cli::backend_kind::graphviz> {
+		using type = backend::graphviz<>;
+	};
+
+	template <cli::backend_kind Kind>
+	using for_kind_t = typename for_kind<Kind>::type;
+
+	template <cli::backend_kind Kind>
+	inline constexpr bool implemented_v =
+		!std::is_void_v<for_kind_t<Kind>>;
+}
+
+#endif
+// ===== end include/mgmake/backend/registry.hxx =====
+
+
+// ===== begin include/mgmake/backend/capabilities.hxx =====
+#pragma once
+
+#ifndef MGMAKE_BACKEND_CAPABILITIES_HXX
+#define MGMAKE_BACKEND_CAPABILITIES_HXX
+
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/dag/graph.hxx
+
+#include <concepts>
+#include <expected>
+#include <string>
+
+namespace mgmake::backend {
+	template <typename Backend>
+	concept can_generate =
+		requires(
+			Backend backend,
+			const dag::graph& graph,
+			const build::request& req
+		) {
+			backend.generate(graph, req);
+		};
+
+	template <typename Backend>
+	concept can_build =
+		requires(
+			Backend backend,
+			const dag::graph& graph,
+			const build::request& req
+		) {
+			{ backend.build(graph, req) } -> std::same_as<std::expected<void, std::string>>;
+		};
+}
+
+#endif
+// ===== end include/mgmake/backend/capabilities.hxx =====
+
+
+// ===== begin include/mgmake/backend/execute.hxx =====
+#pragma once
+
+#ifndef MGMAKE_BACKEND_EXECUTE_HXX
+#define MGMAKE_BACKEND_EXECUTE_HXX
+
+// skipped duplicate include: include/mgmake/backend/capabilities.hxx
+// skipped duplicate include: include/mgmake/backend/registry.hxx
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/cli/action.hxx
+// skipped duplicate include: include/mgmake/cli/backend.hxx
+// skipped duplicate include: include/mgmake/cli/options.hxx
+// skipped duplicate include: include/mgmake/dag/graph.hxx
+
+#include <expected>
+#include <string>
+#include <type_traits>
+
+namespace mgmake::backend {
+	template <cli::backend_kind Kind>
+	[[nodiscard]] inline std::expected<void, std::string> generate(
+		const dag::graph& graph,
+		const build::request& req
+	) {
+		using backend_type = backend::for_kind_t<Kind>;
+
+		if constexpr (std::is_void_v<backend_type>) {
+			return std::unexpected{
+				"mgmake: backend '" +
+				std::string{ cli::backend_name(Kind) } +
+				"' is not implemented yet"
+			};
+		} else if constexpr (backend::can_generate<backend_type>) {
+			backend_type{}.generate(graph, req);
+			return {};
+		} else {
+			return std::unexpected{
+				"mgmake: backend '" +
+				std::string{ cli::backend_name(Kind) } +
+				"' does not support action 'generate'"
+			};
+		}
+	}
+
+	template <cli::backend_kind Kind>
+	[[nodiscard]] inline std::expected<void, std::string> build(
+		const dag::graph& graph,
+		const build::request& req
+	) {
+		using backend_type = backend::for_kind_t<Kind>;
+
+		if constexpr (std::is_void_v<backend_type>) {
+			return std::unexpected{
+				"mgmake: backend '" +
+				std::string{ cli::backend_name(Kind) } +
+				"' is not implemented yet"
+			};
+		} else if constexpr (backend::can_build<backend_type>) {
+			return backend_type{}.build(graph, req);
+		} else {
+			return std::unexpected{
+				"mgmake: backend '" +
+				std::string{ cli::backend_name(Kind) } +
+				"' does not support action 'build'"
+			};
+		}
+	}
+
+	template <cli::backend_kind Kind>
+	[[nodiscard]] inline std::expected<void, std::string> execute_project_action_for_backend(
+		const cli::options& opts,
+		const build::request& req,
+		const dag::graph& graph
+	) {
+		switch (opts.m_action) {
+			case cli::action_kind::generate:
+				return backend::generate<Kind>(graph, req);
+
+			case cli::action_kind::build:
+				return backend::build<Kind>(graph, req);
+
+			case cli::action_kind::run:
+				return std::unexpected{
+					"mgmake: run action is not implemented yet"
+				};
+
+			case cli::action_kind::clean:
+			case cli::action_kind::help:
+			case cli::action_kind::version:
+				return {};
+
+			case cli::action_kind::count:
+				break;
+		}
+
+		return std::unexpected{ "mgmake: unknown action" };
+	}
+
+	[[nodiscard]] inline std::expected<void, std::string> execute_project_action(
+		const cli::options& opts,
+		const build::request& req,
+		const dag::graph& graph
+	) {
+		switch (opts.m_backend) {
+			case cli::backend_kind::automatic:
+				return execute_project_action_for_backend<
+					cli::backend_kind::automatic
+				>(opts, req, graph);
+
+			case cli::backend_kind::ninja:
+				return execute_project_action_for_backend<
+					cli::backend_kind::ninja
+				>(opts, req, graph);
+
+			case cli::backend_kind::graphviz:
+				return execute_project_action_for_backend<
+					cli::backend_kind::graphviz
+				>(opts, req, graph);
+
+			case cli::backend_kind::make:
+				return execute_project_action_for_backend<
+					cli::backend_kind::make
+				>(opts, req, graph);
+
+			case cli::backend_kind::direct:
+				return execute_project_action_for_backend<
+					cli::backend_kind::direct
+				>(opts, req, graph);
+
+			case cli::backend_kind::count:
+				break;
+		}
+
+		return std::unexpected{ "mgmake: unknown backend" };
+	}
+}
+
+#endif
+// ===== end include/mgmake/backend/execute.hxx =====
 
 
 // ===== begin include/mgmake/spec/executable.hxx =====
@@ -4750,53 +5197,307 @@ namespace mgmake::spec {
 // ===== end include/mgmake/spec/project_impl.hxx =====
 
 
+// ===== begin include/mgmake/detail/project_factory.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DETAIL_PROJECT_FACTORY_HXX
+#define MGMAKE_DETAIL_PROJECT_FACTORY_HXX
+
+// skipped duplicate include: include/mgmake/cli/options.hxx
+// skipped duplicate include: include/mgmake/spec/project.hxx
+
+#include <functional>
+#include <type_traits>
+#include <utility>
+
+namespace mgmake::detail {
+	template <typename>
+	inline constexpr bool always_false_v = false;
+
+	template <typename ProjectFactory>
+	[[nodiscard]] inline constexpr spec::project make_project(
+		ProjectFactory&& factory,
+		const cli::options& opts
+	) {
+		if constexpr (std::is_invocable_r_v<
+			spec::project,
+			ProjectFactory&&,
+			const cli::options&
+		>) {
+			return std::invoke(
+				std::forward<ProjectFactory>(factory),
+				opts
+			);
+		} else if constexpr (std::is_invocable_r_v<
+			spec::project,
+			ProjectFactory&&
+		>) {
+			return std::invoke(std::forward<ProjectFactory>(factory));
+		} else {
+			static_assert(
+				always_false_v<ProjectFactory>,
+				"mgmake entry: project factory must return mgmake::spec::project"
+			);
+		}
+	}
+}
+
+#endif
+// ===== end include/mgmake/detail/project_factory.hxx =====
+
+
+// ===== begin include/mgmake/entry/exit_code.hxx =====
+#pragma once
+
+#ifndef MGMAKE_ENTRY_EXIT_CODE_HXX
+#define MGMAKE_ENTRY_EXIT_CODE_HXX
+
+namespace mgmake::detail {
+	inline constexpr int entry_exit_success = 0;
+	inline constexpr int entry_exit_action_failure = 1;
+	inline constexpr int entry_exit_usage_error = 2;
+}
+
+#endif
+// ===== end include/mgmake/entry/exit_code.hxx =====
+
+
+// ===== begin include/mgmake/entry/entry.hxx =====
+#pragma once
+
+#ifndef MGMAKE_ENTRY_ENTRY_HXX
+#define MGMAKE_ENTRY_ENTRY_HXX
+
+// skipped duplicate include: include/mgmake/backend/execute.hxx
+// skipped duplicate include: include/mgmake/build/clean.hxx
+// skipped duplicate include: include/mgmake/build/request_from_options.hxx
+// skipped duplicate include: include/mgmake/build/toolchain_registry.hxx
+// skipped duplicate include: include/mgmake/cli/help.hxx
+// skipped duplicate include: include/mgmake/cli/parse.hxx
+// skipped duplicate include: include/mgmake/detail/project_factory.hxx
+// skipped duplicate include: include/mgmake/spec/project.hxx
+// skipped duplicate include: include/mgmake/sys/command_line.hxx
+// skipped duplicate include: include/mgmake/entry/exit_code.hxx
+
+#include <print>
+#include <type_traits>
+#include <utility>
+
 namespace mgmake {
-	int entry(const sys::command_line& command_line) {
+	template <build::toolchain_registry_like Toolchains>
+	[[nodiscard]] inline int entry(
+		const sys::command_line& command_line,
+		const Toolchains& toolchains
+	) {
 		auto parsed = cli::parse(command_line.user_args());
 
 		if (!parsed) {
 			std::println(stderr, "mgmake: error: {}", parsed.m_error);
 			std::println(stderr, "try '{} help'", command_line.program_name());
-			return 2;
+			return detail::entry_exit_usage_error;
 		}
 
 		const cli::options& opts = parsed.m_value;
 
-		if (opts.m_show_help) {
-			cli::print_help(command_line.program_name());
-			return 0;
+		if (opts.m_show_help || opts.m_action == cli::action_kind::help) {
+			cli::print_help(command_line.program_name(), toolchains);
+			return detail::entry_exit_success;
 		}
 
-		std::println("action: {}", cli::action_name(opts.m_action));
-		std::println("backend: {}", cli::backend_name(opts.m_backend));
-		std::println("build dir: {}", opts.m_build_dir);
-
-		for (const auto& target : opts.m_targets) {
-			std::println("target: {}", target);
+		if (opts.m_show_version || opts.m_action == cli::action_kind::version) {
+			std::println("mgmake");
+			return detail::entry_exit_success;
 		}
 
-		return 0;
+		auto req_result = build::request_from_options(opts, toolchains);
+
+		if (!req_result) {
+			std::println(stderr, "{}", req_result.error());
+			return detail::entry_exit_usage_error;
+		}
+
+		auto req = std::move(*req_result);
+
+		if (opts.m_action == cli::action_kind::clean) {
+			const auto clean_result = build::clean(req);
+
+			if (!clean_result) {
+				std::println(stderr, "{}", clean_result.error());
+				return detail::entry_exit_action_failure;
+			}
+
+			return detail::entry_exit_success;
+		}
+
+		std::println(
+			stderr,
+			"mgmake: error: action '{}' requires a project, but no project was provided",
+			cli::action_name(opts.m_action)
+		);
+
+		return detail::entry_exit_usage_error;
+	}
+
+	[[nodiscard]] inline int entry(const sys::command_line& command_line) {
+		return entry(command_line, build::default_toolchains);
+	}
+
+	template <
+		typename ProjectFactory,
+		build::toolchain_registry_like Toolchains
+	>
+	[[nodiscard]] inline int entry(
+		const sys::command_line& command_line,
+		ProjectFactory&& project_factory,
+		const Toolchains& toolchains
+	) {
+		auto parsed = cli::parse(command_line.user_args());
+
+		if (!parsed) {
+			std::println(stderr, "mgmake: error: {}", parsed.m_error);
+			std::println(stderr, "try '{} help'", command_line.program_name());
+			return detail::entry_exit_usage_error;
+		}
+
+		const cli::options& opts = parsed.m_value;
+
+		if (opts.m_show_help || opts.m_action == cli::action_kind::help) {
+			cli::print_help(command_line.program_name(), toolchains);
+			return detail::entry_exit_success;
+		}
+
+		if (opts.m_show_version || opts.m_action == cli::action_kind::version) {
+			std::println("mgmake");
+			return detail::entry_exit_success;
+		}
+
+		auto req_result = build::request_from_options(opts, toolchains);
+
+		if (!req_result) {
+			std::println(stderr, "{}", req_result.error());
+			return detail::entry_exit_usage_error;
+		}
+
+		auto req = std::move(*req_result);
+
+		if (opts.m_action == cli::action_kind::clean) {
+			const auto clean_result = build::clean(req);
+
+			if (!clean_result) {
+				std::println(stderr, "{}", clean_result.error());
+				return detail::entry_exit_action_failure;
+			}
+
+			return detail::entry_exit_success;
+		}
+
+		auto proj = detail::make_project(
+			std::forward<ProjectFactory>(project_factory),
+			opts
+		);
+
+		auto graph = proj.graph(req);
+
+		const auto action_result = backend::execute_project_action(
+			opts,
+			req,
+			graph
+		);
+
+		if (!action_result) {
+			std::println(stderr, "{}", action_result.error());
+			return detail::entry_exit_action_failure;
+		}
+
+		return detail::entry_exit_success;
+	}
+
+	template <typename ProjectFactory>
+		requires(!build::toolchain_registry_like<std::remove_cvref_t<ProjectFactory>>)
+	[[nodiscard]] inline int entry(
+		const sys::command_line& command_line,
+		ProjectFactory&& project_factory
+	) {
+		return entry(
+			command_line,
+			std::forward<ProjectFactory>(project_factory),
+			build::default_toolchains
+		);
 	}
 }
+
+#endif
+// ===== end include/mgmake/entry/entry.hxx =====
+
+
+// ===== begin include/mgmake/entry/macro.hxx =====
+#pragma once
+
+#ifndef MGMAKE_ENTRY_MACRO_HXX
+#define MGMAKE_ENTRY_MACRO_HXX
+
+// skipped duplicate include: include/mgmake/entry/entry.hxx
+
 namespace mgmk = mgmake;
 
-#if defined(MGMK_PLATFORM_WINDOWS) and defined(WIN32_LEAN_AND_MEAN)
-#define MGMAKE_BUILD_ENTRY(ProjectType) \
-int wmain(int argc, wchar_t** argv) { \
-    auto args = ::mgmk::sys::args_from_wide(argc, argv); \
-    return ::mgmk::entry<ProjectType>(args); \
+#if defined(MGMK_PLATFORM_WINDOWS) && defined(MGMK_INCLUDED_WINDOWS)
+
+#define MGMK_DETAIL_ENTRY_0()                                                   \
+int wmain(int argc, wchar_t** argv) {                                            \
+    auto args = ::mgmk::sys::args_from_wide(argc, argv);                         \
+    return ::mgmk::entry(args);                                                  \
 }
+
+#define MGMK_DETAIL_ENTRY_1(ProjectFactory)                                      \
+int wmain(int argc, wchar_t** argv) {                                            \
+    auto args = ::mgmk::sys::args_from_wide(argc, argv);                         \
+    return ::mgmk::entry(args, ProjectFactory);                                  \
+}
+
+#define MGMK_DETAIL_ENTRY_2(ProjectFactory, Toolchains)                          \
+int wmain(int argc, wchar_t** argv) {                                            \
+    auto args = ::mgmk::sys::args_from_wide(argc, argv);                         \
+    return ::mgmk::entry(args, ProjectFactory, Toolchains);                      \
+}
+
 #else
-#define MGMAKE_BUILD_ENTRY(ProjectType) \
-int main(int argc, char** argv) { \
-    auto args = ::mgmk::sys::args_from_utf8(argc, argv); \
-    return ::mgmk::entry<ProjectType>(args); \
+
+#define MGMK_DETAIL_ENTRY_0()                                                   \
+int main(int argc, char** argv) {                                                \
+    auto args = ::mgmk::sys::args_from_utf8(argc, argv);                         \
+    return ::mgmk::entry(args);                                                  \
 }
+
+#define MGMK_DETAIL_ENTRY_1(ProjectFactory)                                      \
+int main(int argc, char** argv) {                                                \
+    auto args = ::mgmk::sys::args_from_utf8(argc, argv);                         \
+    return ::mgmk::entry(args, ProjectFactory);                                  \
+}
+
+#define MGMK_DETAIL_ENTRY_2(ProjectFactory, Toolchains)                          \
+int main(int argc, char** argv) {                                                \
+    auto args = ::mgmk::sys::args_from_utf8(argc, argv);                         \
+    return ::mgmk::entry(args, ProjectFactory, Toolchains);                      \
+}
+
 #endif
 
-// Short-hand
-#define MGMK_BUILD_ENTRY MGMAKE_BUILD_ENTRY
-#define MGMK_ENTRY MGMK_BUILD_ENTRY
+#define MGMK_DETAIL_ENTRY_SELECT(_0, _1, _2, NAME, ...) NAME
+
+#define MGMK_ENTRY(...)                                                         \
+    MGMK_DETAIL_ENTRY_SELECT(                                                   \
+        _0 __VA_OPT__(,) __VA_ARGS__,                                           \
+        MGMK_DETAIL_ENTRY_2,                                                    \
+        MGMK_DETAIL_ENTRY_1,                                                    \
+        MGMK_DETAIL_ENTRY_0                                                     \
+    )(__VA_ARGS__)
+
+#define MGMAKE_BUILD_ENTRY(...) MGMK_ENTRY(__VA_ARGS__)
+#define MGMK_BUILD_ENTRY(...) MGMK_ENTRY(__VA_ARGS__)
+
+#endif
+// ===== end include/mgmake/entry/macro.hxx =====
+
 
 #endif
 // ===== end include/mgmake/mgmake.hxx =====

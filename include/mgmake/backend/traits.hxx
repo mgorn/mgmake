@@ -3,17 +3,23 @@
 #ifndef MGMAKE_BACKEND_TRAITS_HXX
 #define MGMAKE_BACKEND_TRAITS_HXX
 
+#include "../build/request.hxx"
 #include "../dag/graph.hxx"
 
+#include <expected>
+#include <string>
+
 namespace mgmake::backend {
-    // Generates graph output (graph.dot, build.ninja)
-    trait generator {
-        void generate(const dag::graph& graph, const build::request& req) const;
-    };
-    // Actually builds the program from the graph (invokes compiler, runs ninja)
-    trait builder {
-        void build(const dag::graph& graph, const build::request& req) const;
-    };
+	trait generate_backend {
+		void generate(const dag::graph& graph, const build::request& req) const;
+	};
+
+	trait build_backend {
+		std::expected<void, std::string> build(
+			const dag::graph& graph,
+			const build::request& req
+		) const;
+	};
 }
 
 #endif
