@@ -18,7 +18,20 @@ namespace mgmake::sys {
 		bool needs_quotes = false;
 
 		for (const char ch : arg) {
-			if (ch == ' ' || ch == '\t' || ch == '"' || ch == '\\') {
+			if (
+				ch == ' '
+				|| ch == '\t'
+				|| ch == '"'
+				|| ch == '&'
+				|| ch == '|'
+				|| ch == '<'
+				|| ch == '>'
+				|| ch == '^'
+				|| ch == '%'
+				|| ch == '!'
+				|| ch == '('
+				|| ch == ')'
+			) {
 				needs_quotes = true;
 				break;
 			}

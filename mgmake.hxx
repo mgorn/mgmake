@@ -929,7 +929,20 @@ namespace mgmake::sys {
 		bool needs_quotes = false;
 
 		for (const char ch : arg) {
-			if (ch == ' ' || ch == '\t' || ch == '"' || ch == '\\') {
+			if (
+				ch == ' '
+				|| ch == '\t'
+				|| ch == '"'
+				|| ch == '&'
+				|| ch == '|'
+				|| ch == '<'
+				|| ch == '>'
+				|| ch == '^'
+				|| ch == '%'
+				|| ch == '!'
+				|| ch == '('
+				|| ch == ')'
+			) {
 				needs_quotes = true;
 				break;
 			}
@@ -1008,7 +1021,8 @@ namespace mgmake::sys {
 #endif
 }
 
-#endif// ===== end include/mgmake/sys/util.hxx =====
+#endif
+// ===== end include/mgmake/sys/util.hxx =====
 
 
 // ===== begin include/mgmake/sys/command_line.hxx =====
@@ -1056,7 +1070,18 @@ namespace mgmake::sys {
 		}
 
 		auto invoke() const {
-			return std::system(full_command().c_str());
+			const auto command = full_command();
+
+#if defined(MGMK_PLATFORM_WINDOWS)
+			std::string shell_command;
+			shell_command.reserve(command.size() + 2);
+			shell_command += '"';
+			shell_command += command;
+			shell_command += '"';
+			return std::system(shell_command.c_str());
+#else
+			return std::system(command.c_str());
+#endif
 		}
 	};
 
@@ -1467,7 +1492,11 @@ namespace mgmake::discovery {
 		}
 
 		[[nodiscard]] inline std::string path_string() const {
+#if defined(MGMK_PLATFORM_WINDOWS)
+			return m_path.generic_string();
+#else
 			return m_path.string();
+#endif
 		}
 	};
 }

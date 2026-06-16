@@ -42,7 +42,11 @@ namespace mgmake::discovery {
 		}
 
 		[[nodiscard]] inline std::string path_string() const {
+#if defined(MGMK_PLATFORM_WINDOWS)
+			return m_path.generic_string();
+#else
 			return m_path.string();
+#endif
 		}
 	};
 }

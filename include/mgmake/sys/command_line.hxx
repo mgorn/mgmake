@@ -42,7 +42,18 @@ namespace mgmake::sys {
 		}
 
 		auto invoke() const {
-			return std::system(full_command().c_str());
+			const auto command = full_command();
+
+#if defined(MGMK_PLATFORM_WINDOWS)
+			std::string shell_command;
+			shell_command.reserve(command.size() + 2);
+			shell_command += '"';
+			shell_command += command;
+			shell_command += '"';
+			return std::system(shell_command.c_str());
+#else
+			return std::system(command.c_str());
+#endif
 		}
 	};
 
