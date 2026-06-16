@@ -17,5 +17,3 @@ project proj() {
 }
 
 MGMK_ENTRY(proj);
-
-
