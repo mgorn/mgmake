@@ -8,6 +8,7 @@
 #include "tool_role.hxx"
 
 #include <filesystem>
+#include <optional>
 #include <string>
 
 namespace mgmake::discovery {
@@ -18,6 +19,8 @@ namespace mgmake::discovery {
 		tool_provider m_provider{};
 		std::string m_reason{};
 		int m_priority = 0;
+		bool m_authoritative = false;
+		std::optional<std::filesystem::path> m_provider_root{};
 	};
 
 	struct rejected_tool_candidate {
@@ -36,6 +39,7 @@ namespace mgmake::discovery {
 		std::string m_version{};
 		std::string m_target_triple{};
 		std::string m_reason{};
+		std::optional<std::filesystem::path> m_provider_root{};
 
 		[[nodiscard]] inline const std::filesystem::path& path() const noexcept {
 			return m_path;

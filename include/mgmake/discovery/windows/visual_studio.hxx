@@ -4,6 +4,11 @@
 #define MGMAKE_DISCOVERY_WINDOWS_VISUAL_STUDIO_HXX
 
 #include "../providers.hxx"
+#include "../validate.hxx"
+
+#include <ranges>
+#include <sstream>
+#include <utility>
 
 namespace mgmake::discovery::windows {
 	struct visual_studio_instance {
@@ -56,6 +61,82 @@ namespace mgmake::discovery::windows {
 			}
 		}
 #endif
+
+		return result;
+	}
+
+	[[nodiscard]] inline std::vector<std::filesystem::path> vswhere_installation_paths() {
+		std::vector<std::filesystem::path> result;
+
+#if defined(_WIN32)
+		auto vswhere = find_vswhere();
+
+		if (!vswhere) {
+			return result;
+		}
+
+		sys::command_line command;
+		command.m_args.emplace_back(vswhere->string());
+		command.m_args.emplace_back("-all");
+		command.m_args.emplace_back("-products");
+		command.m_args.emplace_back("*");
+		command.m_args.emplace_back("-requires");
+		command.m_args.emplace_back("Microsoft.VisualStudio.Component.VC.Tools.x86.x64");
+		command.m_args.emplace_back("-property");
+		command.m_args.emplace_back("installationPath");
+
+		auto text = capture_command(std::move(command));
+
+		if (!text) {
+			return result;
+		}
+
+		std::istringstream in{*text};
+		std::string line;
+
+		while (std::getline(in, line)) {
+			while (!line.empty() && (line.back() == '\r' || line.back() == '\n')) {
+				line.pop_back();
+			}
+
+			if (!line.empty() && std::filesystem::exists(line)) {
+				result.emplace_back(line);
+			}
+		}
+#endif
+
+		return result;
+	}
+
+	[[nodiscard]] inline bool same_existing_path(
+		const std::filesystem::path& left,
+		const std::filesystem::path& right
+	) {
+		std::error_code ec;
+		const bool same = std::filesystem::equivalent(left, right, ec);
+		return !ec && same;
+	}
+
+	[[nodiscard]] inline std::vector<visual_studio_instance> visual_studio_instances() {
+		std::vector<visual_studio_instance> result;
+
+		for (const auto& path : vswhere_installation_paths()) {
+			result.push_back({
+				.m_root = path,
+				.m_display_name = path.filename().string(),
+				.m_has_cpp_tools = std::filesystem::exists(path / "VC" / "Tools" / "MSVC")
+			});
+		}
+
+		for (auto fallback : common_visual_studio_instances()) {
+			const bool already_added = std::ranges::any_of(result, [&](const auto& instance) {
+				return same_existing_path(instance.m_root, fallback.m_root);
+			});
+
+			if (!already_added) {
+				result.emplace_back(std::move(fallback));
+			}
+		}
 
 		return result;
 	}
@@ -122,8 +203,8 @@ namespace mgmake::discovery {
 
 	inline void add_visual_studio_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
 #if defined(_WIN32)
-		for (const auto& vs : windows::common_visual_studio_instances()) {
-			add_candidates_from_dirs(out, ctx.request(), req, windows::visual_studio_tool_dirs(vs), tool_provider::visual_studio, 150, "Visual Studio tool directory");
+		for (const auto& vs : windows::visual_studio_instances()) {
+			add_candidates_from_dirs(out, ctx.request(), req, windows::visual_studio_tool_dirs(vs), tool_provider::visual_studio, 150, "Visual Studio tool directory", true, ctx.m_mode, vs.m_root);
 		}
 #else
 		(void)ctx; (void)req; (void)out;
@@ -136,7 +217,7 @@ namespace mgmake::discovery {
 		if (auto root = getenv_path("MGMK_LLVM_ROOT")) dirs.emplace_back(*root / "bin");
 		dirs.emplace_back("C:/Program Files/LLVM/bin");
 		dirs.emplace_back("C:/Program Files (x86)/LLVM/bin");
-		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::standalone_llvm, 170, "standalone LLVM installation");
+		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::standalone_llvm, 170, "standalone LLVM installation", true, ctx.m_mode);
 #else
 		(void)ctx; (void)req; (void)out;
 #endif

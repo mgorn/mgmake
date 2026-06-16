@@ -19,6 +19,8 @@
 namespace mgmake::discovery {
 	struct cache_entry {
 		std::string m_toolchain{};
+		std::string m_host_key{};
+		std::string m_target_key{};
 		sys::target m_host{};
 		sys::target m_target{};
 		tool_role m_role{};
@@ -49,13 +51,25 @@ namespace mgmake::discovery {
 
 		[[nodiscard]] std::optional<cache_entry> find(
 			std::string_view toolchain,
-			const sys::target&,
-			const sys::target&,
+			const sys::target& host,
+			const sys::target& target,
 			tool_role role,
 			std::string_view logical_name
 		) const {
+			const auto host_key = target_key(host);
+			const auto target_key_value = target_key(target);
+
 			for (const auto& entry : m_entries) {
+				const auto entry_host_key = entry.m_host_key.empty()
+					? target_key(entry.m_host)
+					: entry.m_host_key;
+				const auto entry_target_key = entry.m_target_key.empty()
+					? target_key(entry.m_target)
+					: entry.m_target_key;
+
 				if (entry.m_toolchain == toolchain
+					&& entry_host_key == host_key
+					&& entry_target_key == target_key_value
 					&& entry.m_role == role
 					&& entry.m_logical_name == logical_name
 					&& is_launchable_file(entry.m_path)) {
@@ -67,8 +81,18 @@ namespace mgmake::discovery {
 		}
 
 		void put(cache_entry entry) {
+			if (entry.m_host_key.empty()) {
+				entry.m_host_key = target_key(entry.m_host);
+			}
+
+			if (entry.m_target_key.empty()) {
+				entry.m_target_key = target_key(entry.m_target);
+			}
+
 			for (auto& existing : m_entries) {
 				if (existing.m_toolchain == entry.m_toolchain
+					&& (existing.m_host_key.empty() ? target_key(existing.m_host) : existing.m_host_key) == entry.m_host_key
+					&& (existing.m_target_key.empty() ? target_key(existing.m_target) : existing.m_target_key) == entry.m_target_key
 					&& existing.m_role == entry.m_role
 					&& existing.m_logical_name == entry.m_logical_name) {
 					existing = std::move(entry);
@@ -129,6 +153,8 @@ namespace mgmake::discovery {
 			active = true;
 
 			if (auto value = value_after(line, "toolchain=")) current.m_toolchain = *value;
+			else if (auto value = value_after(line, "host=")) current.m_host_key = *value;
+			else if (auto value = value_after(line, "target=")) current.m_target_key = *value;
 			else if (auto value = value_after(line, "tool.role=")) {
 				if (auto role = tool_role_names::from_string(*value)) current.m_role = *role;
 			} else if (auto value = value_after(line, "tool.logical=")) current.m_logical_name = *value;
@@ -158,9 +184,16 @@ namespace mgmake::discovery {
 		out << "mgmake-tool-cache-v1\n\n";
 
 		for (const auto& entry : cache_data.m_entries) {
+			const auto host_key = entry.m_host_key.empty()
+				? target_key(entry.m_host)
+				: entry.m_host_key;
+			const auto target_key_value = entry.m_target_key.empty()
+				? target_key(entry.m_target)
+				: entry.m_target_key;
+
 			out << "toolchain=" << entry.m_toolchain << "\n";
-			out << "host=" << target_key(entry.m_host) << "\n";
-			out << "target=" << target_key(entry.m_target) << "\n";
+			out << "host=" << host_key << "\n";
+			out << "target=" << target_key_value << "\n";
 			out << "tool.role=" << name(entry.m_role) << "\n";
 			out << "tool.logical=" << entry.m_logical_name << "\n";
 			out << "tool.path=" << entry.m_path.generic_string() << "\n";

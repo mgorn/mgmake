@@ -11,6 +11,24 @@
 #include <vector>
 
 namespace mgmake::discovery {
+#if defined(_WIN32)
+	[[nodiscard]] inline std::string cmd_call_quote(std::string_view text) {
+		std::string result;
+		result += "\"\"";
+
+		for (const char ch : text) {
+			if (ch == '"') {
+				result += "\"\"";
+			} else {
+				result += ch;
+			}
+		}
+
+		result += "\"\"";
+		return result;
+	}
+#endif
+
 	struct environment_variable {
 		std::string m_name{};
 		std::string m_value{};
@@ -44,7 +62,7 @@ namespace mgmake::discovery {
 			std::string result;
 #if defined(_WIN32)
 			result += "cmd /s /c \"call ";
-			result += sys::shell_escape(env.m_setup_script->string());
+			result += cmd_call_quote(env.m_setup_script->string());
 #else
 			result += ". ";
 			result += sys::shell_escape(env.m_setup_script->string());

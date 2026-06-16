@@ -5,6 +5,7 @@
 
 #include "environment.hxx"
 
+#include <cctype>
 #include <filesystem>
 #include <optional>
 #include <string>
@@ -17,10 +18,16 @@
 #endif
 
 namespace mgmake::discovery {
+	[[nodiscard]] inline bool has_windows_drive_prefix(std::string_view text) noexcept {
+		return text.size() >= 2
+			&& std::isalpha(static_cast<unsigned char>(text[0]))
+			&& text[1] == ':';
+	}
+
 	[[nodiscard]] inline bool is_path_like(std::string_view text) {
 		return text.find('/') != std::string_view::npos
 			|| text.find('\\') != std::string_view::npos
-			|| text.find(':') != std::string_view::npos;
+			|| has_windows_drive_prefix(text);
 	}
 
 	[[nodiscard]] inline bool is_explicit_path(std::string_view text) {

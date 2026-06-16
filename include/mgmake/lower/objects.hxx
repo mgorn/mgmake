@@ -42,7 +42,8 @@ namespace mgmake::lower {
 			auto object_id = m_emit.generated(object_path);
 
 			sys::command_line command{};
-			command.m_args.emplace_back(tc.cxx());
+			const bool is_c_source = source.extension().string() == ".c";
+			command.m_args.emplace_back(is_c_source ? tc.cc() : tc.cxx());
 
 			build::append_target_args(command, tc, request());
 
@@ -50,8 +51,14 @@ namespace mgmake::lower {
 				command.m_args.emplace_back(flag);
 			}
 
-			for (const auto& flag : tc.cxx_flags()) {
-				command.m_args.emplace_back(flag);
+			if (is_c_source) {
+				for (const auto& flag : tc.c_flags()) {
+					command.m_args.emplace_back(flag);
+				}
+			} else {
+				for (const auto& flag : tc.cxx_flags()) {
+					command.m_args.emplace_back(flag);
+				}
 			}
 
 			for (const auto& include_dir : include_dirs) {

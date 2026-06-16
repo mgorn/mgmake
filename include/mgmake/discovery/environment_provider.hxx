@@ -24,7 +24,7 @@ namespace mgmake::discovery {
 				return env;
 			}
 
-			for (const auto& vs : windows::common_visual_studio_instances()) {
+			for (const auto& vs : windows::visual_studio_instances()) {
 				auto candidate = windows::visual_studio_environment(vs, req);
 				if (!candidate.empty()) {
 					return candidate;

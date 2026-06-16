@@ -13,6 +13,17 @@
 #include <string>
 
 namespace mgmake::discovery {
+	[[nodiscard]] inline discovery::mode effective_discovery_mode(
+		const cli::options& opts,
+		const build::toolchain& tc
+	) {
+		if (opts.m_tool_discovery == discovery::mode::automatic) {
+			return tc.discovery_mode();
+		}
+
+		return opts.m_tool_discovery;
+	}
+
 	[[nodiscard]] inline std::expected<resolved_tool, std::string> resolve_tool(
 		context& ctx,
 		const tool_requirement& req
@@ -36,6 +47,11 @@ namespace mgmake::discovery {
 			}
 
 			diag.m_rejected.emplace_back(candidate.m_path.string() + ": " + validated.error());
+
+			if (candidate.m_authoritative) {
+				diag.m_fixes = fixes_for(req);
+				return std::unexpected{diag.format_missing_tool()};
+			}
 		}
 
 		if (req.required()) {
@@ -54,6 +70,8 @@ namespace mgmake::discovery {
 		entry.m_toolchain = std::string{req.toolchain().name()};
 		entry.m_host = sys::g_host_target;
 		entry.m_target = req.target();
+		entry.m_host_key = target_key(entry.m_host);
+		entry.m_target_key = target_key(entry.m_target);
 		entry.m_role = tool.m_role;
 		entry.m_logical_name = tool.m_logical_name;
 		entry.m_path = tool.m_path;
@@ -67,7 +85,9 @@ namespace mgmake::discovery {
 		const build::request& req,
 		const spec::project& project
 	) {
-		if (opts.m_tool_discovery == mode::disabled) {
+		const auto discovery_mode = effective_discovery_mode(opts, req.toolchain());
+
+		if (discovery_mode == mode::disabled) {
 			return req;
 		}
 
@@ -79,7 +99,7 @@ namespace mgmake::discovery {
 		ctx.m_refresh_cache = opts.m_refresh_tools;
 		ctx.m_verbose = opts.m_verbose;
 		ctx.m_show_search = opts.m_show_tool_search;
-		ctx.m_mode = opts.m_tool_discovery;
+		ctx.m_mode = discovery_mode;
 
 		if (ctx.m_use_cache) {
 			ctx.m_cache = load_cache(req);
@@ -143,7 +163,9 @@ namespace mgmake::discovery {
 		const build::request& req,
 		backend_tool_requirement requirement
 	) {
-		if (opts.m_tool_discovery == mode::disabled) {
+		const auto discovery_mode = effective_discovery_mode(opts, req.toolchain());
+
+		if (discovery_mode == mode::disabled) {
 			return resolved_tool{
 				.m_role = requirement.m_role,
 				.m_logical_name = requirement.m_logical_name,
@@ -160,7 +182,7 @@ namespace mgmake::discovery {
 		ctx.m_refresh_cache = opts.m_refresh_tools;
 		ctx.m_verbose = opts.m_verbose;
 		ctx.m_show_search = opts.m_show_tool_search;
-		ctx.m_mode = opts.m_tool_discovery;
+		ctx.m_mode = discovery_mode;
 
 		if (ctx.m_use_cache) {
 			ctx.m_cache = load_cache(req);

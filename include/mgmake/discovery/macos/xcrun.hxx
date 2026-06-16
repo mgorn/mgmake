@@ -9,7 +9,7 @@
 namespace mgmake::discovery {
 	inline void add_xcrun_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
 #if defined(__APPLE__)
-		for (const auto& logical : candidate_names_for(ctx.request(), req.m_role)) {
+		for (const auto& logical : candidate_names_for(ctx.request(), req.m_role, ctx.m_mode)) {
 			sys::command_line command;
 			command.m_args.emplace_back("xcrun");
 			if (!ctx.options().m_apple_sdk.empty()) {
@@ -41,7 +41,7 @@ namespace mgmake::discovery {
 			"/opt/homebrew/bin",
 			"/usr/local/bin"
 		};
-		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::homebrew, 220, "Homebrew tool root");
+		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::homebrew, 220, "Homebrew tool root", true, ctx.m_mode);
 #else
 		(void)ctx; (void)req; (void)out;
 #endif
@@ -49,7 +49,7 @@ namespace mgmake::discovery {
 
 	inline void add_macports_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
 #if defined(__APPLE__)
-		add_candidates_from_dirs(out, ctx.request(), req, {"/opt/local/bin"}, tool_provider::macports, 230, "MacPorts tool root");
+		add_candidates_from_dirs(out, ctx.request(), req, {"/opt/local/bin"}, tool_provider::macports, 230, "MacPorts tool root", true, ctx.m_mode);
 #else
 		(void)ctx; (void)req; (void)out;
 #endif

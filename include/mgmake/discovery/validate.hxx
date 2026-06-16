@@ -27,7 +27,16 @@ namespace mgmake::discovery {
 		shell += sys::shell_escape(output_path.string());
 		shell += " 2>&1";
 
+#if defined(MGMK_PLATFORM_WINDOWS)
+		std::string shell_command;
+		shell_command.reserve(shell.size() + 2);
+		shell_command += '"';
+		shell_command += shell;
+		shell_command += '"';
+		const int exit_code = std::system(shell_command.c_str());
+#else
 		const int exit_code = std::system(shell.c_str());
+#endif
 
 		std::ifstream in(output_path);
 		std::string text;
@@ -121,6 +130,7 @@ namespace mgmake::discovery {
 		result.m_version = version;
 		result.m_family = classify_tool_family(req, candidate, version);
 		result.m_target_triple = req.m_target_triple;
+		result.m_provider_root = candidate.m_provider_root;
 		return result;
 	}
 }

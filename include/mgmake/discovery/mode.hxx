@@ -9,6 +9,7 @@
 
 namespace mgmake::discovery {
 	enum struct mode {
+		automatic,
 		exact,
 		family_fallback,
 		auto_fallback,
@@ -18,6 +19,7 @@ namespace mgmake::discovery {
 
 	using mode_names = detail::enum_table<
 		mode,
+		detail::enum_entry<mode::automatic, "automatic">,
 		detail::enum_entry<mode::exact, "exact">,
 		detail::enum_entry<mode::family_fallback, "family-fallback">,
 		detail::enum_entry<mode::auto_fallback, "auto-fallback">,
@@ -26,6 +28,8 @@ namespace mgmake::discovery {
 
 	using mode_parse_names = detail::enum_table<
 		mode,
+		detail::enum_entry<mode::automatic, "automatic">,
+		detail::enum_entry<mode::automatic, "default">,
 		detail::enum_entry<mode::exact, "exact">,
 		detail::enum_entry<mode::family_fallback, "family-fallback">,
 		detail::enum_entry<mode::family_fallback, "family">,

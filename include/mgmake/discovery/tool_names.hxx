@@ -6,6 +6,7 @@
 #include "../build/request.hxx"
 #include "../build/toolchain.hxx"
 #include "../cli/options.hxx"
+#include "mode.hxx"
 #include "tool_role.hxx"
 
 #include <algorithm>
@@ -46,12 +47,22 @@ namespace mgmake::discovery {
 			case tool_role::cxx_compiler: return opts.m_cxx;
 			case tool_role::archiver: return opts.m_ar;
 			case tool_role::ranlib: return opts.m_ranlib;
+			case tool_role::librarian: return opts.m_librarian;
 			case tool_role::linker: return opts.m_linker;
+			case tool_role::shared_linker: return opts.m_shared_linker;
 			case tool_role::resource_compiler: return opts.m_rc;
 			case tool_role::manifest_tool: return opts.m_mt;
+			case tool_role::dll_tool: return opts.m_dll_tool;
+			case tool_role::strip: return opts.m_strip;
+			case tool_role::objcopy: return opts.m_objcopy;
+			case tool_role::objdump: return opts.m_objdump;
+			case tool_role::nm: return opts.m_nm;
+			case tool_role::readelf: return opts.m_readelf;
 			case tool_role::generator_ninja: return opts.m_ninja;
 			case tool_role::cmake: return opts.m_cmake;
 			case tool_role::pkg_config: return opts.m_pkg_config;
+			case tool_role::exe_wrapper: return opts.m_exe_wrapper;
+			case tool_role::emulator: return opts.m_emulator;
 			default: return {};
 		}
 	}
@@ -129,9 +140,14 @@ namespace mgmake::discovery {
 
 	[[nodiscard]] inline std::vector<std::string> candidate_names_for(
 		const build::request& req,
-		tool_role role
+		tool_role role,
+		mode discovery_mode
 	) {
 		std::vector<std::string> result = logical_names_for(req.toolchain(), role);
+
+		if (discovery_mode == mode::exact) {
+			return result;
+		}
 
 		for (auto fallback : fallback_names_for(req.toolchain(), req, role)) {
 			if (std::ranges::find(result, fallback) == result.end()) {
@@ -144,7 +160,8 @@ namespace mgmake::discovery {
 
 	[[nodiscard]] inline std::vector<std::string> target_prefixed_names_for(
 		const build::request& req,
-		tool_role role
+		tool_role role,
+		mode discovery_mode
 	) {
 		std::vector<std::string> result;
 		std::string triple;
@@ -159,7 +176,7 @@ namespace mgmake::discovery {
 			return result;
 		}
 
-		for (const auto& name : candidate_names_for(req, role)) {
+		for (const auto& name : candidate_names_for(req, role, discovery_mode)) {
 			if (!name.starts_with(triple + "-")) {
 				result.emplace_back(triple + "-" + name);
 			}

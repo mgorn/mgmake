@@ -17,7 +17,7 @@ namespace mgmake::discovery {
 		std::println("    provider: {}", name(tool.m_provider));
 
 		if (tool.m_family != tool_family::unknown) {
-			std::println("    family: {}", static_cast<int>(tool.m_family));
+			std::println("    family: {}", discovery::name(tool.m_family));
 		}
 
 		if (!tool.m_version.empty()) {

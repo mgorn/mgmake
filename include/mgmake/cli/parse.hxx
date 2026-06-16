@@ -93,7 +93,7 @@ namespace mgmake::cli {
 	using tool_discovery_option =
 		value_option<&options::m_tool_discovery, "tool-discovery">
 			::value_name<"mode">
-			::description<"Set tool discovery mode: exact, family-fallback, auto-fallback, disabled.">;
+			::description<"Set tool discovery mode: automatic, exact, family-fallback, auto-fallback, disabled.">;
 
 	using toolchain_root_option =
 		value_option<&options::m_toolchain_root, "toolchain-root">
@@ -135,10 +135,20 @@ namespace mgmake::cli {
 			::value_name<"path-or-name">
 			::description<"Override ranlib.">;
 
+	using librarian_option =
+		value_option<&options::m_librarian, "librarian">
+			::value_name<"path-or-name">
+			::description<"Override the librarian.">;
+
 	using linker_option =
 		value_option<&options::m_linker, "linker">
 			::value_name<"path-or-name">
 			::description<"Override the linker.">;
+
+	using shared_linker_option =
+		value_option<&options::m_shared_linker, "shared-linker">
+			::value_name<"path-or-name">
+			::description<"Override the shared-library linker.">;
 
 	using rc_option =
 		value_option<&options::m_rc, "rc">
@@ -149,6 +159,36 @@ namespace mgmake::cli {
 		value_option<&options::m_mt, "mt">
 			::value_name<"path-or-name">
 			::description<"Override the manifest tool.">;
+
+	using dll_tool_option =
+		value_option<&options::m_dll_tool, "dll-tool">
+			::value_name<"path-or-name">
+			::description<"Override dlltool.">;
+
+	using strip_option =
+		value_option<&options::m_strip, "strip">
+			::value_name<"path-or-name">
+			::description<"Override strip.">;
+
+	using objcopy_option =
+		value_option<&options::m_objcopy, "objcopy">
+			::value_name<"path-or-name">
+			::description<"Override objcopy.">;
+
+	using objdump_option =
+		value_option<&options::m_objdump, "objdump">
+			::value_name<"path-or-name">
+			::description<"Override objdump.">;
+
+	using nm_option =
+		value_option<&options::m_nm, "nm">
+			::value_name<"path-or-name">
+			::description<"Override nm.">;
+
+	using readelf_option =
+		value_option<&options::m_readelf, "readelf">
+			::value_name<"path-or-name">
+			::description<"Override readelf.">;
 
 	using ninja_option =
 		value_option<&options::m_ninja, "ninja">
@@ -164,6 +204,16 @@ namespace mgmake::cli {
 		value_option<&options::m_pkg_config, "pkg-config">
 			::value_name<"path-or-name">
 			::description<"Override pkg-config.">;
+
+	using exe_wrapper_option =
+		value_option<&options::m_exe_wrapper, "exe-wrapper">
+			::value_name<"path-or-name">
+			::description<"Override the executable wrapper.">;
+
+	using emulator_option =
+		value_option<&options::m_emulator, "emulator">
+			::value_name<"path-or-name">
+			::description<"Override the emulator.">;
 
 	using toolchain_version_option =
 		value_option<&options::m_toolchain_version, "toolchain-version">
@@ -216,12 +266,22 @@ namespace mgmake::cli {
 		cxx_option,
 		ar_option,
 		ranlib_option,
+		librarian_option,
 		linker_option,
+		shared_linker_option,
 		rc_option,
 		mt_option,
+		dll_tool_option,
+		strip_option,
+		objcopy_option,
+		objdump_option,
+		nm_option,
+		readelf_option,
 		ninja_option,
 		cmake_option,
 		pkg_config_option,
+		exe_wrapper_option,
+		emulator_option,
 		toolchain_version_option,
 		android_ndk_option,
 		android_abi_option,

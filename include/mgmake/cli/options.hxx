@@ -37,7 +37,7 @@ namespace mgmake::cli {
 		bool m_no_tool_cache = false;
 		bool m_show_tool_search = false;
 
-		discovery::mode m_tool_discovery = discovery::mode::exact;
+		discovery::mode m_tool_discovery = discovery::mode::automatic;
 
 		std::string m_toolchain_root{};
 		std::string m_sdk_root{};
@@ -48,12 +48,22 @@ namespace mgmake::cli {
 		std::string m_cxx{};
 		std::string m_ar{};
 		std::string m_ranlib{};
+		std::string m_librarian{};
 		std::string m_linker{};
+		std::string m_shared_linker{};
 		std::string m_rc{};
 		std::string m_mt{};
+		std::string m_dll_tool{};
+		std::string m_strip{};
+		std::string m_objcopy{};
+		std::string m_objdump{};
+		std::string m_nm{};
+		std::string m_readelf{};
 		std::string m_ninja{};
 		std::string m_cmake{};
 		std::string m_pkg_config{};
+		std::string m_exe_wrapper{};
+		std::string m_emulator{};
 
 		std::string m_toolchain_version{};
 
