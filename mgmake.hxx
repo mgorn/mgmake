@@ -908,14 +908,6 @@ namespace mgmake::detail {
 // skipped duplicate include: include/mgmake/detail/assert.hxx
 // skipped duplicate include: include/mgmake/sys/platform.hxx
 
-// ===== begin include/mgmake/sys/command_line.hxx =====
-#pragma once
-
-#ifndef MGMAKE_SYS_COMMAND_LINE_HXX
-#define MGMAKE_SYS_COMMAND_LINE_HXX
-
-// skipped duplicate include: include/mgmake/detail/convert.hxx
-
 // ===== begin include/mgmake/sys/util.hxx =====
 #pragma once
 
@@ -1019,6 +1011,15 @@ namespace mgmake::sys {
 #endif// ===== end include/mgmake/sys/util.hxx =====
 
 
+// ===== begin include/mgmake/sys/command_line.hxx =====
+#pragma once
+
+#ifndef MGMAKE_SYS_COMMAND_LINE_HXX
+#define MGMAKE_SYS_COMMAND_LINE_HXX
+
+// skipped duplicate include: include/mgmake/detail/convert.hxx
+// skipped duplicate include: include/mgmake/sys/util.hxx
+
 #include <cstdlib>
 #include <span>
 #include <string_view>
@@ -1102,7 +1103,463 @@ namespace mgmake::sys {
 #endif
 // ===== end include/mgmake/sys/command_line.hxx =====
 
+
+// ===== begin include/mgmake/discovery/tool_role.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DISCOVERY_TOOL_ROLE_HXX
+#define MGMAKE_DISCOVERY_TOOL_ROLE_HXX
+
+// skipped duplicate include: include/mgmake/detail/enum_string.hxx
+
+#include <string_view>
+
+namespace mgmake::discovery {
+	enum struct tool_role {
+		c_compiler,
+		cxx_compiler,
+		objc_compiler,
+		objcxx_compiler,
+		assembler,
+		cuda_compiler,
+		hip_compiler,
+		resource_compiler,
+		midl_compiler,
+		archiver,
+		ranlib,
+		librarian,
+		linker,
+		shared_linker,
+		dll_tool,
+		manifest_tool,
+		strip,
+		objcopy,
+		objdump,
+		nm,
+		readelf,
+		debug_symbol_tool,
+		lipo,
+		install_name_tool,
+		codesign,
+		generator_ninja,
+		generator_make,
+		generator_msbuild,
+		generator_xcode,
+		cmake,
+		pkg_config,
+		exe_wrapper,
+		emulator,
+		count
+	};
+
+	using tool_role_names = detail::enum_table<
+		tool_role,
+		detail::enum_entry<tool_role::c_compiler, "c compiler">,
+		detail::enum_entry<tool_role::cxx_compiler, "c++ compiler">,
+		detail::enum_entry<tool_role::objc_compiler, "objective-c compiler">,
+		detail::enum_entry<tool_role::objcxx_compiler, "objective-c++ compiler">,
+		detail::enum_entry<tool_role::assembler, "assembler">,
+		detail::enum_entry<tool_role::cuda_compiler, "cuda compiler">,
+		detail::enum_entry<tool_role::hip_compiler, "hip compiler">,
+		detail::enum_entry<tool_role::resource_compiler, "resource compiler">,
+		detail::enum_entry<tool_role::midl_compiler, "midl compiler">,
+		detail::enum_entry<tool_role::archiver, "archiver">,
+		detail::enum_entry<tool_role::ranlib, "ranlib">,
+		detail::enum_entry<tool_role::librarian, "librarian">,
+		detail::enum_entry<tool_role::linker, "linker">,
+		detail::enum_entry<tool_role::shared_linker, "shared linker">,
+		detail::enum_entry<tool_role::dll_tool, "dll tool">,
+		detail::enum_entry<tool_role::manifest_tool, "manifest tool">,
+		detail::enum_entry<tool_role::strip, "strip">,
+		detail::enum_entry<tool_role::objcopy, "objcopy">,
+		detail::enum_entry<tool_role::objdump, "objdump">,
+		detail::enum_entry<tool_role::nm, "nm">,
+		detail::enum_entry<tool_role::readelf, "readelf">,
+		detail::enum_entry<tool_role::debug_symbol_tool, "debug symbol tool">,
+		detail::enum_entry<tool_role::lipo, "lipo">,
+		detail::enum_entry<tool_role::install_name_tool, "install name tool">,
+		detail::enum_entry<tool_role::codesign, "codesign">,
+		detail::enum_entry<tool_role::generator_ninja, "ninja">,
+		detail::enum_entry<tool_role::generator_make, "make">,
+		detail::enum_entry<tool_role::generator_msbuild, "msbuild">,
+		detail::enum_entry<tool_role::generator_xcode, "xcodebuild">,
+		detail::enum_entry<tool_role::cmake, "cmake">,
+		detail::enum_entry<tool_role::pkg_config, "pkg-config">,
+		detail::enum_entry<tool_role::exe_wrapper, "exe wrapper">,
+		detail::enum_entry<tool_role::emulator, "emulator">
+	>;
+
+	static_assert(tool_role_names::is_zero_based_count_canonical(tool_role::count));
+
+	[[nodiscard]] inline constexpr std::string_view name(tool_role role) noexcept {
+		return tool_role_names::to_string(role);
+	}
+}
+
+#endif
+// ===== end include/mgmake/discovery/tool_role.hxx =====
+
+
+// ===== begin include/mgmake/discovery/tool_provider.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DISCOVERY_TOOL_PROVIDER_HXX
+#define MGMAKE_DISCOVERY_TOOL_PROVIDER_HXX
+
+// skipped duplicate include: include/mgmake/detail/enum_string.hxx
+
+#include <string_view>
+
+namespace mgmake::discovery {
+	enum struct tool_provider {
+		explicit_path,
+		cli_override,
+		environment_override,
+		cache,
+		sibling,
+		target_prefix,
+		path,
+		known_install_root,
+		toolchain_root,
+		sdk_root,
+		sysroot_root,
+		project_toolchain_root,
+		package_toolchain,
+		windows_registry,
+		vswhere,
+		visual_studio,
+		visual_studio_llvm,
+		visual_studio_environment,
+		windows_sdk,
+		standalone_llvm,
+		msys2,
+		mingw,
+		cygwin,
+		xcrun,
+		xcode,
+		homebrew,
+		macports,
+		unix_system,
+		distro_llvm,
+		distro_gcc,
+		android_ndk,
+		emscripten_sdk,
+		embedded_sdk,
+		compatible_fallback,
+		auto_fallback,
+		count
+	};
+
+	using tool_provider_names = detail::enum_table<
+		tool_provider,
+		detail::enum_entry<tool_provider::explicit_path, "explicit path">,
+		detail::enum_entry<tool_provider::cli_override, "CLI override">,
+		detail::enum_entry<tool_provider::environment_override, "environment override">,
+		detail::enum_entry<tool_provider::cache, "cache">,
+		detail::enum_entry<tool_provider::sibling, "sibling">,
+		detail::enum_entry<tool_provider::target_prefix, "target prefix">,
+		detail::enum_entry<tool_provider::path, "PATH">,
+		detail::enum_entry<tool_provider::known_install_root, "known install root">,
+		detail::enum_entry<tool_provider::toolchain_root, "toolchain root">,
+		detail::enum_entry<tool_provider::sdk_root, "SDK root">,
+		detail::enum_entry<tool_provider::sysroot_root, "sysroot root">,
+		detail::enum_entry<tool_provider::project_toolchain_root, "project toolchain root">,
+		detail::enum_entry<tool_provider::package_toolchain, "package toolchain">,
+		detail::enum_entry<tool_provider::windows_registry, "Windows registry">,
+		detail::enum_entry<tool_provider::vswhere, "vswhere">,
+		detail::enum_entry<tool_provider::visual_studio, "Visual Studio">,
+		detail::enum_entry<tool_provider::visual_studio_llvm, "Visual Studio LLVM">,
+		detail::enum_entry<tool_provider::visual_studio_environment, "Visual Studio environment">,
+		detail::enum_entry<tool_provider::windows_sdk, "Windows SDK">,
+		detail::enum_entry<tool_provider::standalone_llvm, "standalone LLVM">,
+		detail::enum_entry<tool_provider::msys2, "MSYS2">,
+		detail::enum_entry<tool_provider::mingw, "MinGW">,
+		detail::enum_entry<tool_provider::cygwin, "Cygwin">,
+		detail::enum_entry<tool_provider::xcrun, "xcrun">,
+		detail::enum_entry<tool_provider::xcode, "Xcode">,
+		detail::enum_entry<tool_provider::homebrew, "Homebrew">,
+		detail::enum_entry<tool_provider::macports, "MacPorts">,
+		detail::enum_entry<tool_provider::unix_system, "Unix system">,
+		detail::enum_entry<tool_provider::distro_llvm, "distro LLVM">,
+		detail::enum_entry<tool_provider::distro_gcc, "distro GCC">,
+		detail::enum_entry<tool_provider::android_ndk, "Android NDK">,
+		detail::enum_entry<tool_provider::emscripten_sdk, "Emscripten SDK">,
+		detail::enum_entry<tool_provider::embedded_sdk, "embedded SDK">,
+		detail::enum_entry<tool_provider::compatible_fallback, "compatible fallback">,
+		detail::enum_entry<tool_provider::auto_fallback, "auto fallback">
+	>;
+
+	static_assert(tool_provider_names::is_zero_based_count_canonical(tool_provider::count));
+
+	[[nodiscard]] inline constexpr std::string_view name(tool_provider provider) noexcept {
+		return tool_provider_names::to_string(provider);
+	}
+}
+
+#endif
+// ===== end include/mgmake/discovery/tool_provider.hxx =====
+
+
+// ===== begin include/mgmake/discovery/mode.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DISCOVERY_MODE_HXX
+#define MGMAKE_DISCOVERY_MODE_HXX
+
+// skipped duplicate include: include/mgmake/detail/enum_string.hxx
+
+#include <string_view>
+
+namespace mgmake::discovery {
+	enum struct mode {
+		exact,
+		family_fallback,
+		auto_fallback,
+		disabled,
+		count
+	};
+
+	using mode_names = detail::enum_table<
+		mode,
+		detail::enum_entry<mode::exact, "exact">,
+		detail::enum_entry<mode::family_fallback, "family-fallback">,
+		detail::enum_entry<mode::auto_fallback, "auto-fallback">,
+		detail::enum_entry<mode::disabled, "disabled">
+	>;
+
+	using mode_parse_names = detail::enum_table<
+		mode,
+		detail::enum_entry<mode::exact, "exact">,
+		detail::enum_entry<mode::family_fallback, "family-fallback">,
+		detail::enum_entry<mode::family_fallback, "family">,
+		detail::enum_entry<mode::auto_fallback, "auto-fallback">,
+		detail::enum_entry<mode::auto_fallback, "auto">,
+		detail::enum_entry<mode::disabled, "disabled">,
+		detail::enum_entry<mode::disabled, "off">
+	>;
+
+	static_assert(mode_names::is_zero_based_count_canonical(mode::count));
+	static_assert(mode_parse_names::is_display_aliases());
+
+	[[nodiscard]] inline constexpr std::string_view name(mode value) noexcept {
+		return mode_names::to_string(value);
+	}
+}
+
+#endif
+// ===== end include/mgmake/discovery/mode.hxx =====
+
+
+// ===== begin include/mgmake/discovery/tool_family.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DISCOVERY_TOOL_FAMILY_HXX
+#define MGMAKE_DISCOVERY_TOOL_FAMILY_HXX
+
+namespace mgmake::discovery {
+	enum struct tool_family {
+		unknown,
+		gcc,
+		clang,
+		apple_clang,
+		msvc,
+		clang_cl,
+		llvm_binutils,
+		gnu_binutils,
+		msvc_binutils,
+		mingw,
+		cygwin,
+		android_clang,
+		emscripten,
+		cuda,
+		hip,
+		count
+	};
+
+	enum struct linker_flavor {
+		unknown,
+		compiler_driver,
+		gnu_ld,
+		lld,
+		lld_link,
+		msvc_link,
+		apple_ld,
+		count
+	};
+
+	enum struct object_format {
+		unknown,
+		coff,
+		elf,
+		mach_o,
+		wasm,
+		count
+	};
+}
+
+#endif
+// ===== end include/mgmake/discovery/tool_family.hxx =====
+
+
+// ===== begin include/mgmake/discovery/tool_binding.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DISCOVERY_TOOL_BINDING_HXX
+#define MGMAKE_DISCOVERY_TOOL_BINDING_HXX
+
+// skipped duplicate include: include/mgmake/discovery/tool_role.hxx
+
+#include <string>
+
+namespace mgmake::discovery {
+	struct tool_binding {
+		tool_role m_role{};
+		std::string m_name{};
+	};
+}
+
+#endif
+// ===== end include/mgmake/discovery/tool_binding.hxx =====
+
+
+// ===== begin include/mgmake/discovery/resolved_tool.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DISCOVERY_RESOLVED_TOOL_HXX
+#define MGMAKE_DISCOVERY_RESOLVED_TOOL_HXX
+
+// skipped duplicate include: include/mgmake/discovery/tool_family.hxx
+// skipped duplicate include: include/mgmake/discovery/tool_provider.hxx
+// skipped duplicate include: include/mgmake/discovery/tool_role.hxx
+
+#include <filesystem>
+#include <string>
+
+namespace mgmake::discovery {
+	struct tool_candidate {
+		tool_role m_role{};
+		std::string m_logical_name{};
+		std::filesystem::path m_path{};
+		tool_provider m_provider{};
+		std::string m_reason{};
+		int m_priority = 0;
+	};
+
+	struct rejected_tool_candidate {
+		tool_candidate m_candidate{};
+		std::string m_reason{};
+	};
+
+	struct resolved_tool {
+		tool_role m_role{};
+		std::string m_logical_name{};
+		std::filesystem::path m_path{};
+		tool_provider m_provider{};
+		tool_family m_family = tool_family::unknown;
+		linker_flavor m_linker_flavor = linker_flavor::unknown;
+		object_format m_object_format = object_format::unknown;
+		std::string m_version{};
+		std::string m_target_triple{};
+		std::string m_reason{};
+
+		[[nodiscard]] inline const std::filesystem::path& path() const noexcept {
+			return m_path;
+		}
+
+		[[nodiscard]] inline std::string path_string() const {
+			return m_path.string();
+		}
+	};
+}
+
+#endif
+// ===== end include/mgmake/discovery/resolved_tool.hxx =====
+
+
+// ===== begin include/mgmake/discovery/tool_environment.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DISCOVERY_TOOL_ENVIRONMENT_HXX
+#define MGMAKE_DISCOVERY_TOOL_ENVIRONMENT_HXX
+
 // skipped duplicate include: include/mgmake/sys/util.hxx
+
+#include <filesystem>
+#include <optional>
+#include <string>
+#include <vector>
+
+namespace mgmake::discovery {
+	struct environment_variable {
+		std::string m_name{};
+		std::string m_value{};
+	};
+
+	struct tool_environment {
+		std::vector<std::filesystem::path> m_path_prepend{};
+		std::vector<std::filesystem::path> m_path_append{};
+		std::vector<environment_variable> m_variables{};
+		std::optional<std::filesystem::path> m_setup_script{};
+		std::vector<std::string> m_setup_args{};
+		std::string m_fingerprint{};
+
+		[[nodiscard]] inline bool empty() const noexcept {
+			return m_path_prepend.empty()
+				&& m_path_append.empty()
+				&& m_variables.empty()
+				&& !m_setup_script.has_value();
+		}
+	};
+
+	[[nodiscard]] inline std::string wrap_command_for_environment(
+		const tool_environment& env,
+		std::string command
+	) {
+		if (env.empty()) {
+			return command;
+		}
+
+		if (env.m_setup_script.has_value()) {
+			std::string result;
+#if defined(_WIN32)
+			result += "cmd /s /c \"call ";
+			result += sys::shell_escape(env.m_setup_script->string());
+#else
+			result += ". ";
+			result += sys::shell_escape(env.m_setup_script->string());
+#endif
+			for (const auto& arg : env.m_setup_args) {
+				result += ' ';
+				result += sys::shell_escape(arg);
+			}
+
+#if defined(_WIN32)
+			result += " >nul && ";
+			result += command;
+			result += "\"";
+#else
+			result += " && ";
+			result += command;
+#endif
+			return result;
+		}
+
+		std::string prefix;
+#if !defined(_WIN32)
+		for (const auto& variable : env.m_variables) {
+			prefix += variable.m_name;
+			prefix += '=';
+			prefix += sys::shell_escape(variable.m_value);
+			prefix += ' ';
+		}
+#endif
+		return prefix + command;
+	}
+}
+
+#endif
+// ===== end include/mgmake/discovery/tool_environment.hxx =====
+
 
 // ===== begin include/mgmake/build/toolchain.hxx =====
 #pragma once
@@ -1110,6 +1567,9 @@ namespace mgmake::sys {
 #ifndef MGMAKE_BUILD_TOOLCHAIN_HXX
 #define MGMAKE_BUILD_TOOLCHAIN_HXX
 
+// skipped duplicate include: include/mgmake/discovery/mode.hxx
+// skipped duplicate include: include/mgmake/discovery/tool_binding.hxx
+// skipped duplicate include: include/mgmake/discovery/tool_role.hxx
 // skipped duplicate include: include/mgmake/sys/platform.hxx
 
 #include <initializer_list>
@@ -1146,6 +1606,14 @@ namespace mgmake::build {
         std::string m_cxx;
         std::string m_ar;
         std::string m_linker;
+        std::vector<discovery::tool_binding> m_tools{};
+
+        std::optional<std::string> m_version{};
+        std::optional<std::string> m_sdk_root{};
+        std::optional<std::string> m_toolchain_root{};
+        std::optional<std::string> m_package_root{};
+        std::vector<std::string> m_search_roots{};
+        discovery::mode m_discovery_mode = discovery::mode::exact;
 
         std::vector<std::string> m_compile_flags;
         std::vector<std::string> m_c_flags;
@@ -1213,6 +1681,134 @@ namespace mgmake::build {
         }
         inline constexpr auto& linker(std::string path) {
             m_linker = std::move(path);
+            return *this;
+        }
+
+        inline constexpr auto& tool(discovery::tool_role role, std::string name) {
+            for (auto& binding : m_tools) {
+                if (binding.m_role == role) {
+                    binding.m_name = std::move(name);
+                    return *this;
+                }
+            }
+
+            m_tools.push_back(discovery::tool_binding{
+                .m_role = role,
+                .m_name = std::move(name)
+            });
+
+            return *this;
+        }
+
+        [[nodiscard]] inline constexpr std::string_view tool(
+            discovery::tool_role role
+        ) const noexcept {
+            for (const auto& binding : m_tools) {
+                if (binding.m_role == role) {
+                    return binding.m_name;
+                }
+            }
+
+            switch (role) {
+                case discovery::tool_role::c_compiler:
+                    return m_cc;
+
+                case discovery::tool_role::cxx_compiler:
+                    return m_cxx;
+
+                case discovery::tool_role::archiver:
+                    return m_ar;
+
+                case discovery::tool_role::linker:
+                    return m_linker;
+
+                default:
+                    return {};
+            }
+        }
+
+        inline constexpr auto& assembler(std::string name) {
+            return tool(discovery::tool_role::assembler, std::move(name));
+        }
+
+        inline constexpr auto& ranlib(std::string name) {
+            return tool(discovery::tool_role::ranlib, std::move(name));
+        }
+
+        inline constexpr auto& librarian(std::string name) {
+            return tool(discovery::tool_role::librarian, std::move(name));
+        }
+
+        inline constexpr auto& shared_linker(std::string name) {
+            return tool(discovery::tool_role::shared_linker, std::move(name));
+        }
+
+        inline constexpr auto& resource_compiler(std::string name) {
+            return tool(discovery::tool_role::resource_compiler, std::move(name));
+        }
+
+        inline constexpr auto& manifest_tool(std::string name) {
+            return tool(discovery::tool_role::manifest_tool, std::move(name));
+        }
+
+        inline constexpr auto& dll_tool(std::string name) {
+            return tool(discovery::tool_role::dll_tool, std::move(name));
+        }
+
+        inline constexpr auto& strip(std::string name) {
+            return tool(discovery::tool_role::strip, std::move(name));
+        }
+
+        inline constexpr auto& objcopy(std::string name) {
+            return tool(discovery::tool_role::objcopy, std::move(name));
+        }
+
+        inline constexpr auto& objdump(std::string name) {
+            return tool(discovery::tool_role::objdump, std::move(name));
+        }
+
+        inline constexpr auto& nm(std::string name) {
+            return tool(discovery::tool_role::nm, std::move(name));
+        }
+
+        inline constexpr auto& readelf(std::string name) {
+            return tool(discovery::tool_role::readelf, std::move(name));
+        }
+
+        inline constexpr auto& cmake(std::string name) {
+            return tool(discovery::tool_role::cmake, std::move(name));
+        }
+
+        inline constexpr auto& pkg_config(std::string name) {
+            return tool(discovery::tool_role::pkg_config, std::move(name));
+        }
+
+        inline constexpr auto& discovery_mode(discovery::mode value) noexcept {
+            m_discovery_mode = value;
+            return *this;
+        }
+
+        [[nodiscard]] inline constexpr discovery::mode discovery_mode() const noexcept {
+            return m_discovery_mode;
+        }
+
+        inline constexpr auto& sdk_root(std::string path) {
+            m_sdk_root = std::move(path);
+            return *this;
+        }
+
+        inline constexpr auto& toolchain_root(std::string path) {
+            m_toolchain_root = std::move(path);
+            return *this;
+        }
+
+        inline constexpr auto& package_root(std::string path) {
+            m_package_root = std::move(path);
+            return *this;
+        }
+
+        inline constexpr auto& add_search_root(std::string path) {
+            m_search_roots.emplace_back(std::move(path));
             return *this;
         }
 
@@ -1377,35 +1973,68 @@ namespace mgmake::build {
         }
     };
 
-    static constexpr auto tc_clang_mg = build::toolchain{"clang-mg"}
+    inline const auto tc_clang_mg = build::toolchain{"clang-mg"}
         .dialect(build::toolchain::dialect::gcc)
         .cc("clang-mg")
         .cxx("clang-mg++")
         .ar("llvm-ar")
+        .ranlib("llvm-ranlib")
         .linker("clang-mg++")
-        .target_selection(build::toolchain::target_mode::clang_target);
+        .shared_linker("clang-mg++")
+        .resource_compiler("llvm-rc")
+        .strip("llvm-strip")
+        .objcopy("llvm-objcopy")
+        .objdump("llvm-objdump")
+        .nm("llvm-nm")
+        .readelf("llvm-readelf")
+        .target_selection(build::toolchain::target_mode::clang_target)
+        .discovery_mode(discovery::mode::family_fallback);
 
-    static constexpr auto tc_clang = build::toolchain{"clang"}
+    inline const auto tc_clang = build::toolchain{"clang"}
         .dialect(build::toolchain::dialect::gcc)
         .cc("clang")
         .cxx("clang++")
         .ar("llvm-ar")
+        .ranlib("llvm-ranlib")
         .linker("clang++")
-        .target_selection(build::toolchain::target_mode::clang_target);
+        .shared_linker("clang++")
+        .resource_compiler("llvm-rc")
+        .strip("llvm-strip")
+        .objcopy("llvm-objcopy")
+        .objdump("llvm-objdump")
+        .nm("llvm-nm")
+        .readelf("llvm-readelf")
+        .target_selection(build::toolchain::target_mode::clang_target)
+        .discovery_mode(discovery::mode::family_fallback);
 
-    static constexpr auto tc_gcc = build::toolchain{"gcc"}
+    inline const auto tc_gcc = build::toolchain{"gcc"}
         .dialect(build::toolchain::dialect::gcc)
         .cc("gcc")
         .cxx("g++")
         .ar("ar")
-        .linker("g++");
+        .ranlib("ranlib")
+        .linker("g++")
+        .shared_linker("g++")
+        .resource_compiler("windres")
+        .strip("strip")
+        .objcopy("objcopy")
+        .objdump("objdump")
+        .nm("nm")
+        .readelf("readelf")
+        .discovery_mode(discovery::mode::family_fallback);
     
-    static constexpr auto tc_msvc = build::toolchain{"msvc"}
+    inline const auto tc_msvc = build::toolchain{"msvc"}
         .dialect(build::toolchain::dialect::msvc)
         .cc("cl")
         .cxx("cl")
         .ar("lib")
-        .linker("link");
+        .librarian("lib")
+        .linker("link")
+        .shared_linker("link")
+        .resource_compiler("rc")
+        .manifest_tool("mt")
+        .tool(discovery::tool_role::debug_symbol_tool, "mspdbsrv")
+        .discovery_mode(discovery::mode::family_fallback);
 }
 
 #endif
@@ -1495,6 +2124,8 @@ namespace mgmake::build {
 #ifndef MGMAKE_BUILD_REQUEST_HXX
 #define MGMAKE_BUILD_REQUEST_HXX
 
+// skipped duplicate include: include/mgmake/discovery/resolved_tool.hxx
+// skipped duplicate include: include/mgmake/discovery/tool_environment.hxx
 // skipped duplicate include: include/mgmake/build/toolchain.hxx
 // skipped duplicate include: include/mgmake/sys/platform.hxx
 
@@ -1509,6 +2140,8 @@ namespace mgmake::build {
         std::filesystem::path m_build_dir;
         std::vector<std::string> m_targets; // Which targets to build, empty = build all
         sys::target m_target = sys::g_host_target;
+        std::vector<discovery::resolved_tool> m_discovered_tools{};
+        discovery::tool_environment m_tool_environment{};
 
         [[nodiscard]] inline constexpr const toolchain& toolchain() const {
             return m_tc;
@@ -1542,6 +2175,33 @@ namespace mgmake::build {
         inline constexpr auto& target_platform(sys::platform value) noexcept {
             m_target.m_platform = value;
             return *this;
+        }
+
+        [[nodiscard]] inline const discovery::resolved_tool* discovered_tool(
+            discovery::tool_role role
+        ) const noexcept {
+            for (const auto& tool : m_discovered_tools) {
+                if (tool.m_role == role) {
+                    return &tool;
+                }
+            }
+
+            return nullptr;
+        }
+
+        [[nodiscard]] inline std::filesystem::path tool_path(
+            discovery::tool_role role,
+            std::filesystem::path fallback = {}
+        ) const {
+            if (const auto* tool = discovered_tool(role)) {
+                return tool->m_path;
+            }
+
+            return fallback;
+        }
+
+        [[nodiscard]] inline const discovery::tool_environment& tool_environment() const noexcept {
+            return m_tool_environment;
         }
     };
 }
@@ -1584,6 +2244,7 @@ namespace mgmake::cli {
 		generate,
 		clean,
 		run,
+		tools,
 		help,
 		version,
 
@@ -1596,6 +2257,7 @@ namespace mgmake::cli {
 		detail::enum_entry<action_kind::generate, "generate">,
 		detail::enum_entry<action_kind::clean, "clean">,
 		detail::enum_entry<action_kind::run, "run">,
+		detail::enum_entry<action_kind::tools, "tools">,
 		detail::enum_entry<action_kind::help, "help">,
 		detail::enum_entry<action_kind::version, "version">
 	>;
@@ -1612,6 +2274,9 @@ namespace mgmake::cli {
 		detail::enum_entry<action_kind::generate, "gen">,
 		detail::enum_entry<action_kind::clean, "clean">,
 		detail::enum_entry<action_kind::run, "run">,
+		detail::enum_entry<action_kind::tools, "tools">,
+		detail::enum_entry<action_kind::tools, "toolchains">,
+		detail::enum_entry<action_kind::tools, "toolchain-info">,
 		detail::enum_entry<action_kind::help, "help">,
 		detail::enum_entry<action_kind::version, "version">
 	>;
@@ -1638,6 +2303,10 @@ namespace mgmake::cli {
 		detail::enum_entry<
 			action_kind::run,
 			"Build and run a target."
+		>,
+		detail::enum_entry<
+			action_kind::tools,
+			"Show discovered build tools and discovery diagnostics."
 		>,
 		detail::enum_entry<
 			action_kind::help,
@@ -1776,6 +2445,7 @@ namespace mgmake::cli {
 #endif
 // ===== end include/mgmake/cli/backend.hxx =====
 
+// skipped duplicate include: include/mgmake/discovery/mode.hxx
 // skipped duplicate include: include/mgmake/sys/platform.hxx
 
 #include <string>
@@ -1803,6 +2473,35 @@ namespace mgmake::cli {
 		bool m_dry_run = false;
 		bool m_show_help = false;
 		bool m_show_version = false;
+		bool m_refresh_tools = false;
+		bool m_no_tool_cache = false;
+		bool m_show_tool_search = false;
+
+		discovery::mode m_tool_discovery = discovery::mode::exact;
+
+		std::string m_toolchain_root{};
+		std::string m_sdk_root{};
+		std::string m_sysroot{};
+		std::string m_package_toolchain_root{};
+
+		std::string m_cc{};
+		std::string m_cxx{};
+		std::string m_ar{};
+		std::string m_ranlib{};
+		std::string m_linker{};
+		std::string m_rc{};
+		std::string m_mt{};
+		std::string m_ninja{};
+		std::string m_cmake{};
+		std::string m_pkg_config{};
+
+		std::string m_toolchain_version{};
+
+		std::string m_android_ndk{};
+		std::string m_android_abi{};
+		int m_android_api = 0;
+
+		std::string m_apple_sdk{};
 
 		inline constexpr const std::vector<std::string>& targets() const {
 			return m_targets;
@@ -2201,6 +2900,7 @@ namespace mgmake::cli {
 // skipped duplicate include: include/mgmake/cli/action.hxx
 // skipped duplicate include: include/mgmake/cli/backend.hxx
 // skipped duplicate include: include/mgmake/cli/value_parser.hxx
+// skipped duplicate include: include/mgmake/discovery/mode.hxx
 // skipped duplicate include: include/mgmake/sys/platform.hxx
 
 #include <format>
@@ -2267,6 +2967,19 @@ namespace mgmake::cli {
 				"unknown action '{}'; expected one of: {}",
 				text,
 				action_kind_names::choices_string()
+			);
+		}
+	};
+
+	template <>
+	struct value_parser<discovery::mode> :
+		enum_value_parser<discovery::mode_parse_names, discovery::mode_names>
+	{
+		[[nodiscard]] static std::string error(std::string_view text) {
+			return std::format(
+				"unknown tool discovery mode '{}'; expected one of: {}",
+				text,
+				discovery::mode_names::choices_string()
 			);
 		}
 	};
@@ -3126,6 +3839,118 @@ namespace mgmake::cli {
 			::value_name<"triple">
 			::description<"Set an explicit compiler target triple for target-aware toolchains.">;
 
+	using refresh_tools_option =
+		flag_option<&options::m_refresh_tools, "refresh-tools">
+			::description<"Ignore cached tool paths and rediscover tools.">;
+
+	using no_tool_cache_option =
+		flag_option<&options::m_no_tool_cache, "no-tool-cache">
+			::description<"Do not read or write the tool discovery cache.">;
+
+	using show_tool_search_option =
+		flag_option<&options::m_show_tool_search, "show-tool-search">
+			::description<"Print detailed tool discovery search diagnostics.">;
+
+	using tool_discovery_option =
+		value_option<&options::m_tool_discovery, "tool-discovery">
+			::value_name<"mode">
+			::description<"Set tool discovery mode: exact, family-fallback, auto-fallback, disabled.">;
+
+	using toolchain_root_option =
+		value_option<&options::m_toolchain_root, "toolchain-root">
+			::value_name<"path">
+			::description<"Add a toolchain root to tool discovery.">;
+
+	using sdk_root_option =
+		value_option<&options::m_sdk_root, "sdk">
+			::value_name<"path">
+			::description<"Set an SDK root for tool discovery.">;
+
+	using sysroot_option =
+		value_option<&options::m_sysroot, "sysroot">
+			::value_name<"path">
+			::description<"Set a target sysroot.">;
+
+	using package_toolchain_root_option =
+		value_option<&options::m_package_toolchain_root, "package-toolchain-root">
+			::value_name<"path">
+			::description<"Add a package-provided toolchain root.">;
+
+	using cc_option =
+		value_option<&options::m_cc, "cc">
+			::value_name<"path-or-name">
+			::description<"Override the C compiler.">;
+
+	using cxx_option =
+		value_option<&options::m_cxx, "cxx">
+			::value_name<"path-or-name">
+			::description<"Override the C++ compiler.">;
+
+	using ar_option =
+		value_option<&options::m_ar, "ar">
+			::value_name<"path-or-name">
+			::description<"Override the archiver.">;
+
+	using ranlib_option =
+		value_option<&options::m_ranlib, "ranlib">
+			::value_name<"path-or-name">
+			::description<"Override ranlib.">;
+
+	using linker_option =
+		value_option<&options::m_linker, "linker">
+			::value_name<"path-or-name">
+			::description<"Override the linker.">;
+
+	using rc_option =
+		value_option<&options::m_rc, "rc">
+			::value_name<"path-or-name">
+			::description<"Override the resource compiler.">;
+
+	using mt_option =
+		value_option<&options::m_mt, "mt">
+			::value_name<"path-or-name">
+			::description<"Override the manifest tool.">;
+
+	using ninja_option =
+		value_option<&options::m_ninja, "ninja">
+			::value_name<"path-or-name">
+			::description<"Override the Ninja executable.">;
+
+	using cmake_option =
+		value_option<&options::m_cmake, "cmake">
+			::value_name<"path-or-name">
+			::description<"Override CMake.">;
+
+	using pkg_config_option =
+		value_option<&options::m_pkg_config, "pkg-config">
+			::value_name<"path-or-name">
+			::description<"Override pkg-config.">;
+
+	using toolchain_version_option =
+		value_option<&options::m_toolchain_version, "toolchain-version">
+			::value_name<"version">
+			::description<"Request a specific toolchain version.">;
+
+	using android_ndk_option =
+		value_option<&options::m_android_ndk, "android-ndk">
+			::value_name<"path">
+			::description<"Set the Android NDK root.">;
+
+	using android_abi_option =
+		value_option<&options::m_android_abi, "android-abi">
+			::value_name<"abi">
+			::description<"Set the Android ABI.">;
+
+	using android_api_option =
+		value_option<&options::m_android_api, "android-api">
+			::value_name<"level">
+			::description<"Set the Android API level.">;
+
+	using apple_sdk_option =
+		value_option<&options::m_apple_sdk, "apple-sdk">
+			::value_name<"sdk">
+			::description<"Set the Apple SDK name for xcrun discovery.">;
+
 	using default_parser = option_parser<
 		help_option,
 		version_option,
@@ -3139,7 +3964,30 @@ namespace mgmake::cli {
 		platform_option,
 		arch_option,
 		abi_option,
-		target_triple_option
+		target_triple_option,
+		refresh_tools_option,
+		no_tool_cache_option,
+		show_tool_search_option,
+		tool_discovery_option,
+		toolchain_root_option,
+		sdk_root_option,
+		sysroot_option,
+		package_toolchain_root_option,
+		cc_option,
+		cxx_option,
+		ar_option,
+		ranlib_option,
+		linker_option,
+		rc_option,
+		mt_option,
+		ninja_option,
+		cmake_option,
+		pkg_config_option,
+		toolchain_version_option,
+		android_ndk_option,
+		android_abi_option,
+		android_api_option,
+		apple_sdk_option
 	>;
 
 	[[nodiscard]] inline parse_result parse(std::span<const std::string> args) {
@@ -3387,6 +4235,7 @@ namespace mgmake::backend {
 #define MGMAKE_BACKEND_GRAPHVIZ_HXX
 
 // skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/cli/options.hxx
 // skipped duplicate include: include/mgmake/dag/artifact.hxx
 // skipped duplicate include: include/mgmake/dag/graph.hxx
 
@@ -3463,7 +4312,7 @@ namespace mgmake::backend {
     struct graphviz {
         std::filesystem::path m_output_file = "graph.dot";
 
-        void generate(const dag::graph& graph, const build::request& req) const {
+        void generate(const cli::options&, const dag::graph& graph, const build::request& req) const {
             auto output_path = req.build_dir() / m_output_file;
             if (output_path.has_parent_path()) {
                 std::filesystem::create_directories(output_path.parent_path());
@@ -3582,7 +4431,8 @@ namespace mgmake::backend {
     };
 }
 
-#endif// ===== end include/mgmake/backend/graphviz.hxx =====
+#endif
+// ===== end include/mgmake/backend/graphviz.hxx =====
 
 
 // ===== begin include/mgmake/backend/ninja.hxx =====
@@ -3592,485 +4442,65 @@ namespace mgmake::backend {
 #define MGMAKE_BACKEND_NINJA_HXX
 
 // skipped duplicate include: include/mgmake/build/request.hxx
-// skipped duplicate include: include/mgmake/dag/graph.hxx
-// skipped duplicate include: include/mgmake/sys/util.hxx
-
-#include <cstdlib>
-#include <expected>
-#include <filesystem>
-#include <fstream>
-#include <ranges>
-#include <set>
-#include <string>
-#include <string_view>
-
-namespace mgmake::backend {
-    namespace detail {
-        inline std::string ninja_escape_build_text(std::string_view text) {
-            std::string result;
-
-            for (const char ch : text) {
-                switch (ch) {
-                    case '$':
-                        result += "$$";
-                        break;
-
-                    case ' ':
-                        result += "$ ";
-                        break;
-
-                    case ':':
-                        result += "$:";
-                        break;
-
-                    case '|':
-                        result += "$|";
-                        break;
-
-                    case '\n':
-                        result += "$\n";
-                        break;
-
-                    default:
-                        result += ch;
-                        break;
-                }
-            }
-
-            return result;
-        }
-
-        inline std::string ninja_escape_path(const std::filesystem::path& path) {
-            return ninja_escape_build_text(path.generic_string());
-        }
-
-        inline std::string ninja_escape_variable_text(std::string_view text) {
-            std::string result;
-
-            for (const char ch : text) {
-                switch (ch) {
-                    case '$':
-                        result += "$$";
-                        break;
-
-                    case '\n':
-                        result += "$\n";
-                        break;
-
-                    default:
-                        result += ch;
-                        break;
-                }
-            }
-
-            return result;
-        }
-
-        inline void write_artifact_list(std::ofstream& out, const dag::graph& graph, const std::vector<dag::artifact::id>& artifacts) {
-            bool first = true;
-
-            for (const auto id : artifacts) {
-                const auto& artifact = graph.artifact(id);
-
-                if (!first) {
-                    out << ' ';
-                }
-
-                out << ninja_escape_path(artifact.m_path);
-                first = false;
-            }
-        }
-		inline void write_artifact_list(std::ofstream& out, const dag::graph& graph, const std::set<dag::artifact::id>& artifacts) {
-			return write_artifact_list(out, graph, artifacts | std::ranges::to<std::vector<dag::artifact::id>>());
-		}
-
-        inline void create_output_directories(const dag::graph& graph) {
-            for (const auto& action : graph.m_actions) {
-                for (const auto output_id : action.m_outputs) {
-                    const auto& output = graph.artifact(output_id);
-
-                    if (output.m_kind == dag::artifact::kind::phony) {
-                        continue;
-                    }
-
-                    const auto parent = output.m_path.parent_path();
-
-                    if (!parent.empty()) {
-                        std::filesystem::create_directories(parent);
-                    }
-                }
-            }
-        }
-
-        inline void write_target_defaults(std::ofstream& out, const dag::graph& graph) {
-            if (graph.m_targets.empty()) {
-                return;
-            }
-
-            out << "\ndefault";
-
-            for (const auto& target : graph.m_targets) {
-                out << ' ' << ninja_escape_build_text(target.m_name);
-            }
-
-            out << "\n";
-        }
-    }
-
-    struct ninja {
-        std::filesystem::path m_output_file = "build.ninja";
-
-        void generate(const dag::graph& graph, const build::request& req) const {
-            auto output_path = req.build_dir() / m_output_file;
-            if (output_path.has_parent_path()) {
-                std::filesystem::create_directories(output_path.parent_path());
-            }
-            detail::create_output_directories(graph);
-
-            std::ofstream out(output_path);
-			mgmkassert(out.is_open(), "ninja backend: failed to open " + output_path.string());
-
-            out << "# generated by mgmake\n\n";
-
-            out << "builddir = "
-                << detail::ninja_escape_variable_text(req.build_dir().generic_string())
-                << "\n\n";
-
-            bool needs_always = false;
-
-            for (const auto& action : graph.m_actions) {
-                if (action.m_always_run) {
-                    needs_always = true;
-                    break;
-                }
-            }
-
-            if (needs_always) {
-                out << "build __mgmake_always: phony\n\n";
-            }
-
-            for (auto i = 0; i < graph.m_actions.size(); ++i) {
-                const auto& action = graph.action(i);
-
-                mgmkassert(not action.m_outputs.empty(), "ninja backend: action '" + action.m_name + "' has no outputs");
-				mgmkassert(not action.m_command.m_args.empty(), "ninja backend: action '" + action.m_name + "' has no command");
-
-                out << "rule action_" << i << "\n";
-                out << "  command = " << action.m_command.full_command() << "\n";
-
-                if (!action.m_description.empty()) {
-                    out << "  description = " << detail::ninja_escape_variable_text(action.m_description) << "\n";
-                } else if (!action.m_name.empty()) {
-                    out << "  description = " << detail::ninja_escape_variable_text(action.m_name) << "\n";
-                }
-
-                if (!action.m_working_directory.empty()) {
-#if defined(_WIN32) // bruh
-                    out << "  command = cd /d "
-                        << detail::ninja_escape_variable_text(sys::shell_escape(action.m_working_directory.string()))
-                        << " && "
-                        << action.m_command.full_command()
-                        << "\n";
-#else
-                    out << "  command = cd "
-                        << detail::ninja_escape_variable_text(sys::shell_escape(action.m_working_directory.string()))
-                        << " && "
-                        << action.m_command.full_command()
-                        << "\n";
-#endif
-                }
-
-                out << "\n";
-
-                out << "build ";
-                detail::write_artifact_list(out, graph, action.m_outputs);
-                out << ": action_" << i;
-
-                if (!action.m_inputs.empty()) {
-                    out << ' ';
-                    detail::write_artifact_list(out, graph, action.m_inputs);
-                }
-
-                if (action.m_always_run) {
-                    out << " | __mgmake_always";
-                }
-
-                out << "\n\n";
-            }
-
-            for (const auto& target : graph.m_targets) {
-                out << "build " << detail::ninja_escape_build_text(target.m_name) << ": phony ";
-                if (not target.m_outputs.empty()) {
-                    out << ' ';
-                    detail::write_artifact_list(out, graph, target.m_outputs);
-                }
-                for (const auto dep_id : target.m_dependencies) {
-                    const auto& dep = graph.target(dep_id);
-                    out << ' ' << detail::ninja_escape_build_text(dep.m_name);
-                }
-                out << "\n";
-            }
-
-            detail::write_target_defaults(out, graph);
-        }
-
-		std::expected<void, std::string> build(const dag::graph& graph, const build::request& req) const {
-            auto output_path = req.build_dir() / m_output_file;
-            if (output_path.has_parent_path()) {
-                std::filesystem::create_directories(output_path.parent_path());
-            }
-			generate(graph, req);
-
-			sys::command_line command;
-			command.m_args.emplace_back("ninja");
-			command.m_args.emplace_back("-f");
-			command.m_args.emplace_back(output_path.string());
-
-			for (const auto& target : req.m_targets) {
-				command.m_args.emplace_back(target);
-			}
-
-			const auto exit_code = command.invoke();
-
-			if (exit_code != 0) {
-				return std::unexpected(
-					"ninja backend: ninja failed with exit code " + std::to_string(exit_code)
-				);
-			}
-
-			return {};
-		}
-    };
-}
-
-#endif
-// ===== end include/mgmake/backend/ninja.hxx =====
-
-
-// ===== begin include/mgmake/backend/registry.hxx =====
-#pragma once
-
-#ifndef MGMAKE_BACKEND_REGISTRY_HXX
-#define MGMAKE_BACKEND_REGISTRY_HXX
-
-// skipped duplicate include: include/mgmake/backend/graphviz.hxx
-// skipped duplicate include: include/mgmake/backend/ninja.hxx
-// skipped duplicate include: include/mgmake/cli/backend.hxx
-
-#include <type_traits>
-
-namespace mgmake::backend {
-	template <cli::backend_kind Kind>
-	struct for_kind {
-		using type = void;
-	};
-
-	template <>
-	struct for_kind<cli::backend_kind::automatic> {
-		using type = backend::ninja;
-	};
-
-	template <>
-	struct for_kind<cli::backend_kind::ninja> {
-		using type = backend::ninja;
-	};
-
-	template <>
-	struct for_kind<cli::backend_kind::graphviz> {
-		using type = backend::graphviz<>;
-	};
-
-	template <cli::backend_kind Kind>
-	using for_kind_t = typename for_kind<Kind>::type;
-
-	template <cli::backend_kind Kind>
-	inline constexpr bool implemented_v =
-		!std::is_void_v<for_kind_t<Kind>>;
-}
-
-#endif
-// ===== end include/mgmake/backend/registry.hxx =====
-
-
-// ===== begin include/mgmake/backend/capabilities.hxx =====
-#pragma once
-
-#ifndef MGMAKE_BACKEND_CAPABILITIES_HXX
-#define MGMAKE_BACKEND_CAPABILITIES_HXX
-
-// skipped duplicate include: include/mgmake/build/request.hxx
-// skipped duplicate include: include/mgmake/dag/graph.hxx
-
-#include <concepts>
-#include <expected>
-#include <string>
-
-namespace mgmake::backend {
-	template <typename Backend>
-	concept can_generate =
-		requires(
-			Backend backend,
-			const dag::graph& graph,
-			const build::request& req
-		) {
-			backend.generate(graph, req);
-		};
-
-	template <typename Backend>
-	concept can_build =
-		requires(
-			Backend backend,
-			const dag::graph& graph,
-			const build::request& req
-		) {
-			{ backend.build(graph, req) } -> std::same_as<std::expected<void, std::string>>;
-		};
-}
-
-#endif
-// ===== end include/mgmake/backend/capabilities.hxx =====
-
-
-// ===== begin include/mgmake/backend/execute.hxx =====
-#pragma once
-
-#ifndef MGMAKE_BACKEND_EXECUTE_HXX
-#define MGMAKE_BACKEND_EXECUTE_HXX
-
-// skipped duplicate include: include/mgmake/backend/capabilities.hxx
-// skipped duplicate include: include/mgmake/backend/registry.hxx
-// skipped duplicate include: include/mgmake/build/request.hxx
-// skipped duplicate include: include/mgmake/cli/action.hxx
-// skipped duplicate include: include/mgmake/cli/backend.hxx
 // skipped duplicate include: include/mgmake/cli/options.hxx
 // skipped duplicate include: include/mgmake/dag/graph.hxx
 
-#include <expected>
+// ===== begin include/mgmake/discovery/resolve.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DISCOVERY_RESOLVE_HXX
+#define MGMAKE_DISCOVERY_RESOLVE_HXX
+
+
+// ===== begin include/mgmake/discovery/backend_requirement.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DISCOVERY_BACKEND_REQUIREMENT_HXX
+#define MGMAKE_DISCOVERY_BACKEND_REQUIREMENT_HXX
+
+// skipped duplicate include: include/mgmake/discovery/tool_role.hxx
+
 #include <string>
-#include <type_traits>
 
-namespace mgmake::backend {
-	template <cli::backend_kind Kind>
-	[[nodiscard]] inline std::expected<void, std::string> generate(
-		const dag::graph& graph,
-		const build::request& req
-	) {
-		using backend_type = backend::for_kind_t<Kind>;
-
-		if constexpr (std::is_void_v<backend_type>) {
-			return std::unexpected{
-				"mgmake: backend '" +
-				std::string{ cli::backend_name(Kind) } +
-				"' is not implemented yet"
-			};
-		} else if constexpr (backend::can_generate<backend_type>) {
-			backend_type{}.generate(graph, req);
-			return {};
-		} else {
-			return std::unexpected{
-				"mgmake: backend '" +
-				std::string{ cli::backend_name(Kind) } +
-				"' does not support action 'generate'"
-			};
-		}
-	}
-
-	template <cli::backend_kind Kind>
-	[[nodiscard]] inline std::expected<void, std::string> build(
-		const dag::graph& graph,
-		const build::request& req
-	) {
-		using backend_type = backend::for_kind_t<Kind>;
-
-		if constexpr (std::is_void_v<backend_type>) {
-			return std::unexpected{
-				"mgmake: backend '" +
-				std::string{ cli::backend_name(Kind) } +
-				"' is not implemented yet"
-			};
-		} else if constexpr (backend::can_build<backend_type>) {
-			return backend_type{}.build(graph, req);
-		} else {
-			return std::unexpected{
-				"mgmake: backend '" +
-				std::string{ cli::backend_name(Kind) } +
-				"' does not support action 'build'"
-			};
-		}
-	}
-
-	template <cli::backend_kind Kind>
-	[[nodiscard]] inline std::expected<void, std::string> execute_project_action_for_backend(
-		const cli::options& opts,
-		const build::request& req,
-		const dag::graph& graph
-	) {
-		switch (opts.m_action) {
-			case cli::action_kind::generate:
-				return backend::generate<Kind>(graph, req);
-
-			case cli::action_kind::build:
-				return backend::build<Kind>(graph, req);
-
-			case cli::action_kind::run:
-				return std::unexpected{
-					"mgmake: run action is not implemented yet"
-				};
-
-			case cli::action_kind::clean:
-			case cli::action_kind::help:
-			case cli::action_kind::version:
-				return {};
-
-			case cli::action_kind::count:
-				break;
-		}
-
-		return std::unexpected{ "mgmake: unknown action" };
-	}
-
-	[[nodiscard]] inline std::expected<void, std::string> execute_project_action(
-		const cli::options& opts,
-		const build::request& req,
-		const dag::graph& graph
-	) {
-		switch (opts.m_backend) {
-			case cli::backend_kind::automatic:
-				return execute_project_action_for_backend<
-					cli::backend_kind::automatic
-				>(opts, req, graph);
-
-			case cli::backend_kind::ninja:
-				return execute_project_action_for_backend<
-					cli::backend_kind::ninja
-				>(opts, req, graph);
-
-			case cli::backend_kind::graphviz:
-				return execute_project_action_for_backend<
-					cli::backend_kind::graphviz
-				>(opts, req, graph);
-
-			case cli::backend_kind::make:
-				return execute_project_action_for_backend<
-					cli::backend_kind::make
-				>(opts, req, graph);
-
-			case cli::backend_kind::direct:
-				return execute_project_action_for_backend<
-					cli::backend_kind::direct
-				>(opts, req, graph);
-
-			case cli::backend_kind::count:
-				break;
-		}
-
-		return std::unexpected{ "mgmake: unknown backend" };
-	}
+namespace mgmake::discovery {
+	struct backend_tool_requirement {
+		tool_role m_role{};
+		std::string m_logical_name{};
+		std::string m_needed_because{};
+	};
 }
 
 #endif
-// ===== end include/mgmake/backend/execute.hxx =====
+// ===== end include/mgmake/discovery/backend_requirement.hxx =====
 
+
+// ===== begin include/mgmake/discovery/diagnostic.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DISCOVERY_DIAGNOSTIC_HXX
+#define MGMAKE_DISCOVERY_DIAGNOSTIC_HXX
+
+
+// ===== begin include/mgmake/discovery/tool_requirement.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DISCOVERY_TOOL_REQUIREMENT_HXX
+#define MGMAKE_DISCOVERY_TOOL_REQUIREMENT_HXX
+
+// skipped duplicate include: include/mgmake/discovery/tool_family.hxx
+// skipped duplicate include: include/mgmake/discovery/tool_role.hxx
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/cli/options.hxx
+
+// ===== begin include/mgmake/spec/project.hxx =====
+#pragma once
+
+#ifndef MGMK_SPEC_PROJECT_HXX
+#define MGMK_SPEC_PROJECT_HXX
+
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/dag/graph.hxx
+// skipped duplicate include: include/mgmake/detail/assert.hxx
 
 // ===== begin include/mgmake/spec/executable.hxx =====
 #pragma once
@@ -4184,18 +4614,6 @@ namespace mgmake::spec {
 // ===== end include/mgmake/spec/executable.hxx =====
 
 
-// ===== begin include/mgmake/spec/executable_impl.hxx =====
-#pragma once
-
-#ifndef MGMK_SPEC_EXECUTABLE_IMPL_HXX
-#define MGMK_SPEC_EXECUTABLE_IMPL_HXX
-
-// skipped duplicate include: include/mgmake/spec/executable.hxx
-
-#endif
-// ===== end include/mgmake/spec/executable_impl.hxx =====
-
-
 // ===== begin include/mgmake/spec/library.hxx =====
 #pragma once
 
@@ -4246,30 +4664,6 @@ namespace mgmake::spec {
 #endif
 // ===== end include/mgmake/spec/library.hxx =====
 
-
-// ===== begin include/mgmake/spec/library_impl.hxx =====
-#pragma once
-
-#ifndef MGMK_SPEC_LIBRARY_IMPL_HXX
-#define MGMK_SPEC_LIBRARY_IMPL_HXX
-
-// skipped duplicate include: include/mgmake/spec/library.hxx
-
-#endif
-// ===== end include/mgmake/spec/library_impl.hxx =====
-
-
-// ===== begin include/mgmake/spec/project.hxx =====
-#pragma once
-
-#ifndef MGMK_SPEC_PROJECT_HXX
-#define MGMK_SPEC_PROJECT_HXX
-
-// skipped duplicate include: include/mgmake/build/request.hxx
-// skipped duplicate include: include/mgmake/dag/graph.hxx
-// skipped duplicate include: include/mgmake/detail/assert.hxx
-// skipped duplicate include: include/mgmake/spec/executable.hxx
-// skipped duplicate include: include/mgmake/spec/library.hxx
 
 #include <optional>
 #include <set>
@@ -4448,6 +4842,2535 @@ namespace mgmake::spec {
 
 #endif
 // ===== end include/mgmake/spec/project.hxx =====
+
+
+#include <filesystem>
+#include <string>
+#include <string_view>
+#include <vector>
+
+namespace mgmake::discovery {
+	enum struct requirement_strength {
+		required,
+		optional,
+		probe_only
+	};
+
+	struct tool_requirement {
+		tool_role m_role{};
+		requirement_strength m_strength = requirement_strength::required;
+		std::string m_logical_name{};
+		std::string m_needed_because{};
+		tool_family m_expected_family = tool_family::unknown;
+		object_format m_expected_object_format = object_format::unknown;
+		std::string m_target_triple{};
+
+		[[nodiscard]] inline bool required() const noexcept {
+			return m_strength == requirement_strength::required;
+		}
+	};
+
+	[[nodiscard]] inline std::vector<tool_requirement> required_tools(
+		const cli::options&,
+		const build::request& req,
+		const spec::project& project
+	) {
+		std::vector<tool_requirement> result;
+		const auto& tc = req.toolchain();
+
+		bool has_c_sources = false;
+		bool has_cxx_sources = false;
+		bool has_asm_sources = false;
+		bool has_rc_sources = false;
+		bool has_idl_sources = false;
+		bool has_static_library = false;
+		bool has_shared_library = false;
+		bool has_executable = false;
+
+		auto inspect_sources = [&](const auto& target) {
+			for (const auto& source : target.m_sources) {
+				const auto ext = source.extension().string();
+
+				if (ext == ".c") {
+					has_c_sources = true;
+				} else if (ext == ".cc" || ext == ".cpp" || ext == ".cxx" || ext == ".C") {
+					has_cxx_sources = true;
+				} else if (ext == ".s" || ext == ".S" || ext == ".asm") {
+					has_asm_sources = true;
+				} else if (ext == ".rc") {
+					has_rc_sources = true;
+				} else if (ext == ".idl") {
+					has_idl_sources = true;
+				} else {
+					has_cxx_sources = true;
+				}
+			}
+		};
+
+		for (const auto& lib : project.m_libraries) {
+			inspect_sources(lib);
+
+			switch (lib.m_kind) {
+				case spec::library::kind::interface:
+					break;
+
+				case spec::library::kind::static_lib:
+					has_static_library = true;
+					break;
+
+				case spec::library::kind::shared_lib:
+					has_shared_library = true;
+					break;
+			}
+		}
+
+		for (const auto& exe : project.m_executables) {
+			inspect_sources(exe);
+			has_executable = true;
+		}
+
+		if (has_c_sources) {
+			result.push_back({tool_role::c_compiler, requirement_strength::required, std::string{tc.tool(tool_role::c_compiler)}, "the project has C sources"});
+		}
+
+		if (has_cxx_sources) {
+			result.push_back({tool_role::cxx_compiler, requirement_strength::required, std::string{tc.tool(tool_role::cxx_compiler)}, "the project has C++ sources"});
+		}
+
+		if (has_asm_sources) {
+			result.push_back({tool_role::assembler, requirement_strength::required, std::string{tc.tool(tool_role::assembler)}, "the project has assembly sources"});
+		}
+
+		if (has_rc_sources) {
+			result.push_back({tool_role::resource_compiler, requirement_strength::required, std::string{tc.tool(tool_role::resource_compiler)}, "the project has Windows resource sources"});
+		}
+
+		if (has_idl_sources) {
+			result.push_back({tool_role::midl_compiler, requirement_strength::required, std::string{tc.tool(tool_role::midl_compiler)}, "the project has IDL sources"});
+		}
+
+		if (has_static_library) {
+			const auto role = tc.dialect() == build::toolchain::dialect::msvc
+				? tool_role::librarian
+				: tool_role::archiver;
+
+			result.push_back({role, requirement_strength::required, std::string{tc.tool(role)}, "the project builds at least one static library"});
+
+			if (!tc.tool(tool_role::ranlib).empty()) {
+				result.push_back({tool_role::ranlib, requirement_strength::optional, std::string{tc.tool(tool_role::ranlib)}, "the selected toolchain declares ranlib"});
+			}
+		}
+
+		if (has_shared_library) {
+			const auto shared = tc.tool(tool_role::shared_linker);
+			result.push_back({
+				shared.empty() ? tool_role::linker : tool_role::shared_linker,
+				requirement_strength::required,
+				std::string{shared.empty() ? tc.tool(tool_role::linker) : shared},
+				"the project builds at least one shared library"
+			});
+		}
+
+		if (has_executable) {
+			result.push_back({tool_role::linker, requirement_strength::required, std::string{tc.tool(tool_role::linker)}, "the project builds at least one executable"});
+		}
+
+		if (req.target_platform() == sys::platform::p_windows && tc.dialect() == build::toolchain::dialect::msvc) {
+			if (!tc.tool(tool_role::manifest_tool).empty()) {
+				result.push_back({tool_role::manifest_tool, requirement_strength::optional, std::string{tc.tool(tool_role::manifest_tool)}, "MSVC-style Windows builds may require manifest handling"});
+			}
+		}
+
+		return result;
+	}
+}
+
+#endif
+// ===== end include/mgmake/discovery/tool_requirement.hxx =====
+
+// skipped duplicate include: include/mgmake/discovery/tool_role.hxx
+
+#include <string>
+#include <vector>
+
+namespace mgmake::discovery {
+	struct diagnostic {
+		tool_role m_role{};
+		std::string m_toolchain{};
+		std::string m_logical_name{};
+		std::string m_needed_because{};
+		std::vector<std::string> m_searched{};
+		std::vector<std::string> m_rejected{};
+		std::vector<std::string> m_notes{};
+		std::vector<std::string> m_fixes{};
+
+		[[nodiscard]] std::string format_missing_tool() const {
+			std::string result;
+			result += "mgmake: required tool not found\n\n";
+			result += "toolchain:\n  " + m_toolchain + "\n\n";
+			result += "required tool:\n  " + std::string{name(m_role)} + "\n\n";
+
+			if (!m_logical_name.empty()) {
+				result += "logical name:\n  " + m_logical_name + "\n\n";
+			}
+
+			if (!m_needed_because.empty()) {
+				result += "needed because:\n  " + m_needed_because + "\n\n";
+			}
+
+			if (!m_searched.empty()) {
+				result += "searched:\n";
+				for (const auto& item : m_searched) {
+					result += "  " + item + "\n";
+				}
+				result += "\n";
+			}
+
+			if (!m_rejected.empty()) {
+				result += "rejected:\n";
+				for (const auto& item : m_rejected) {
+					result += "  " + item + "\n";
+				}
+				result += "\n";
+			}
+
+			if (!m_notes.empty()) {
+				result += "notes:\n";
+				for (const auto& item : m_notes) {
+					result += "  " + item + "\n";
+				}
+				result += "\n";
+			}
+
+			if (!m_fixes.empty()) {
+				result += "fixes:\n";
+				for (const auto& item : m_fixes) {
+					result += "  " + item + "\n";
+				}
+			}
+
+			return result;
+		}
+	};
+
+	[[nodiscard]] inline std::vector<std::string> fixes_for(const tool_requirement& req) {
+		switch (req.m_role) {
+			case tool_role::archiver:
+			case tool_role::ranlib:
+				return {
+					"install LLVM/GNU binutils for the selected toolchain",
+					"set the matching MGMK_* environment variable",
+					"pass an explicit --ar or --ranlib path",
+					"add the tool directory to PATH",
+					"run './build tools --refresh'"
+				};
+
+			case tool_role::generator_ninja:
+				return {
+					"install Ninja",
+					"set MGMK_NINJA",
+					"pass --ninja <path>",
+					"add Ninja to PATH",
+					"run './build tools --refresh'"
+				};
+
+			default:
+				return {
+					"set the matching MGMK_* environment variable",
+					"pass an explicit tool override",
+					"add the tool directory to PATH",
+					"run './build tools --refresh'"
+				};
+		}
+	}
+}
+
+#endif
+// ===== end include/mgmake/discovery/diagnostic.hxx =====
+
+
+// ===== begin include/mgmake/discovery/environment_provider.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DISCOVERY_ENVIRONMENT_PROVIDER_HXX
+#define MGMAKE_DISCOVERY_ENVIRONMENT_PROVIDER_HXX
+
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/cli/options.hxx
+// skipped duplicate include: include/mgmake/spec/project.hxx
+
+// ===== begin include/mgmake/discovery/environment.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DISCOVERY_ENVIRONMENT_HXX
+#define MGMAKE_DISCOVERY_ENVIRONMENT_HXX
+
+#include <cstdlib>
+#include <filesystem>
+#include <optional>
+#include <string>
+#include <string_view>
+
+namespace mgmake::discovery {
+	[[nodiscard]] inline std::optional<std::string> getenv_string(std::string_view name) {
+		std::string key{name};
+		const char* value = std::getenv(key.c_str());
+
+		if (value == nullptr || value[0] == '\0') {
+			return std::nullopt;
+		}
+
+		return std::string{value};
+	}
+
+	[[nodiscard]] inline std::optional<std::filesystem::path> getenv_path(
+		std::string_view name
+	) {
+		if (auto value = getenv_string(name)) {
+			return std::filesystem::path{*value};
+		}
+
+		return std::nullopt;
+	}
+}
+
+#endif
+// ===== end include/mgmake/discovery/environment.hxx =====
+
+// skipped duplicate include: include/mgmake/discovery/tool_environment.hxx
+
+// ===== begin include/mgmake/discovery/windows/visual_studio.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DISCOVERY_WINDOWS_VISUAL_STUDIO_HXX
+#define MGMAKE_DISCOVERY_WINDOWS_VISUAL_STUDIO_HXX
+
+
+// ===== begin include/mgmake/discovery/providers.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DISCOVERY_PROVIDERS_HXX
+#define MGMAKE_DISCOVERY_PROVIDERS_HXX
+
+
+// ===== begin include/mgmake/discovery/context.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DISCOVERY_CONTEXT_HXX
+#define MGMAKE_DISCOVERY_CONTEXT_HXX
+
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/cli/options.hxx
+
+// ===== begin include/mgmake/discovery/cache.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DISCOVERY_CACHE_HXX
+#define MGMAKE_DISCOVERY_CACHE_HXX
+
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/sys/platform.hxx
+
+// ===== begin include/mgmake/discovery/filesystem.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DISCOVERY_FILESYSTEM_HXX
+#define MGMAKE_DISCOVERY_FILESYSTEM_HXX
+
+// skipped duplicate include: include/mgmake/discovery/environment.hxx
+
+#include <filesystem>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <system_error>
+#include <vector>
+
+#if defined(MGMK_PLATFORM_POSIX)
+	#include <unistd.h>
+#endif
+
+namespace mgmake::discovery {
+	[[nodiscard]] inline bool is_path_like(std::string_view text) {
+		return text.find('/') != std::string_view::npos
+			|| text.find('\\') != std::string_view::npos
+			|| text.find(':') != std::string_view::npos;
+	}
+
+	[[nodiscard]] inline bool is_explicit_path(std::string_view text) {
+		return is_path_like(text);
+	}
+
+	[[nodiscard]] inline bool is_launchable_file(const std::filesystem::path& path) {
+		std::error_code ec;
+
+		if (!std::filesystem::exists(path, ec) || ec) {
+			return false;
+		}
+
+		if (!std::filesystem::is_regular_file(path, ec) || ec) {
+			return false;
+		}
+
+#if defined(_WIN32)
+		return true;
+#else
+		return ::access(path.c_str(), X_OK) == 0;
+#endif
+	}
+
+	[[nodiscard]] inline std::vector<std::string> executable_suffixes() {
+#if defined(_WIN32)
+		return {".com", ".exe", ".bat", ".cmd", ""};
+#else
+		return {""};
+#endif
+	}
+
+	[[nodiscard]] inline std::optional<std::filesystem::path> find_in_directory(
+		const std::filesystem::path& dir,
+		std::string_view name
+	) {
+		if (dir.empty() || name.empty()) {
+			return std::nullopt;
+		}
+
+		std::filesystem::path requested{name};
+
+		if (requested.has_extension()) {
+			auto candidate = dir / requested;
+
+			if (is_launchable_file(candidate)) {
+				return std::filesystem::absolute(candidate);
+			}
+		}
+
+		for (const auto& suffix : executable_suffixes()) {
+			auto candidate = dir / (std::string{name} + suffix);
+
+			if (is_launchable_file(candidate)) {
+				return std::filesystem::absolute(candidate);
+			}
+		}
+
+		return std::nullopt;
+	}
+
+	[[nodiscard]] inline std::vector<std::filesystem::path> path_entries() {
+		std::vector<std::filesystem::path> result;
+		auto path = getenv_string("PATH");
+
+		if (!path) {
+			return result;
+		}
+
+#if defined(_WIN32)
+		constexpr char separator = ';';
+#else
+		constexpr char separator = ':';
+#endif
+
+		std::string_view view{*path};
+		std::size_t start = 0;
+
+		while (start <= view.size()) {
+			const auto end = view.find(separator, start);
+			const auto part = view.substr(
+				start,
+				end == std::string_view::npos ? std::string_view::npos : end - start
+			);
+
+			if (!part.empty()) {
+				result.emplace_back(part);
+			}
+
+			if (end == std::string_view::npos) {
+				break;
+			}
+
+			start = end + 1;
+		}
+
+		return result;
+	}
+
+	[[nodiscard]] inline std::optional<std::filesystem::path> find_on_path(
+		std::string_view name
+	) {
+		if (is_explicit_path(name)) {
+			std::filesystem::path path{name};
+
+			if (is_launchable_file(path)) {
+				return std::filesystem::absolute(path);
+			}
+
+			return std::nullopt;
+		}
+
+		for (const auto& dir : path_entries()) {
+			if (auto found = find_in_directory(dir, name)) {
+				return found;
+			}
+		}
+
+		return std::nullopt;
+	}
+}
+
+#endif
+// ===== end include/mgmake/discovery/filesystem.hxx =====
+
+// skipped duplicate include: include/mgmake/discovery/resolved_tool.hxx
+
+#include <filesystem>
+#include <fstream>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+namespace mgmake::discovery {
+	struct cache_entry {
+		std::string m_toolchain{};
+		sys::target m_host{};
+		sys::target m_target{};
+		tool_role m_role{};
+		std::string m_logical_name{};
+		std::filesystem::path m_path{};
+		tool_provider m_provider{};
+		std::string m_version{};
+	};
+
+	[[nodiscard]] inline std::string target_key(const sys::target& target) {
+		std::string result;
+		result += std::string{sys::name(target.m_arch)};
+		result += '-';
+		result += std::string{sys::name(target.m_platform)};
+		result += '-';
+		result += std::string{sys::name(target.m_abi)};
+
+		if (!target.m_triple.empty()) {
+			result += '-';
+			result += target.m_triple;
+		}
+
+		return result;
+	}
+
+	struct cache {
+		std::vector<cache_entry> m_entries{};
+
+		[[nodiscard]] std::optional<cache_entry> find(
+			std::string_view toolchain,
+			const sys::target&,
+			const sys::target&,
+			tool_role role,
+			std::string_view logical_name
+		) const {
+			for (const auto& entry : m_entries) {
+				if (entry.m_toolchain == toolchain
+					&& entry.m_role == role
+					&& entry.m_logical_name == logical_name
+					&& is_launchable_file(entry.m_path)) {
+					return entry;
+				}
+			}
+
+			return std::nullopt;
+		}
+
+		void put(cache_entry entry) {
+			for (auto& existing : m_entries) {
+				if (existing.m_toolchain == entry.m_toolchain
+					&& existing.m_role == entry.m_role
+					&& existing.m_logical_name == entry.m_logical_name) {
+					existing = std::move(entry);
+					return;
+				}
+			}
+
+			m_entries.emplace_back(std::move(entry));
+		}
+	};
+
+	[[nodiscard]] inline std::filesystem::path cache_path(const build::request& req) {
+		return req.build_dir() / "mgmake" / "tool-cache.txt";
+	}
+
+	[[nodiscard]] inline std::optional<std::string> value_after(
+		std::string_view line,
+		std::string_view prefix
+	) {
+		if (!line.starts_with(prefix)) {
+			return std::nullopt;
+		}
+
+		return std::string{line.substr(prefix.size())};
+	}
+
+	[[nodiscard]] inline cache load_cache(const build::request& req) {
+		cache result;
+		std::ifstream in(cache_path(req));
+
+		if (!in.is_open()) {
+			return result;
+		}
+
+		std::string line;
+		cache_entry current{};
+		bool active = false;
+
+		auto flush = [&] {
+			if (active && !current.m_path.empty()) {
+				result.m_entries.emplace_back(std::move(current));
+			}
+
+			current = cache_entry{};
+			active = false;
+		};
+
+		while (std::getline(in, line)) {
+			if (line.empty()) {
+				flush();
+				continue;
+			}
+
+			if (line == "mgmake-tool-cache-v1") {
+				continue;
+			}
+
+			active = true;
+
+			if (auto value = value_after(line, "toolchain=")) current.m_toolchain = *value;
+			else if (auto value = value_after(line, "tool.role=")) {
+				if (auto role = tool_role_names::from_string(*value)) current.m_role = *role;
+			} else if (auto value = value_after(line, "tool.logical=")) current.m_logical_name = *value;
+			else if (auto value = value_after(line, "tool.path=")) current.m_path = *value;
+			else if (auto value = value_after(line, "tool.provider=")) {
+				if (auto provider = tool_provider_names::from_string(*value)) current.m_provider = *provider;
+			} else if (auto value = value_after(line, "tool.version=")) current.m_version = *value;
+		}
+
+		flush();
+		return result;
+	}
+
+	inline void save_cache(const build::request& req, const cache& cache_data) {
+		const auto path = cache_path(req);
+
+		if (path.has_parent_path()) {
+			std::filesystem::create_directories(path.parent_path());
+		}
+
+		std::ofstream out(path);
+
+		if (!out.is_open()) {
+			return;
+		}
+
+		out << "mgmake-tool-cache-v1\n\n";
+
+		for (const auto& entry : cache_data.m_entries) {
+			out << "toolchain=" << entry.m_toolchain << "\n";
+			out << "host=" << target_key(entry.m_host) << "\n";
+			out << "target=" << target_key(entry.m_target) << "\n";
+			out << "tool.role=" << name(entry.m_role) << "\n";
+			out << "tool.logical=" << entry.m_logical_name << "\n";
+			out << "tool.path=" << entry.m_path.generic_string() << "\n";
+			out << "tool.provider=" << name(entry.m_provider) << "\n";
+			out << "tool.version=" << entry.m_version << "\n\n";
+		}
+	}
+}
+
+#endif
+// ===== end include/mgmake/discovery/cache.hxx =====
+
+// skipped duplicate include: include/mgmake/discovery/mode.hxx
+// skipped duplicate include: include/mgmake/discovery/resolved_tool.hxx
+
+#include <filesystem>
+#include <string>
+#include <vector>
+
+namespace mgmake::spec { struct project; }
+
+namespace mgmake::discovery {
+	struct context {
+		const cli::options* m_options = nullptr;
+		const spec::project* m_project = nullptr;
+		const build::request* m_request = nullptr;
+		cache m_cache{};
+		std::vector<resolved_tool> m_resolved_tools{};
+		std::vector<rejected_tool_candidate> m_rejected{};
+		std::vector<std::string> m_notes{};
+		mode m_mode = mode::exact;
+		bool m_use_cache = true;
+		bool m_refresh_cache = false;
+		bool m_verbose = false;
+		bool m_show_search = false;
+
+		[[nodiscard]] inline const cli::options& options() const {
+			return *m_options;
+		}
+
+		[[nodiscard]] inline const build::request& request() const {
+			return *m_request;
+		}
+
+		[[nodiscard]] inline const build::toolchain& toolchain() const {
+			return request().toolchain();
+		}
+	};
+}
+
+#endif
+// ===== end include/mgmake/discovery/context.hxx =====
+
+// skipped duplicate include: include/mgmake/discovery/filesystem.hxx
+
+// ===== begin include/mgmake/discovery/tool_names.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DISCOVERY_TOOL_NAMES_HXX
+#define MGMAKE_DISCOVERY_TOOL_NAMES_HXX
+
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/build/toolchain.hxx
+// skipped duplicate include: include/mgmake/cli/options.hxx
+// skipped duplicate include: include/mgmake/discovery/tool_role.hxx
+
+#include <algorithm>
+#include <string>
+#include <string_view>
+#include <vector>
+
+namespace mgmake::discovery {
+	[[nodiscard]] inline std::string environment_variable_for(tool_role role) {
+		switch (role) {
+			case tool_role::c_compiler: return "MGMK_CC";
+			case tool_role::cxx_compiler: return "MGMK_CXX";
+			case tool_role::archiver: return "MGMK_AR";
+			case tool_role::ranlib: return "MGMK_RANLIB";
+			case tool_role::librarian: return "MGMK_LIB";
+			case tool_role::linker: return "MGMK_LINKER";
+			case tool_role::shared_linker: return "MGMK_SHARED_LINKER";
+			case tool_role::resource_compiler: return "MGMK_RC";
+			case tool_role::manifest_tool: return "MGMK_MT";
+			case tool_role::dll_tool: return "MGMK_DLLTOOL";
+			case tool_role::strip: return "MGMK_STRIP";
+			case tool_role::objcopy: return "MGMK_OBJCOPY";
+			case tool_role::objdump: return "MGMK_OBJDUMP";
+			case tool_role::nm: return "MGMK_NM";
+			case tool_role::readelf: return "MGMK_READELF";
+			case tool_role::cmake: return "MGMK_CMAKE";
+			case tool_role::pkg_config: return "MGMK_PKG_CONFIG";
+			case tool_role::generator_ninja: return "MGMK_NINJA";
+			case tool_role::exe_wrapper: return "MGMK_EXE_WRAPPER";
+			case tool_role::emulator: return "MGMK_EMULATOR";
+			default: return {};
+		}
+	}
+
+	[[nodiscard]] inline std::string cli_override_for(const cli::options& opts, tool_role role) {
+		switch (role) {
+			case tool_role::c_compiler: return opts.m_cc;
+			case tool_role::cxx_compiler: return opts.m_cxx;
+			case tool_role::archiver: return opts.m_ar;
+			case tool_role::ranlib: return opts.m_ranlib;
+			case tool_role::linker: return opts.m_linker;
+			case tool_role::resource_compiler: return opts.m_rc;
+			case tool_role::manifest_tool: return opts.m_mt;
+			case tool_role::generator_ninja: return opts.m_ninja;
+			case tool_role::cmake: return opts.m_cmake;
+			case tool_role::pkg_config: return opts.m_pkg_config;
+			default: return {};
+		}
+	}
+
+	[[nodiscard]] inline std::vector<std::string> logical_names_for(
+		const build::toolchain& tc,
+		tool_role role
+	) {
+		std::vector<std::string> result;
+
+		if (auto value = tc.tool(role); !value.empty()) {
+			result.emplace_back(value);
+		}
+
+		return result;
+	}
+
+	[[nodiscard]] inline std::vector<std::string> fallback_names_for(
+		const build::toolchain& tc,
+		const build::request&,
+		tool_role role
+	) {
+		if (tc.dialect() == build::toolchain::dialect::msvc) {
+			switch (role) {
+				case tool_role::c_compiler:
+				case tool_role::cxx_compiler: return {"cl"};
+				case tool_role::archiver:
+				case tool_role::librarian: return {"lib"};
+				case tool_role::linker:
+				case tool_role::shared_linker: return {"link"};
+				case tool_role::resource_compiler: return {"rc", "llvm-rc"};
+				case tool_role::manifest_tool: return {"mt"};
+				default: break;
+			}
+		}
+
+		const bool clang_like = tc.name().find("clang") != std::string_view::npos;
+
+		if (clang_like) {
+			switch (role) {
+				case tool_role::c_compiler: return {"clang"};
+				case tool_role::cxx_compiler: return {"clang++"};
+				case tool_role::archiver: return {"llvm-ar", "ar"};
+				case tool_role::ranlib: return {"llvm-ranlib", "ranlib"};
+				case tool_role::linker:
+				case tool_role::shared_linker: return {"clang++", "clang"};
+				case tool_role::resource_compiler: return {"llvm-rc", "windres"};
+				case tool_role::strip: return {"llvm-strip", "strip"};
+				case tool_role::objcopy: return {"llvm-objcopy", "objcopy"};
+				case tool_role::objdump: return {"llvm-objdump", "objdump"};
+				case tool_role::nm: return {"llvm-nm", "nm"};
+				case tool_role::readelf: return {"llvm-readelf", "readelf"};
+				default: break;
+			}
+		}
+
+		switch (role) {
+			case tool_role::c_compiler: return {"gcc", "cc"};
+			case tool_role::cxx_compiler: return {"g++", "c++"};
+			case tool_role::archiver: return {"gcc-ar", "ar"};
+			case tool_role::ranlib: return {"gcc-ranlib", "ranlib"};
+			case tool_role::linker:
+			case tool_role::shared_linker: return {"g++", "gcc"};
+			case tool_role::resource_compiler: return {"windres"};
+			case tool_role::strip: return {"strip"};
+			case tool_role::objcopy: return {"objcopy"};
+			case tool_role::objdump: return {"objdump"};
+			case tool_role::nm: return {"nm"};
+			case tool_role::readelf: return {"readelf"};
+			default: break;
+		}
+
+		return {};
+	}
+
+	[[nodiscard]] inline std::vector<std::string> candidate_names_for(
+		const build::request& req,
+		tool_role role
+	) {
+		std::vector<std::string> result = logical_names_for(req.toolchain(), role);
+
+		for (auto fallback : fallback_names_for(req.toolchain(), req, role)) {
+			if (std::ranges::find(result, fallback) == result.end()) {
+				result.emplace_back(std::move(fallback));
+			}
+		}
+
+		return result;
+	}
+
+	[[nodiscard]] inline std::vector<std::string> target_prefixed_names_for(
+		const build::request& req,
+		tool_role role
+	) {
+		std::vector<std::string> result;
+		std::string triple;
+
+		if (req.toolchain().target_triple().has_value()) {
+			triple = *req.toolchain().target_triple();
+		} else {
+			triple = req.target().m_triple;
+		}
+
+		if (triple.empty()) {
+			return result;
+		}
+
+		for (const auto& name : candidate_names_for(req, role)) {
+			if (!name.starts_with(triple + "-")) {
+				result.emplace_back(triple + "-" + name);
+			}
+		}
+
+		return result;
+	}
+}
+
+#endif
+// ===== end include/mgmake/discovery/tool_names.hxx =====
+
+// skipped duplicate include: include/mgmake/discovery/tool_requirement.hxx
+
+#include <algorithm>
+#include <filesystem>
+#include <ranges>
+#include <string>
+#include <vector>
+
+namespace mgmake::discovery {
+	using candidate_list = std::vector<tool_candidate>;
+
+	inline void add_candidate_if_found(
+		candidate_list& out,
+		const tool_requirement& req,
+		std::string_view logical_name,
+		const std::filesystem::path& dir,
+		tool_provider provider,
+		int priority,
+		std::string reason
+	) {
+		if (auto path = find_in_directory(dir, logical_name)) {
+			out.push_back({
+				.m_role = req.m_role,
+				.m_logical_name = std::string{logical_name},
+				.m_path = *path,
+				.m_provider = provider,
+				.m_reason = std::move(reason),
+				.m_priority = priority
+			});
+		}
+	}
+
+	inline void add_candidates_from_dirs(
+		candidate_list& out,
+		const build::request& build_req,
+		const tool_requirement& req,
+		const std::vector<std::filesystem::path>& dirs,
+		tool_provider provider,
+		int priority,
+		std::string reason
+	) {
+		std::vector<std::string> names;
+
+		if (!req.m_logical_name.empty()) {
+			names.emplace_back(req.m_logical_name);
+		}
+
+		for (auto name : candidate_names_for(build_req, req.m_role)) {
+			if (std::ranges::find(names, name) == names.end()) {
+				names.emplace_back(std::move(name));
+			}
+		}
+
+		for (const auto& name : names) {
+			for (const auto& dir : dirs) {
+				add_candidate_if_found(out, req, name, dir, provider, priority, reason);
+			}
+		}
+	}
+
+	inline void add_explicit_path_candidates(context&, const tool_requirement& req, candidate_list& out) {
+		if (!req.m_logical_name.empty() && is_explicit_path(req.m_logical_name)) {
+			out.push_back({
+				.m_role = req.m_role,
+				.m_logical_name = req.m_logical_name,
+				.m_path = std::filesystem::absolute(req.m_logical_name),
+				.m_provider = tool_provider::explicit_path,
+				.m_reason = "explicit tool path from selected toolchain",
+				.m_priority = 0
+			});
+		}
+	}
+
+	inline void add_cli_override_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
+		const auto override = cli_override_for(ctx.options(), req.m_role);
+
+		if (override.empty()) {
+			return;
+		}
+
+		if (is_explicit_path(override)) {
+			out.push_back({req.m_role, override, std::filesystem::absolute(override), tool_provider::cli_override, "CLI tool override", 10});
+			return;
+		}
+
+		for (const auto& dir : path_entries()) {
+			add_candidate_if_found(out, req, override, dir, tool_provider::cli_override, 10, "CLI tool override searched on PATH");
+		}
+	}
+
+	inline void add_environment_override_candidates(context&, const tool_requirement& req, candidate_list& out) {
+		const auto variable = environment_variable_for(req.m_role);
+
+		if (variable.empty()) {
+			return;
+		}
+
+		const auto value = getenv_string(variable);
+
+		if (!value || value->empty()) {
+			return;
+		}
+
+		if (is_explicit_path(*value)) {
+			out.push_back({req.m_role, *value, std::filesystem::absolute(*value), tool_provider::environment_override, variable, 20});
+			return;
+		}
+
+		for (const auto& dir : path_entries()) {
+			add_candidate_if_found(out, req, *value, dir, tool_provider::environment_override, 20, "environment override " + variable);
+		}
+	}
+
+	inline void add_cache_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
+		if (!ctx.m_use_cache || ctx.m_refresh_cache) {
+			return;
+		}
+
+		if (auto entry = ctx.m_cache.find(
+				ctx.toolchain().name(),
+				sys::g_host_target,
+				ctx.request().target(),
+				req.m_role,
+				req.m_logical_name
+			)) {
+			out.push_back({
+				req.m_role,
+				req.m_logical_name,
+				entry->m_path,
+				tool_provider::cache,
+				"validated build directory cache entry",
+				30
+			});
+		}
+	}
+
+	inline void add_root_candidates(
+		context& ctx,
+		const tool_requirement& req,
+		candidate_list& out
+	) {
+		std::vector<std::filesystem::path> package_dirs;
+		std::vector<std::filesystem::path> project_dirs;
+		std::vector<std::filesystem::path> toolchain_dirs;
+		std::vector<std::filesystem::path> sdk_dirs;
+		std::vector<std::filesystem::path> sysroot_dirs;
+
+		if (!ctx.options().m_package_toolchain_root.empty()) package_dirs.emplace_back(std::filesystem::path{ctx.options().m_package_toolchain_root} / "bin");
+		if (ctx.toolchain().m_package_root.has_value()) package_dirs.emplace_back(std::filesystem::path{*ctx.toolchain().m_package_root} / "bin");
+		if (!package_dirs.empty()) add_candidates_from_dirs(out, ctx.request(), req, package_dirs, tool_provider::package_toolchain, 40, "package-provided toolchain root");
+
+		for (const auto& root : ctx.toolchain().m_search_roots) project_dirs.emplace_back(root);
+		if (!project_dirs.empty()) add_candidates_from_dirs(out, ctx.request(), req, project_dirs, tool_provider::project_toolchain_root, 50, "project toolchain search root");
+
+		if (!ctx.options().m_toolchain_root.empty()) toolchain_dirs.emplace_back(std::filesystem::path{ctx.options().m_toolchain_root} / "bin");
+		if (ctx.toolchain().m_toolchain_root.has_value()) toolchain_dirs.emplace_back(std::filesystem::path{*ctx.toolchain().m_toolchain_root} / "bin");
+		if (!toolchain_dirs.empty()) add_candidates_from_dirs(out, ctx.request(), req, toolchain_dirs, tool_provider::toolchain_root, 60, "toolchain root");
+
+		if (!ctx.options().m_sdk_root.empty()) sdk_dirs.emplace_back(std::filesystem::path{ctx.options().m_sdk_root} / "bin");
+		if (ctx.toolchain().m_sdk_root.has_value()) sdk_dirs.emplace_back(std::filesystem::path{*ctx.toolchain().m_sdk_root} / "bin");
+		if (!sdk_dirs.empty()) add_candidates_from_dirs(out, ctx.request(), req, sdk_dirs, tool_provider::sdk_root, 70, "SDK root");
+
+		if (!ctx.options().m_sysroot.empty()) sysroot_dirs.emplace_back(std::filesystem::path{ctx.options().m_sysroot} / "bin");
+		if (ctx.toolchain().sysroot().has_value()) sysroot_dirs.emplace_back(std::filesystem::path{*ctx.toolchain().sysroot()} / "bin");
+		if (!sysroot_dirs.empty()) add_candidates_from_dirs(out, ctx.request(), req, sysroot_dirs, tool_provider::sysroot_root, 80, "sysroot bin directory");
+	}
+
+	inline void add_sibling_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
+		std::vector<std::filesystem::path> dirs;
+
+		for (const auto& tool : ctx.m_resolved_tools) {
+			if (tool.m_path.has_parent_path()) {
+				dirs.emplace_back(tool.m_path.parent_path());
+			}
+		}
+
+		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::sibling, 90, "sibling of an already resolved tool");
+	}
+
+	inline void add_target_prefix_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
+		for (const auto& prefixed_name : target_prefixed_names_for(ctx.request(), req.m_role)) {
+			for (const auto& dir : path_entries()) {
+				add_candidate_if_found(out, req, prefixed_name, dir, tool_provider::target_prefix, 100, "target-prefixed tool on PATH");
+			}
+		}
+	}
+
+	inline void add_path_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
+		add_candidates_from_dirs(out, ctx.request(), req, path_entries(), tool_provider::path, 110, "PATH");
+	}
+
+	inline void add_known_install_root_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
+		std::vector<std::filesystem::path> dirs;
+
+#if defined(_WIN32)
+		dirs.emplace_back("C:/Program Files/LLVM/bin");
+		dirs.emplace_back("C:/Program Files (x86)/LLVM/bin");
+		dirs.emplace_back("C:/Tools/Ninja");
+#elif defined(__APPLE__)
+		dirs.emplace_back("/opt/homebrew/bin");
+		dirs.emplace_back("/usr/local/bin");
+		dirs.emplace_back("/opt/local/bin");
+#else
+		dirs.emplace_back("/usr/local/bin");
+		dirs.emplace_back("/usr/bin");
+		dirs.emplace_back("/bin");
+		dirs.emplace_back("/opt/bin");
+#endif
+
+		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::known_install_root, 120, "known install root");
+	}
+
+	void add_windows_registry_candidates(context& ctx, const tool_requirement& req, candidate_list& out);
+	void add_vswhere_candidates(context& ctx, const tool_requirement& req, candidate_list& out);
+	void add_visual_studio_candidates(context& ctx, const tool_requirement& req, candidate_list& out);
+	void add_windows_sdk_candidates(context& ctx, const tool_requirement& req, candidate_list& out);
+	void add_standalone_llvm_candidates(context& ctx, const tool_requirement& req, candidate_list& out);
+	void add_msys2_candidates(context& ctx, const tool_requirement& req, candidate_list& out);
+	void add_mingw_candidates(context& ctx, const tool_requirement& req, candidate_list& out);
+	void add_cygwin_candidates(context& ctx, const tool_requirement& req, candidate_list& out);
+	void add_xcrun_candidates(context& ctx, const tool_requirement& req, candidate_list& out);
+	void add_homebrew_candidates(context& ctx, const tool_requirement& req, candidate_list& out);
+	void add_macports_candidates(context& ctx, const tool_requirement& req, candidate_list& out);
+	void add_unix_system_candidates(context& ctx, const tool_requirement& req, candidate_list& out);
+	void add_distro_llvm_candidates(context& ctx, const tool_requirement& req, candidate_list& out);
+	void add_distro_gcc_candidates(context& ctx, const tool_requirement& req, candidate_list& out);
+	void add_android_ndk_candidates(context& ctx, const tool_requirement& req, candidate_list& out);
+	void add_emscripten_sdk_candidates(context& ctx, const tool_requirement& req, candidate_list& out);
+	void add_embedded_sdk_candidates(context& ctx, const tool_requirement& req, candidate_list& out);
+
+	[[nodiscard]] inline candidate_list candidates_for(context& ctx, const tool_requirement& req) {
+		candidate_list out;
+
+		add_explicit_path_candidates(ctx, req, out);
+		add_cli_override_candidates(ctx, req, out);
+		add_environment_override_candidates(ctx, req, out);
+		add_cache_candidates(ctx, req, out);
+		add_root_candidates(ctx, req, out);
+		add_sibling_candidates(ctx, req, out);
+		add_target_prefix_candidates(ctx, req, out);
+		add_path_candidates(ctx, req, out);
+		add_known_install_root_candidates(ctx, req, out);
+		add_windows_registry_candidates(ctx, req, out);
+		add_vswhere_candidates(ctx, req, out);
+		add_visual_studio_candidates(ctx, req, out);
+		add_windows_sdk_candidates(ctx, req, out);
+		add_standalone_llvm_candidates(ctx, req, out);
+		add_msys2_candidates(ctx, req, out);
+		add_mingw_candidates(ctx, req, out);
+		add_cygwin_candidates(ctx, req, out);
+		add_xcrun_candidates(ctx, req, out);
+		add_homebrew_candidates(ctx, req, out);
+		add_macports_candidates(ctx, req, out);
+		add_unix_system_candidates(ctx, req, out);
+		add_distro_llvm_candidates(ctx, req, out);
+		add_distro_gcc_candidates(ctx, req, out);
+		add_android_ndk_candidates(ctx, req, out);
+		add_emscripten_sdk_candidates(ctx, req, out);
+		add_embedded_sdk_candidates(ctx, req, out);
+
+		std::ranges::sort(out, {}, &tool_candidate::m_priority);
+		return out;
+	}
+}
+
+#endif
+// ===== end include/mgmake/discovery/providers.hxx =====
+
+
+namespace mgmake::discovery::windows {
+	struct visual_studio_instance {
+		std::filesystem::path m_root{};
+		std::string m_version{};
+		std::string m_display_name{};
+		bool m_has_cpp_tools = false;
+	};
+
+	[[nodiscard]] inline std::optional<std::filesystem::path> find_vswhere() {
+		if (auto override = getenv_path("MGMK_VSWHERE")) {
+			if (is_launchable_file(*override)) return std::filesystem::absolute(*override);
+		}
+
+		for (const auto& dir : path_entries()) {
+			if (auto found = find_in_directory(dir, "vswhere")) return found;
+		}
+
+		std::vector<std::filesystem::path> candidates;
+
+		if (auto pf86 = getenv_path("ProgramFiles(x86)")) {
+			candidates.emplace_back(*pf86 / "Microsoft Visual Studio" / "Installer" / "vswhere.exe");
+		}
+
+		if (auto pf = getenv_path("ProgramFiles")) {
+			candidates.emplace_back(*pf / "Microsoft Visual Studio" / "Installer" / "vswhere.exe");
+		}
+
+		for (const auto& candidate : candidates) {
+			if (is_launchable_file(candidate)) return std::filesystem::absolute(candidate);
+		}
+
+		return std::nullopt;
+	}
+
+	[[nodiscard]] inline std::vector<visual_studio_instance> common_visual_studio_instances() {
+		std::vector<visual_studio_instance> result;
+
+#if defined(_WIN32)
+		std::vector<std::filesystem::path> roots;
+		if (auto pf = getenv_path("ProgramFiles")) roots.emplace_back(*pf / "Microsoft Visual Studio" / "2022");
+		if (auto pf86 = getenv_path("ProgramFiles(x86)")) roots.emplace_back(*pf86 / "Microsoft Visual Studio" / "2019");
+
+		for (const auto& year_root : roots) {
+			for (std::string edition : {"Community", "Professional", "Enterprise", "BuildTools"}) {
+				auto root = year_root / edition;
+				if (std::filesystem::exists(root)) {
+					result.push_back({root, {}, edition, std::filesystem::exists(root / "VC" / "Tools" / "MSVC")});
+				}
+			}
+		}
+#endif
+
+		return result;
+	}
+
+	[[nodiscard]] inline std::vector<std::filesystem::path> visual_studio_tool_dirs(
+		const visual_studio_instance& vs
+	) {
+		std::vector<std::filesystem::path> result;
+		auto msvc_root = vs.m_root / "VC" / "Tools" / "MSVC";
+		std::error_code ec;
+
+		if (std::filesystem::exists(msvc_root, ec)) {
+			for (const auto& entry : std::filesystem::directory_iterator(msvc_root, ec)) {
+				if (!entry.is_directory()) continue;
+				const auto root = entry.path() / "bin";
+				result.emplace_back(root / "Hostx64" / "x64");
+				result.emplace_back(root / "Hostx64" / "x86");
+				result.emplace_back(root / "Hostx64" / "arm64");
+				result.emplace_back(root / "Hostx86" / "x86");
+				result.emplace_back(root / "Hostx86" / "x64");
+			}
+		}
+
+		result.emplace_back(vs.m_root / "VC" / "Tools" / "Llvm" / "bin");
+		result.emplace_back(vs.m_root / "VC" / "Tools" / "Llvm" / "x64" / "bin");
+		return result;
+	}
+
+	[[nodiscard]] inline tool_environment visual_studio_environment(
+		const visual_studio_instance& vs,
+		const build::request& req
+	) {
+		tool_environment result;
+		auto vcvarsall = vs.m_root / "VC" / "Auxiliary" / "Build" / "vcvarsall.bat";
+
+		if (is_launchable_file(vcvarsall)) {
+			result.m_setup_script = vcvarsall;
+
+			switch (req.target().m_arch) {
+				case sys::arch::x86: result.m_setup_args.emplace_back("x86"); break;
+				case sys::arch::aarch64: result.m_setup_args.emplace_back("arm64"); break;
+				default: result.m_setup_args.emplace_back("x64"); break;
+			}
+		}
+
+		return result;
+	}
+}
+
+namespace mgmake::discovery {
+	inline void add_vswhere_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
+#if defined(_WIN32)
+		if (req.m_logical_name != "vswhere") {
+			return;
+		}
+
+		if (auto vswhere = windows::find_vswhere()) {
+			out.push_back({req.m_role, req.m_logical_name.empty() ? "vswhere" : req.m_logical_name, *vswhere, tool_provider::vswhere, "Visual Studio locator", 140});
+		}
+#else
+		(void)ctx; (void)req; (void)out;
+#endif
+	}
+
+	inline void add_visual_studio_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
+#if defined(_WIN32)
+		for (const auto& vs : windows::common_visual_studio_instances()) {
+			add_candidates_from_dirs(out, ctx.request(), req, windows::visual_studio_tool_dirs(vs), tool_provider::visual_studio, 150, "Visual Studio tool directory");
+		}
+#else
+		(void)ctx; (void)req; (void)out;
+#endif
+	}
+
+	inline void add_standalone_llvm_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
+#if defined(_WIN32)
+		std::vector<std::filesystem::path> dirs;
+		if (auto root = getenv_path("MGMK_LLVM_ROOT")) dirs.emplace_back(*root / "bin");
+		dirs.emplace_back("C:/Program Files/LLVM/bin");
+		dirs.emplace_back("C:/Program Files (x86)/LLVM/bin");
+		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::standalone_llvm, 170, "standalone LLVM installation");
+#else
+		(void)ctx; (void)req; (void)out;
+#endif
+	}
+}
+
+#endif
+// ===== end include/mgmake/discovery/windows/visual_studio.hxx =====
+
+
+namespace mgmake::discovery {
+	[[nodiscard]] inline tool_environment discover_tool_environment(
+		const cli::options&,
+		const build::request& req,
+		const spec::project&
+	) {
+		tool_environment env;
+
+#if defined(_WIN32)
+		if (req.toolchain().dialect() == build::toolchain::dialect::msvc) {
+			if (getenv_string("VCINSTALLDIR") && getenv_string("WindowsSdkDir")) {
+				return env;
+			}
+
+			for (const auto& vs : windows::common_visual_studio_instances()) {
+				auto candidate = windows::visual_studio_environment(vs, req);
+				if (!candidate.empty()) {
+					return candidate;
+				}
+			}
+		}
+#endif
+
+		return env;
+	}
+}
+
+#endif
+// ===== end include/mgmake/discovery/environment_provider.hxx =====
+
+// skipped duplicate include: include/mgmake/discovery/providers.hxx
+
+// ===== begin include/mgmake/discovery/validate.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DISCOVERY_VALIDATE_HXX
+#define MGMAKE_DISCOVERY_VALIDATE_HXX
+
+// skipped duplicate include: include/mgmake/sys/command_line.hxx
+// skipped duplicate include: include/mgmake/sys/util.hxx
+// skipped duplicate include: include/mgmake/discovery/context.hxx
+// skipped duplicate include: include/mgmake/discovery/filesystem.hxx
+
+#include <chrono>
+#include <expected>
+#include <filesystem>
+#include <fstream>
+#include <string>
+
+namespace mgmake::discovery {
+	[[nodiscard]] inline std::expected<std::string, std::string> capture_command(
+		sys::command_line command
+	) {
+		const auto now = std::chrono::steady_clock::now().time_since_epoch().count();
+		auto output_path = std::filesystem::temp_directory_path()
+			/ ("mgmake-tool-probe-" + std::to_string(now) + ".txt");
+
+		std::string shell = command.full_command();
+		shell += " > ";
+		shell += sys::shell_escape(output_path.string());
+		shell += " 2>&1";
+
+		const int exit_code = std::system(shell.c_str());
+
+		std::ifstream in(output_path);
+		std::string text;
+
+		if (in.is_open()) {
+			text.assign(
+				std::istreambuf_iterator<char>{in},
+				std::istreambuf_iterator<char>{}
+			);
+		}
+
+		std::error_code ec;
+		std::filesystem::remove(output_path, ec);
+
+		if (exit_code != 0 && text.empty()) {
+			return std::unexpected{"version probe failed"};
+		}
+
+		return text;
+	}
+
+	[[nodiscard]] inline std::expected<std::string, std::string> probe_version(
+		const tool_candidate& candidate
+	) {
+		for (std::string flag : {"--version", "-v", "/?"}) {
+			sys::command_line command;
+			command.m_args.emplace_back(candidate.m_path.string());
+			command.m_args.emplace_back(std::move(flag));
+
+			auto result = capture_command(std::move(command));
+
+			if (result && !result->empty()) {
+				return result;
+			}
+		}
+
+		return std::string{};
+	}
+
+	[[nodiscard]] inline tool_family classify_tool_family(
+		const tool_requirement& req,
+		const tool_candidate& candidate,
+		std::string_view version_output
+	) {
+		const auto filename = candidate.m_path.filename().string();
+		const auto text = std::string{version_output};
+
+		if (filename.find("clang-cl") != std::string::npos) return tool_family::clang_cl;
+		if (filename == "cl.exe" || filename == "cl") return tool_family::msvc;
+		if (filename.find("llvm-") != std::string::npos) return tool_family::llvm_binutils;
+		if (filename == "lib.exe" || filename == "lib") return tool_family::msvc_binutils;
+		if (text.find("Apple clang") != std::string::npos) return tool_family::apple_clang;
+		if (text.find("clang") != std::string::npos || filename.find("clang") != std::string::npos) return tool_family::clang;
+		if (text.find("gcc") != std::string::npos || filename.find("gcc") != std::string::npos || filename.find("g++") != std::string::npos) return tool_family::gcc;
+		if (filename.find("windres") != std::string::npos || filename.find("mingw") != std::string::npos) return tool_family::mingw;
+
+		return req.m_expected_family;
+	}
+
+	[[nodiscard]] inline std::expected<resolved_tool, std::string> validate_candidate(
+		context&,
+		const tool_requirement& req,
+		const tool_candidate& candidate
+	) {
+		if (!is_launchable_file(candidate.m_path)) {
+			return std::unexpected{"path is not a launchable file"};
+		}
+
+		if (req.m_role == tool_role::generator_ninja) {
+			const auto stem = candidate.m_path.stem().string();
+
+			if (stem != "ninja") {
+				return std::unexpected{"cached or discovered path is not ninja"};
+			}
+		}
+
+		std::string version;
+#if !defined(_WIN32)
+
+		if (auto probe = probe_version(candidate)) {
+			version = *probe;
+		}
+#endif
+
+		resolved_tool result{};
+		result.m_role = candidate.m_role;
+		result.m_logical_name = candidate.m_logical_name;
+		result.m_path = candidate.m_path;
+		result.m_provider = candidate.m_provider;
+		result.m_reason = candidate.m_reason;
+		result.m_version = version;
+		result.m_family = classify_tool_family(req, candidate, version);
+		result.m_target_triple = req.m_target_triple;
+		return result;
+	}
+}
+
+#endif
+// ===== end include/mgmake/discovery/validate.hxx =====
+
+
+#include <expected>
+#include <string>
+
+namespace mgmake::discovery {
+	[[nodiscard]] inline std::expected<resolved_tool, std::string> resolve_tool(
+		context& ctx,
+		const tool_requirement& req
+	) {
+		diagnostic diag;
+		diag.m_role = req.m_role;
+		diag.m_toolchain = std::string{ctx.toolchain().name()};
+		diag.m_logical_name = req.m_logical_name;
+		diag.m_needed_because = req.m_needed_because;
+
+		for (const auto& candidate : candidates_for(ctx, req)) {
+			diag.m_searched.emplace_back(
+				std::string{name(candidate.m_provider)} + ": " + candidate.m_path.string()
+			);
+
+			auto validated = validate_candidate(ctx, req, candidate);
+
+			if (validated) {
+				ctx.m_resolved_tools.emplace_back(*validated);
+				return validated;
+			}
+
+			diag.m_rejected.emplace_back(candidate.m_path.string() + ": " + validated.error());
+		}
+
+		if (req.required()) {
+			diag.m_fixes = fixes_for(req);
+			return std::unexpected{diag.format_missing_tool()};
+		}
+
+		return std::unexpected{std::string{}};
+	}
+
+	[[nodiscard]] inline cache_entry make_cache_entry(
+		const build::request& req,
+		const resolved_tool& tool
+	) {
+		cache_entry entry;
+		entry.m_toolchain = std::string{req.toolchain().name()};
+		entry.m_host = sys::g_host_target;
+		entry.m_target = req.target();
+		entry.m_role = tool.m_role;
+		entry.m_logical_name = tool.m_logical_name;
+		entry.m_path = tool.m_path;
+		entry.m_provider = tool.m_provider;
+		entry.m_version = tool.m_version;
+		return entry;
+	}
+
+	[[nodiscard]] inline std::expected<build::request, std::string> resolve_request(
+		const cli::options& opts,
+		const build::request& req,
+		const spec::project& project
+	) {
+		if (opts.m_tool_discovery == mode::disabled) {
+			return req;
+		}
+
+		context ctx;
+		ctx.m_options = &opts;
+		ctx.m_project = &project;
+		ctx.m_request = &req;
+		ctx.m_use_cache = !opts.m_no_tool_cache;
+		ctx.m_refresh_cache = opts.m_refresh_tools;
+		ctx.m_verbose = opts.m_verbose;
+		ctx.m_show_search = opts.m_show_tool_search;
+		ctx.m_mode = opts.m_tool_discovery;
+
+		if (ctx.m_use_cache) {
+			ctx.m_cache = load_cache(req);
+		}
+
+		build::request resolved = req;
+
+		for (const auto& requirement : required_tools(opts, req, project)) {
+			auto tool = resolve_tool(ctx, requirement);
+
+			if (!tool) {
+				if (requirement.required()) {
+					return std::unexpected{tool.error()};
+				}
+
+				continue;
+			}
+
+			resolved.m_discovered_tools.emplace_back(*tool);
+
+			switch (tool->m_role) {
+				case tool_role::c_compiler:
+					resolved.m_tc.cc(tool->path_string());
+					break;
+
+				case tool_role::cxx_compiler:
+					resolved.m_tc.cxx(tool->path_string());
+					break;
+
+				case tool_role::archiver:
+				case tool_role::librarian:
+					resolved.m_tc.ar(tool->path_string());
+					break;
+
+				case tool_role::linker:
+				case tool_role::shared_linker:
+					resolved.m_tc.linker(tool->path_string());
+					break;
+
+				default:
+					resolved.m_tc.tool(tool->m_role, tool->path_string());
+					break;
+			}
+
+			if (ctx.m_use_cache) {
+				ctx.m_cache.put(make_cache_entry(req, *tool));
+			}
+		}
+
+		resolved.m_tool_environment = discover_tool_environment(opts, resolved, project);
+
+		if (ctx.m_use_cache) {
+			save_cache(req, ctx.m_cache);
+		}
+
+		return resolved;
+	}
+
+	[[nodiscard]] inline std::expected<resolved_tool, std::string> resolve_backend_tool(
+		const cli::options& opts,
+		const build::request& req,
+		backend_tool_requirement requirement
+	) {
+		if (opts.m_tool_discovery == mode::disabled) {
+			return resolved_tool{
+				.m_role = requirement.m_role,
+				.m_logical_name = requirement.m_logical_name,
+				.m_path = requirement.m_logical_name,
+				.m_provider = tool_provider::explicit_path,
+				.m_reason = "tool discovery disabled"
+			};
+		}
+
+		context ctx;
+		ctx.m_options = &opts;
+		ctx.m_request = &req;
+		ctx.m_use_cache = !opts.m_no_tool_cache;
+		ctx.m_refresh_cache = opts.m_refresh_tools;
+		ctx.m_verbose = opts.m_verbose;
+		ctx.m_show_search = opts.m_show_tool_search;
+		ctx.m_mode = opts.m_tool_discovery;
+
+		if (ctx.m_use_cache) {
+			ctx.m_cache = load_cache(req);
+		}
+
+		tool_requirement req_tool;
+		req_tool.m_role = requirement.m_role;
+		req_tool.m_logical_name = std::move(requirement.m_logical_name);
+		req_tool.m_needed_because = std::move(requirement.m_needed_because);
+
+		auto resolved = resolve_tool(ctx, req_tool);
+
+		if (resolved && ctx.m_use_cache) {
+			ctx.m_cache.put(make_cache_entry(req, *resolved));
+			save_cache(req, ctx.m_cache);
+		}
+
+		return resolved;
+	}
+}
+
+#endif
+// ===== end include/mgmake/discovery/resolve.hxx =====
+
+// skipped duplicate include: include/mgmake/sys/util.hxx
+
+#include <cstdlib>
+#include <expected>
+#include <filesystem>
+#include <fstream>
+#include <ranges>
+#include <set>
+#include <string>
+#include <string_view>
+#include <utility>
+
+namespace mgmake::backend {
+    namespace detail {
+        inline std::string ninja_escape_build_text(std::string_view text) {
+            std::string result;
+
+            for (const char ch : text) {
+                switch (ch) {
+                    case '$':
+                        result += "$$";
+                        break;
+
+                    case ' ':
+                        result += "$ ";
+                        break;
+
+                    case ':':
+                        result += "$:";
+                        break;
+
+                    case '|':
+                        result += "$|";
+                        break;
+
+                    case '\n':
+                        result += "$\n";
+                        break;
+
+                    default:
+                        result += ch;
+                        break;
+                }
+            }
+
+            return result;
+        }
+
+        inline std::string ninja_escape_path(const std::filesystem::path& path) {
+            return ninja_escape_build_text(path.generic_string());
+        }
+
+        inline std::string ninja_escape_variable_text(std::string_view text) {
+            std::string result;
+
+            for (const char ch : text) {
+                switch (ch) {
+                    case '$':
+                        result += "$$";
+                        break;
+
+                    case '\n':
+                        result += "$\n";
+                        break;
+
+                    default:
+                        result += ch;
+                        break;
+                }
+            }
+
+            return result;
+        }
+
+        inline void write_artifact_list(std::ofstream& out, const dag::graph& graph, const std::vector<dag::artifact::id>& artifacts) {
+            bool first = true;
+
+            for (const auto id : artifacts) {
+                const auto& artifact = graph.artifact(id);
+
+                if (!first) {
+                    out << ' ';
+                }
+
+                out << ninja_escape_path(artifact.m_path);
+                first = false;
+            }
+        }
+		inline void write_artifact_list(std::ofstream& out, const dag::graph& graph, const std::set<dag::artifact::id>& artifacts) {
+			return write_artifact_list(out, graph, artifacts | std::ranges::to<std::vector<dag::artifact::id>>());
+		}
+
+        inline void create_output_directories(const dag::graph& graph) {
+            for (const auto& action : graph.m_actions) {
+                for (const auto output_id : action.m_outputs) {
+                    const auto& output = graph.artifact(output_id);
+
+                    if (output.m_kind == dag::artifact::kind::phony) {
+                        continue;
+                    }
+
+                    const auto parent = output.m_path.parent_path();
+
+                    if (!parent.empty()) {
+                        std::filesystem::create_directories(parent);
+                    }
+                }
+            }
+        }
+
+        inline void write_target_defaults(std::ofstream& out, const dag::graph& graph) {
+            if (graph.m_targets.empty()) {
+                return;
+            }
+
+            out << "\ndefault";
+
+            for (const auto& target : graph.m_targets) {
+                out << ' ' << ninja_escape_build_text(target.m_name);
+            }
+
+            out << "\n";
+        }
+    }
+
+    struct ninja {
+        std::filesystem::path m_output_file = "build.ninja";
+
+        void generate(const cli::options&, const dag::graph& graph, const build::request& req) const {
+            auto output_path = req.build_dir() / m_output_file;
+            if (output_path.has_parent_path()) {
+                std::filesystem::create_directories(output_path.parent_path());
+            }
+            detail::create_output_directories(graph);
+
+            std::ofstream out(output_path);
+			mgmkassert(out.is_open(), "ninja backend: failed to open " + output_path.string());
+
+            out << "# generated by mgmake\n\n";
+
+            out << "builddir = "
+                << detail::ninja_escape_variable_text(req.build_dir().generic_string())
+                << "\n\n";
+
+            bool needs_always = false;
+
+            for (const auto& action : graph.m_actions) {
+                if (action.m_always_run) {
+                    needs_always = true;
+                    break;
+                }
+            }
+
+            if (needs_always) {
+                out << "build __mgmake_always: phony\n\n";
+            }
+
+            for (auto i = 0; i < graph.m_actions.size(); ++i) {
+                const auto& action = graph.action(i);
+
+                mgmkassert(not action.m_outputs.empty(), "ninja backend: action '" + action.m_name + "' has no outputs");
+                mgmkassert(not action.m_command.m_args.empty(), "ninja backend: action '" + action.m_name + "' has no command");
+
+                out << "rule action_" << i << "\n";
+                auto command_text = discovery::wrap_command_for_environment(
+                    req.tool_environment(),
+                    action.m_command.full_command()
+                );
+                out << "  command = " << command_text << "\n";
+
+                if (!action.m_description.empty()) {
+                    out << "  description = " << detail::ninja_escape_variable_text(action.m_description) << "\n";
+                } else if (!action.m_name.empty()) {
+                    out << "  description = " << detail::ninja_escape_variable_text(action.m_name) << "\n";
+                }
+
+                if (!action.m_working_directory.empty()) {
+#if defined(_WIN32)
+                    command_text = "cd /d ";
+#else
+                    command_text = "cd ";
+#endif
+                    command_text += sys::shell_escape(action.m_working_directory.string());
+                    command_text += " && ";
+                    command_text += action.m_command.full_command();
+                    command_text = discovery::wrap_command_for_environment(
+                        req.tool_environment(),
+                        std::move(command_text)
+                    );
+                    out << "  command = " << command_text << "\n";
+                }
+
+                out << "\n";
+
+                out << "build ";
+                detail::write_artifact_list(out, graph, action.m_outputs);
+                out << ": action_" << i;
+
+                if (!action.m_inputs.empty()) {
+                    out << ' ';
+                    detail::write_artifact_list(out, graph, action.m_inputs);
+                }
+
+                if (action.m_always_run) {
+                    out << " | __mgmake_always";
+                }
+
+                out << "\n\n";
+            }
+
+            for (const auto& target : graph.m_targets) {
+                out << "build " << detail::ninja_escape_build_text(target.m_name) << ": phony ";
+                if (not target.m_outputs.empty()) {
+                    out << ' ';
+                    detail::write_artifact_list(out, graph, target.m_outputs);
+                }
+                for (const auto dep_id : target.m_dependencies) {
+                    const auto& dep = graph.target(dep_id);
+                    out << ' ' << detail::ninja_escape_build_text(dep.m_name);
+                }
+                out << "\n";
+            }
+
+            detail::write_target_defaults(out, graph);
+        }
+
+		std::expected<void, std::string> build(
+            const cli::options& opts,
+            const dag::graph& graph,
+            const build::request& req
+        ) const {
+            auto output_path = req.build_dir() / m_output_file;
+            if (output_path.has_parent_path()) {
+                std::filesystem::create_directories(output_path.parent_path());
+            }
+			generate(opts, graph, req);
+
+            auto ninja = discovery::resolve_backend_tool(
+                opts,
+                req,
+                discovery::backend_tool_requirement{
+                    .m_role = discovery::tool_role::generator_ninja,
+                    .m_logical_name = opts.m_ninja.empty() ? "ninja" : opts.m_ninja,
+                    .m_needed_because = "the selected backend is ninja and this action invokes ninja"
+                }
+            );
+
+            if (!ninja) {
+                return std::unexpected{ninja.error()};
+            }
+
+			sys::command_line command;
+			command.m_args.emplace_back(ninja->path_string());
+			command.m_args.emplace_back("-f");
+			command.m_args.emplace_back(output_path.string());
+
+			for (const auto& target : req.m_targets) {
+				command.m_args.emplace_back(target);
+			}
+
+			const auto exit_code = command.invoke();
+
+			if (exit_code != 0) {
+				return std::unexpected(
+					"ninja backend: ninja failed with exit code " + std::to_string(exit_code)
+				);
+			}
+
+			return {};
+		}
+    };
+}
+
+#endif
+// ===== end include/mgmake/backend/ninja.hxx =====
+
+
+// ===== begin include/mgmake/backend/registry.hxx =====
+#pragma once
+
+#ifndef MGMAKE_BACKEND_REGISTRY_HXX
+#define MGMAKE_BACKEND_REGISTRY_HXX
+
+// skipped duplicate include: include/mgmake/backend/graphviz.hxx
+// skipped duplicate include: include/mgmake/backend/ninja.hxx
+// skipped duplicate include: include/mgmake/cli/backend.hxx
+
+#include <type_traits>
+
+namespace mgmake::backend {
+	template <cli::backend_kind Kind>
+	struct for_kind {
+		using type = void;
+	};
+
+	template <>
+	struct for_kind<cli::backend_kind::automatic> {
+		using type = backend::ninja;
+	};
+
+	template <>
+	struct for_kind<cli::backend_kind::ninja> {
+		using type = backend::ninja;
+	};
+
+	template <>
+	struct for_kind<cli::backend_kind::graphviz> {
+		using type = backend::graphviz<>;
+	};
+
+	template <cli::backend_kind Kind>
+	using for_kind_t = typename for_kind<Kind>::type;
+
+	template <cli::backend_kind Kind>
+	inline constexpr bool implemented_v =
+		!std::is_void_v<for_kind_t<Kind>>;
+}
+
+#endif
+// ===== end include/mgmake/backend/registry.hxx =====
+
+
+// ===== begin include/mgmake/backend/capabilities.hxx =====
+#pragma once
+
+#ifndef MGMAKE_BACKEND_CAPABILITIES_HXX
+#define MGMAKE_BACKEND_CAPABILITIES_HXX
+
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/cli/options.hxx
+// skipped duplicate include: include/mgmake/dag/graph.hxx
+
+#include <concepts>
+#include <expected>
+#include <string>
+
+namespace mgmake::backend {
+	template <typename Backend>
+	concept can_generate =
+		requires(
+			Backend backend,
+			const cli::options& opts,
+			const dag::graph& graph,
+			const build::request& req
+		) {
+			backend.generate(opts, graph, req);
+		};
+
+	template <typename Backend>
+	concept can_build =
+		requires(
+			Backend backend,
+			const cli::options& opts,
+			const dag::graph& graph,
+			const build::request& req
+		) {
+			{ backend.build(opts, graph, req) } -> std::same_as<std::expected<void, std::string>>;
+		};
+}
+
+#endif
+// ===== end include/mgmake/backend/capabilities.hxx =====
+
+
+// ===== begin include/mgmake/backend/execute.hxx =====
+#pragma once
+
+#ifndef MGMAKE_BACKEND_EXECUTE_HXX
+#define MGMAKE_BACKEND_EXECUTE_HXX
+
+// skipped duplicate include: include/mgmake/backend/capabilities.hxx
+// skipped duplicate include: include/mgmake/backend/registry.hxx
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/cli/action.hxx
+// skipped duplicate include: include/mgmake/cli/backend.hxx
+// skipped duplicate include: include/mgmake/cli/options.hxx
+// skipped duplicate include: include/mgmake/dag/graph.hxx
+
+#include <expected>
+#include <string>
+#include <type_traits>
+
+namespace mgmake::backend {
+	template <cli::backend_kind Kind>
+	[[nodiscard]] inline std::expected<void, std::string> generate(
+		const cli::options& opts,
+		const dag::graph& graph,
+		const build::request& req
+	) {
+		using backend_type = backend::for_kind_t<Kind>;
+
+		if constexpr (std::is_void_v<backend_type>) {
+			return std::unexpected{
+				"mgmake: backend '" +
+				std::string{ cli::backend_name(Kind) } +
+				"' is not implemented yet"
+			};
+		} else if constexpr (backend::can_generate<backend_type>) {
+			backend_type{}.generate(opts, graph, req);
+			return {};
+		} else {
+			return std::unexpected{
+				"mgmake: backend '" +
+				std::string{ cli::backend_name(Kind) } +
+				"' does not support action 'generate'"
+			};
+		}
+	}
+
+	template <cli::backend_kind Kind>
+	[[nodiscard]] inline std::expected<void, std::string> build(
+		const cli::options& opts,
+		const dag::graph& graph,
+		const build::request& req
+	) {
+		using backend_type = backend::for_kind_t<Kind>;
+
+		if constexpr (std::is_void_v<backend_type>) {
+			return std::unexpected{
+				"mgmake: backend '" +
+				std::string{ cli::backend_name(Kind) } +
+				"' is not implemented yet"
+			};
+		} else if constexpr (backend::can_build<backend_type>) {
+			return backend_type{}.build(opts, graph, req);
+		} else {
+			return std::unexpected{
+				"mgmake: backend '" +
+				std::string{ cli::backend_name(Kind) } +
+				"' does not support action 'build'"
+			};
+		}
+	}
+
+	template <cli::backend_kind Kind>
+	[[nodiscard]] inline std::expected<void, std::string> execute_project_action_for_backend(
+		const cli::options& opts,
+		const build::request& req,
+		const dag::graph& graph
+	) {
+		switch (opts.m_action) {
+			case cli::action_kind::generate:
+				return backend::generate<Kind>(opts, graph, req);
+
+			case cli::action_kind::build:
+				return backend::build<Kind>(opts, graph, req);
+
+			case cli::action_kind::run:
+				return std::unexpected{
+					"mgmake: run action is not implemented yet"
+				};
+
+			case cli::action_kind::clean:
+			case cli::action_kind::tools:
+			case cli::action_kind::help:
+			case cli::action_kind::version:
+				return {};
+
+			case cli::action_kind::count:
+				break;
+		}
+
+		return std::unexpected{ "mgmake: unknown action" };
+	}
+
+	[[nodiscard]] inline std::expected<void, std::string> execute_project_action(
+		const cli::options& opts,
+		const build::request& req,
+		const dag::graph& graph
+	) {
+		switch (opts.m_backend) {
+			case cli::backend_kind::automatic:
+				return execute_project_action_for_backend<
+					cli::backend_kind::automatic
+				>(opts, req, graph);
+
+			case cli::backend_kind::ninja:
+				return execute_project_action_for_backend<
+					cli::backend_kind::ninja
+				>(opts, req, graph);
+
+			case cli::backend_kind::graphviz:
+				return execute_project_action_for_backend<
+					cli::backend_kind::graphviz
+				>(opts, req, graph);
+
+			case cli::backend_kind::make:
+				return execute_project_action_for_backend<
+					cli::backend_kind::make
+				>(opts, req, graph);
+
+			case cli::backend_kind::direct:
+				return execute_project_action_for_backend<
+					cli::backend_kind::direct
+				>(opts, req, graph);
+
+			case cli::backend_kind::count:
+				break;
+		}
+
+		return std::unexpected{ "mgmake: unknown backend" };
+	}
+}
+
+#endif
+// ===== end include/mgmake/backend/execute.hxx =====
+
+// skipped duplicate include: include/mgmake/spec/executable.hxx
+
+// ===== begin include/mgmake/spec/executable_impl.hxx =====
+#pragma once
+
+#ifndef MGMK_SPEC_EXECUTABLE_IMPL_HXX
+#define MGMK_SPEC_EXECUTABLE_IMPL_HXX
+
+// skipped duplicate include: include/mgmake/spec/executable.hxx
+
+#endif
+// ===== end include/mgmake/spec/executable_impl.hxx =====
+
+// skipped duplicate include: include/mgmake/spec/library.hxx
+
+// ===== begin include/mgmake/spec/library_impl.hxx =====
+#pragma once
+
+#ifndef MGMK_SPEC_LIBRARY_IMPL_HXX
+#define MGMK_SPEC_LIBRARY_IMPL_HXX
+
+// skipped duplicate include: include/mgmake/spec/library.hxx
+
+#endif
+// ===== end include/mgmake/spec/library_impl.hxx =====
+
+// skipped duplicate include: include/mgmake/spec/project.hxx
+
+// ===== begin include/mgmake/discovery/discovery.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DISCOVERY_DISCOVERY_HXX
+#define MGMAKE_DISCOVERY_DISCOVERY_HXX
+
+// skipped duplicate include: include/mgmake/discovery/tool_role.hxx
+// skipped duplicate include: include/mgmake/discovery/tool_provider.hxx
+// skipped duplicate include: include/mgmake/discovery/mode.hxx
+// skipped duplicate include: include/mgmake/discovery/tool_family.hxx
+// skipped duplicate include: include/mgmake/discovery/tool_binding.hxx
+// skipped duplicate include: include/mgmake/discovery/resolved_tool.hxx
+// skipped duplicate include: include/mgmake/discovery/tool_environment.hxx
+// skipped duplicate include: include/mgmake/discovery/tool_requirement.hxx
+// skipped duplicate include: include/mgmake/discovery/backend_requirement.hxx
+// skipped duplicate include: include/mgmake/discovery/environment.hxx
+// skipped duplicate include: include/mgmake/discovery/filesystem.hxx
+// skipped duplicate include: include/mgmake/discovery/tool_names.hxx
+// skipped duplicate include: include/mgmake/discovery/cache.hxx
+// skipped duplicate include: include/mgmake/discovery/context.hxx
+// skipped duplicate include: include/mgmake/discovery/diagnostic.hxx
+// skipped duplicate include: include/mgmake/discovery/validate.hxx
+// skipped duplicate include: include/mgmake/discovery/providers.hxx
+
+// ===== begin include/mgmake/discovery/windows/registry.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DISCOVERY_WINDOWS_REGISTRY_HXX
+#define MGMAKE_DISCOVERY_WINDOWS_REGISTRY_HXX
+
+// skipped duplicate include: include/mgmake/discovery/providers.hxx
+
+namespace mgmake::discovery {
+	inline void add_windows_registry_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
+#if defined(_WIN32)
+		std::vector<std::filesystem::path> dirs;
+		if (auto root = getenv_path("MGMK_LLVM_ROOT")) dirs.emplace_back(*root / "bin");
+		dirs.emplace_back("C:/Program Files/LLVM/bin");
+		dirs.emplace_back("C:/Program Files (x86)/LLVM/bin");
+		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::windows_registry, 130, "Windows registry and registered install roots");
+#else
+		(void)ctx; (void)req; (void)out;
+#endif
+	}
+}
+
+#endif
+// ===== end include/mgmake/discovery/windows/registry.hxx =====
+
+// skipped duplicate include: include/mgmake/discovery/windows/visual_studio.hxx
+
+// ===== begin include/mgmake/discovery/windows/windows_sdk.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DISCOVERY_WINDOWS_WINDOWS_SDK_HXX
+#define MGMAKE_DISCOVERY_WINDOWS_WINDOWS_SDK_HXX
+
+// skipped duplicate include: include/mgmake/discovery/providers.hxx
+
+namespace mgmake::discovery {
+	inline void add_windows_sdk_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
+#if defined(_WIN32)
+		std::vector<std::filesystem::path> dirs;
+
+		if (auto pf86 = getenv_path("ProgramFiles(x86)")) {
+			auto kits = *pf86 / "Windows Kits" / "10" / "bin";
+			std::error_code ec;
+
+			if (std::filesystem::exists(kits, ec)) {
+				for (const auto& version : std::filesystem::directory_iterator(kits, ec)) {
+					if (!version.is_directory()) continue;
+					dirs.emplace_back(version.path() / "x64");
+					dirs.emplace_back(version.path() / "x86");
+					dirs.emplace_back(version.path() / "arm64");
+				}
+			}
+		}
+
+		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::windows_sdk, 160, "Windows SDK tool directory");
+#else
+		(void)ctx; (void)req; (void)out;
+#endif
+	}
+
+	inline void add_msys2_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
+#if defined(_WIN32)
+		std::vector<std::filesystem::path> dirs = {
+			"C:/msys64/ucrt64/bin",
+			"C:/msys64/mingw64/bin",
+			"C:/msys64/clang64/bin",
+			"C:/msys64/mingw32/bin",
+			"C:/msys64/clangarm64/bin"
+		};
+		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::msys2, 180, "MSYS2 toolchain root");
+#else
+		(void)ctx; (void)req; (void)out;
+#endif
+	}
+
+	inline void add_mingw_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
+#if defined(_WIN32)
+		std::vector<std::filesystem::path> dirs;
+		if (auto root = getenv_path("MGMK_MINGW_ROOT")) dirs.emplace_back(*root / "bin");
+		dirs.emplace_back("C:/MinGW/bin");
+		dirs.emplace_back("C:/mingw64/bin");
+		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::mingw, 190, "MinGW root");
+#else
+		(void)ctx; (void)req; (void)out;
+#endif
+	}
+
+	inline void add_cygwin_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
+#if defined(_WIN32)
+		std::vector<std::filesystem::path> dirs = {"C:/cygwin64/bin", "C:/cygwin/bin"};
+		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::cygwin, 200, "Cygwin root");
+#else
+		(void)ctx; (void)req; (void)out;
+#endif
+	}
+}
+
+#endif
+// ===== end include/mgmake/discovery/windows/windows_sdk.hxx =====
+
+
+// ===== begin include/mgmake/discovery/macos/xcrun.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DISCOVERY_MACOS_XCRUN_HXX
+#define MGMAKE_DISCOVERY_MACOS_XCRUN_HXX
+
+// skipped duplicate include: include/mgmake/discovery/providers.hxx
+// skipped duplicate include: include/mgmake/discovery/validate.hxx
+
+namespace mgmake::discovery {
+	inline void add_xcrun_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
+#if defined(__APPLE__)
+		for (const auto& logical : candidate_names_for(ctx.request(), req.m_role)) {
+			sys::command_line command;
+			command.m_args.emplace_back("xcrun");
+			if (!ctx.options().m_apple_sdk.empty()) {
+				command.m_args.emplace_back("--sdk");
+				command.m_args.emplace_back(ctx.options().m_apple_sdk);
+			}
+			command.m_args.emplace_back("--find");
+			command.m_args.emplace_back(logical);
+
+			auto found = capture_command(command);
+			if (found && !found->empty()) {
+				std::string path = *found;
+				while (!path.empty() && (path.back() == '\n' || path.back() == '\r')) path.pop_back();
+				if (is_launchable_file(path)) {
+					out.push_back({req.m_role, logical, path, tool_provider::xcrun, "xcrun --find", 210});
+				}
+			}
+		}
+#else
+		(void)ctx; (void)req; (void)out;
+#endif
+	}
+
+	inline void add_homebrew_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
+#if defined(__APPLE__)
+		std::vector<std::filesystem::path> dirs = {
+			"/opt/homebrew/opt/llvm/bin",
+			"/usr/local/opt/llvm/bin",
+			"/opt/homebrew/bin",
+			"/usr/local/bin"
+		};
+		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::homebrew, 220, "Homebrew tool root");
+#else
+		(void)ctx; (void)req; (void)out;
+#endif
+	}
+
+	inline void add_macports_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
+#if defined(__APPLE__)
+		add_candidates_from_dirs(out, ctx.request(), req, {"/opt/local/bin"}, tool_provider::macports, 230, "MacPorts tool root");
+#else
+		(void)ctx; (void)req; (void)out;
+#endif
+	}
+}
+
+#endif
+// ===== end include/mgmake/discovery/macos/xcrun.hxx =====
+
+
+// ===== begin include/mgmake/discovery/unix/unix_tools.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DISCOVERY_UNIX_UNIX_TOOLS_HXX
+#define MGMAKE_DISCOVERY_UNIX_UNIX_TOOLS_HXX
+
+// skipped duplicate include: include/mgmake/discovery/providers.hxx
+
+namespace mgmake::discovery {
+	inline void add_unix_system_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
+#if defined(MGMK_PLATFORM_POSIX)
+		std::vector<std::filesystem::path> dirs = {"/usr/local/bin", "/usr/bin", "/bin", "/opt/bin", "/opt/local/bin"};
+		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::unix_system, 240, "Unix system tool root");
+#else
+		(void)ctx; (void)req; (void)out;
+#endif
+	}
+
+	inline void add_distro_llvm_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
+#if defined(MGMK_PLATFORM_POSIX)
+		std::vector<std::filesystem::path> dirs;
+		for (int version = 30; version >= 10; --version) {
+			dirs.emplace_back("/usr/lib/llvm-" + std::to_string(version) + "/bin");
+			dirs.emplace_back("/usr/local/llvm-" + std::to_string(version) + "/bin");
+		}
+		dirs.emplace_back("/opt/llvm/bin");
+		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::distro_llvm, 250, "distro LLVM root");
+#else
+		(void)ctx; (void)req; (void)out;
+#endif
+	}
+
+	inline void add_distro_gcc_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
+#if defined(MGMK_PLATFORM_POSIX)
+		std::vector<std::filesystem::path> dirs = {"/usr/bin", "/usr/local/bin"};
+		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::distro_gcc, 260, "distro GCC root");
+#else
+		(void)ctx; (void)req; (void)out;
+#endif
+	}
+}
+
+#endif
+// ===== end include/mgmake/discovery/unix/unix_tools.hxx =====
+
+
+// ===== begin include/mgmake/discovery/android/ndk.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DISCOVERY_ANDROID_NDK_HXX
+#define MGMAKE_DISCOVERY_ANDROID_NDK_HXX
+
+// skipped duplicate include: include/mgmake/discovery/providers.hxx
+
+namespace mgmake::discovery {
+	[[nodiscard]] inline std::string android_host_tag() {
+#if defined(_WIN32)
+		return "windows-x86_64";
+#elif defined(__APPLE__)
+		#if defined(__aarch64__)
+			return "darwin-arm64";
+		#else
+			return "darwin-x86_64";
+		#endif
+#else
+		return "linux-x86_64";
+#endif
+	}
+
+	inline void add_android_ndk_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
+		std::vector<std::filesystem::path> roots;
+		if (!ctx.options().m_android_ndk.empty()) roots.emplace_back(ctx.options().m_android_ndk);
+		if (auto root = getenv_path("ANDROID_NDK_ROOT")) roots.emplace_back(*root);
+		if (auto root = getenv_path("ANDROID_NDK_HOME")) roots.emplace_back(*root);
+
+		for (const auto& root : roots) {
+			auto bin = root / "toolchains" / "llvm" / "prebuilt" / android_host_tag() / "bin";
+			add_candidates_from_dirs(out, ctx.request(), req, {bin}, tool_provider::android_ndk, 270, "Android NDK LLVM toolchain");
+		}
+	}
+
+	inline void add_emscripten_sdk_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
+		std::vector<std::filesystem::path> dirs;
+		if (auto root = getenv_path("EMSDK")) {
+			dirs.emplace_back(*root / "upstream" / "emscripten");
+			dirs.emplace_back(*root / "upstream" / "bin");
+		}
+		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::emscripten_sdk, 280, "Emscripten SDK root");
+	}
+
+	inline void add_embedded_sdk_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
+		std::vector<std::filesystem::path> dirs;
+		if (auto root = getenv_path("MGMK_EMBEDDED_SDK")) dirs.emplace_back(*root / "bin");
+		if (auto root = getenv_path("ARM_GCC_ROOT")) dirs.emplace_back(*root / "bin");
+		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::embedded_sdk, 290, "embedded SDK root");
+	}
+}
+
+#endif
+// ===== end include/mgmake/discovery/android/ndk.hxx =====
+
+// skipped duplicate include: include/mgmake/discovery/environment_provider.hxx
+// skipped duplicate include: include/mgmake/discovery/resolve.hxx
+
+// ===== begin include/mgmake/discovery/print_tools.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DISCOVERY_PRINT_TOOLS_HXX
+#define MGMAKE_DISCOVERY_PRINT_TOOLS_HXX
+
+// skipped duplicate include: include/mgmake/discovery/resolve.hxx
+
+#include <expected>
+#include <print>
+#include <string>
+
+namespace mgmake::discovery {
+	inline void print_resolved_tool(const resolved_tool& tool) {
+		std::println("  {}", name(tool.m_role));
+		std::println("    logical: {}", tool.m_logical_name);
+		std::println("    path: {}", tool.m_path.string());
+		std::println("    provider: {}", name(tool.m_provider));
+
+		if (tool.m_family != tool_family::unknown) {
+			std::println("    family: {}", static_cast<int>(tool.m_family));
+		}
+
+		if (!tool.m_version.empty()) {
+			std::println("    version: {}", tool.m_version.substr(0, tool.m_version.find('\n')));
+		}
+	}
+
+	[[nodiscard]] inline std::expected<void, std::string> print_tools(
+		const cli::options& opts,
+		const build::request& req,
+		const spec::project& project
+	) {
+		auto resolved_req = resolve_request(opts, req, project);
+
+		if (!resolved_req) {
+			return std::unexpected{resolved_req.error()};
+		}
+
+		std::println("mgmake tools\n");
+		std::println("request:");
+		std::println("  host: {}", target_key(sys::g_host_target));
+		std::println("  target: {}", target_key(resolved_req->target()));
+		std::println("  toolchain: {}", resolved_req->toolchain().name());
+		std::println("  backend: {}", cli::backend_name(opts.m_backend));
+		std::println("  discovery mode: {}\n", discovery::name(opts.m_tool_discovery));
+
+		std::println("target tools:");
+		for (const auto& tool : resolved_req->m_discovered_tools) {
+			print_resolved_tool(tool);
+		}
+
+		std::println("\nbackend tools:");
+
+		if (opts.m_backend == cli::backend_kind::automatic || opts.m_backend == cli::backend_kind::ninja) {
+			auto ninja = resolve_backend_tool(
+				opts,
+				*resolved_req,
+				backend_tool_requirement{
+					.m_role = tool_role::generator_ninja,
+					.m_logical_name = opts.m_ninja.empty() ? "ninja" : opts.m_ninja,
+					.m_needed_because = "the selected backend is ninja"
+				}
+			);
+
+			if (!ninja) return std::unexpected{ninja.error()};
+			print_resolved_tool(*ninja);
+		}
+
+		std::println("\nenvironment:");
+		if (resolved_req->m_tool_environment.empty()) {
+			std::println("  none");
+		} else if (resolved_req->m_tool_environment.m_setup_script.has_value()) {
+			std::println("  setup script: {}", resolved_req->m_tool_environment.m_setup_script->string());
+		}
+
+		std::println("\ncache:");
+		std::println("  {}", cache_path(*resolved_req).string());
+		return {};
+	}
+}
+
+#endif
+// ===== end include/mgmake/discovery/print_tools.hxx =====
+
+
+#endif
+// ===== end include/mgmake/discovery/discovery.hxx =====
 
 
 // ===== begin include/mgmake/lower/target.hxx =====
@@ -5275,6 +8198,7 @@ namespace mgmake::detail {
 // skipped duplicate include: include/mgmake/cli/help.hxx
 // skipped duplicate include: include/mgmake/cli/parse.hxx
 // skipped duplicate include: include/mgmake/detail/project_factory.hxx
+// skipped duplicate include: include/mgmake/discovery/discovery.hxx
 // skipped duplicate include: include/mgmake/spec/project.hxx
 // skipped duplicate include: include/mgmake/sys/command_line.hxx
 // skipped duplicate include: include/mgmake/entry/exit_code.hxx
@@ -5396,11 +8320,30 @@ namespace mgmake {
 			opts
 		);
 
-		auto graph = proj.graph(req);
+		if (opts.m_action == cli::action_kind::tools) {
+			const auto tools_result = discovery::print_tools(opts, req, proj);
+
+			if (!tools_result) {
+				std::println(stderr, "{}", tools_result.error());
+				return detail::entry_exit_usage_error;
+			}
+
+			return detail::entry_exit_success;
+		}
+
+		auto resolved_req_result = discovery::resolve_request(opts, req, proj);
+
+		if (!resolved_req_result) {
+			std::println(stderr, "{}", resolved_req_result.error());
+			return detail::entry_exit_usage_error;
+		}
+
+		auto resolved_req = std::move(*resolved_req_result);
+		auto graph = proj.graph(resolved_req);
 
 		const auto action_result = backend::execute_project_action(
 			opts,
-			req,
+			resolved_req,
 			graph
 		);
 

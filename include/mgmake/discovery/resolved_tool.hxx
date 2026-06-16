@@ -1,0 +1,50 @@
+#pragma once
+
+#ifndef MGMAKE_DISCOVERY_RESOLVED_TOOL_HXX
+#define MGMAKE_DISCOVERY_RESOLVED_TOOL_HXX
+
+#include "tool_family.hxx"
+#include "tool_provider.hxx"
+#include "tool_role.hxx"
+
+#include <filesystem>
+#include <string>
+
+namespace mgmake::discovery {
+	struct tool_candidate {
+		tool_role m_role{};
+		std::string m_logical_name{};
+		std::filesystem::path m_path{};
+		tool_provider m_provider{};
+		std::string m_reason{};
+		int m_priority = 0;
+	};
+
+	struct rejected_tool_candidate {
+		tool_candidate m_candidate{};
+		std::string m_reason{};
+	};
+
+	struct resolved_tool {
+		tool_role m_role{};
+		std::string m_logical_name{};
+		std::filesystem::path m_path{};
+		tool_provider m_provider{};
+		tool_family m_family = tool_family::unknown;
+		linker_flavor m_linker_flavor = linker_flavor::unknown;
+		object_format m_object_format = object_format::unknown;
+		std::string m_version{};
+		std::string m_target_triple{};
+		std::string m_reason{};
+
+		[[nodiscard]] inline const std::filesystem::path& path() const noexcept {
+			return m_path;
+		}
+
+		[[nodiscard]] inline std::string path_string() const {
+			return m_path.string();
+		}
+	};
+}
+
+#endif

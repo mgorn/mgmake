@@ -10,6 +10,7 @@
 #include "../cli/help.hxx"
 #include "../cli/parse.hxx"
 #include "../detail/project_factory.hxx"
+#include "../discovery/discovery.hxx"
 #include "../spec/project.hxx"
 #include "../sys/command_line.hxx"
 #include "exit_code.hxx"
@@ -131,11 +132,30 @@ namespace mgmake {
 			opts
 		);
 
-		auto graph = proj.graph(req);
+		if (opts.m_action == cli::action_kind::tools) {
+			const auto tools_result = discovery::print_tools(opts, req, proj);
+
+			if (!tools_result) {
+				std::println(stderr, "{}", tools_result.error());
+				return detail::entry_exit_usage_error;
+			}
+
+			return detail::entry_exit_success;
+		}
+
+		auto resolved_req_result = discovery::resolve_request(opts, req, proj);
+
+		if (!resolved_req_result) {
+			std::println(stderr, "{}", resolved_req_result.error());
+			return detail::entry_exit_usage_error;
+		}
+
+		auto resolved_req = std::move(*resolved_req_result);
+		auto graph = proj.graph(resolved_req);
 
 		const auto action_result = backend::execute_project_action(
 			opts,
-			req,
+			resolved_req,
 			graph
 		);
 

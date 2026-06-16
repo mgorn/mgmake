@@ -4,7 +4,9 @@
 #define MGMAKE_BACKEND_NINJA_HXX
 
 #include "../build/request.hxx"
+#include "../cli/options.hxx"
 #include "../dag/graph.hxx"
+#include "../discovery/resolve.hxx"
 #include "../sys/util.hxx"
 
 #include <cstdlib>
@@ -15,6 +17,7 @@
 #include <set>
 #include <string>
 #include <string_view>
+#include <utility>
 
 namespace mgmake::backend {
     namespace detail {
@@ -132,7 +135,7 @@ namespace mgmake::backend {
     struct ninja {
         std::filesystem::path m_output_file = "build.ninja";
 
-        void generate(const dag::graph& graph, const build::request& req) const {
+        void generate(const cli::options&, const dag::graph& graph, const build::request& req) const {
             auto output_path = req.build_dir() / m_output_file;
             if (output_path.has_parent_path()) {
                 std::filesystem::create_directories(output_path.parent_path());
@@ -165,10 +168,14 @@ namespace mgmake::backend {
                 const auto& action = graph.action(i);
 
                 mgmkassert(not action.m_outputs.empty(), "ninja backend: action '" + action.m_name + "' has no outputs");
-				mgmkassert(not action.m_command.m_args.empty(), "ninja backend: action '" + action.m_name + "' has no command");
+                mgmkassert(not action.m_command.m_args.empty(), "ninja backend: action '" + action.m_name + "' has no command");
 
                 out << "rule action_" << i << "\n";
-                out << "  command = " << action.m_command.full_command() << "\n";
+                auto command_text = discovery::wrap_command_for_environment(
+                    req.tool_environment(),
+                    action.m_command.full_command()
+                );
+                out << "  command = " << command_text << "\n";
 
                 if (!action.m_description.empty()) {
                     out << "  description = " << detail::ninja_escape_variable_text(action.m_description) << "\n";
@@ -177,19 +184,19 @@ namespace mgmake::backend {
                 }
 
                 if (!action.m_working_directory.empty()) {
-#if defined(_WIN32) // bruh
-                    out << "  command = cd /d "
-                        << detail::ninja_escape_variable_text(sys::shell_escape(action.m_working_directory.string()))
-                        << " && "
-                        << action.m_command.full_command()
-                        << "\n";
+#if defined(_WIN32)
+                    command_text = "cd /d ";
 #else
-                    out << "  command = cd "
-                        << detail::ninja_escape_variable_text(sys::shell_escape(action.m_working_directory.string()))
-                        << " && "
-                        << action.m_command.full_command()
-                        << "\n";
+                    command_text = "cd ";
 #endif
+                    command_text += sys::shell_escape(action.m_working_directory.string());
+                    command_text += " && ";
+                    command_text += action.m_command.full_command();
+                    command_text = discovery::wrap_command_for_environment(
+                        req.tool_environment(),
+                        std::move(command_text)
+                    );
+                    out << "  command = " << command_text << "\n";
                 }
 
                 out << "\n";
@@ -226,15 +233,33 @@ namespace mgmake::backend {
             detail::write_target_defaults(out, graph);
         }
 
-		std::expected<void, std::string> build(const dag::graph& graph, const build::request& req) const {
+		std::expected<void, std::string> build(
+            const cli::options& opts,
+            const dag::graph& graph,
+            const build::request& req
+        ) const {
             auto output_path = req.build_dir() / m_output_file;
             if (output_path.has_parent_path()) {
                 std::filesystem::create_directories(output_path.parent_path());
             }
-			generate(graph, req);
+			generate(opts, graph, req);
+
+            auto ninja = discovery::resolve_backend_tool(
+                opts,
+                req,
+                discovery::backend_tool_requirement{
+                    .m_role = discovery::tool_role::generator_ninja,
+                    .m_logical_name = opts.m_ninja.empty() ? "ninja" : opts.m_ninja,
+                    .m_needed_because = "the selected backend is ninja and this action invokes ninja"
+                }
+            );
+
+            if (!ninja) {
+                return std::unexpected{ninja.error()};
+            }
 
 			sys::command_line command;
-			command.m_args.emplace_back("ninja");
+			command.m_args.emplace_back(ninja->path_string());
 			command.m_args.emplace_back("-f");
 			command.m_args.emplace_back(output_path.string());
 

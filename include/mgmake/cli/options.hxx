@@ -5,6 +5,7 @@
 
 #include "action.hxx"
 #include "backend.hxx"
+#include "../discovery/mode.hxx"
 #include "../sys/platform.hxx"
 
 #include <string>
@@ -32,6 +33,35 @@ namespace mgmake::cli {
 		bool m_dry_run = false;
 		bool m_show_help = false;
 		bool m_show_version = false;
+		bool m_refresh_tools = false;
+		bool m_no_tool_cache = false;
+		bool m_show_tool_search = false;
+
+		discovery::mode m_tool_discovery = discovery::mode::exact;
+
+		std::string m_toolchain_root{};
+		std::string m_sdk_root{};
+		std::string m_sysroot{};
+		std::string m_package_toolchain_root{};
+
+		std::string m_cc{};
+		std::string m_cxx{};
+		std::string m_ar{};
+		std::string m_ranlib{};
+		std::string m_linker{};
+		std::string m_rc{};
+		std::string m_mt{};
+		std::string m_ninja{};
+		std::string m_cmake{};
+		std::string m_pkg_config{};
+
+		std::string m_toolchain_version{};
+
+		std::string m_android_ndk{};
+		std::string m_android_abi{};
+		int m_android_api = 0;
+
+		std::string m_apple_sdk{};
 
 		inline constexpr const std::vector<std::string>& targets() const {
 			return m_targets;

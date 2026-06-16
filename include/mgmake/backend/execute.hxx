@@ -18,6 +18,7 @@
 namespace mgmake::backend {
 	template <cli::backend_kind Kind>
 	[[nodiscard]] inline std::expected<void, std::string> generate(
+		const cli::options& opts,
 		const dag::graph& graph,
 		const build::request& req
 	) {
@@ -30,7 +31,7 @@ namespace mgmake::backend {
 				"' is not implemented yet"
 			};
 		} else if constexpr (backend::can_generate<backend_type>) {
-			backend_type{}.generate(graph, req);
+			backend_type{}.generate(opts, graph, req);
 			return {};
 		} else {
 			return std::unexpected{
@@ -43,6 +44,7 @@ namespace mgmake::backend {
 
 	template <cli::backend_kind Kind>
 	[[nodiscard]] inline std::expected<void, std::string> build(
+		const cli::options& opts,
 		const dag::graph& graph,
 		const build::request& req
 	) {
@@ -55,7 +57,7 @@ namespace mgmake::backend {
 				"' is not implemented yet"
 			};
 		} else if constexpr (backend::can_build<backend_type>) {
-			return backend_type{}.build(graph, req);
+			return backend_type{}.build(opts, graph, req);
 		} else {
 			return std::unexpected{
 				"mgmake: backend '" +
@@ -73,10 +75,10 @@ namespace mgmake::backend {
 	) {
 		switch (opts.m_action) {
 			case cli::action_kind::generate:
-				return backend::generate<Kind>(graph, req);
+				return backend::generate<Kind>(opts, graph, req);
 
 			case cli::action_kind::build:
-				return backend::build<Kind>(graph, req);
+				return backend::build<Kind>(opts, graph, req);
 
 			case cli::action_kind::run:
 				return std::unexpected{
@@ -84,6 +86,7 @@ namespace mgmake::backend {
 				};
 
 			case cli::action_kind::clean:
+			case cli::action_kind::tools:
 			case cli::action_kind::help:
 			case cli::action_kind::version:
 				return {};

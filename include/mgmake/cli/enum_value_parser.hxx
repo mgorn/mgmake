@@ -6,6 +6,7 @@
 #include "action.hxx"
 #include "backend.hxx"
 #include "value_parser.hxx"
+#include "../discovery/mode.hxx"
 #include "../sys/platform.hxx"
 
 #include <format>
@@ -72,6 +73,19 @@ namespace mgmake::cli {
 				"unknown action '{}'; expected one of: {}",
 				text,
 				action_kind_names::choices_string()
+			);
+		}
+	};
+
+	template <>
+	struct value_parser<discovery::mode> :
+		enum_value_parser<discovery::mode_parse_names, discovery::mode_names>
+	{
+		[[nodiscard]] static std::string error(std::string_view text) {
+			return std::format(
+				"unknown tool discovery mode '{}'; expected one of: {}",
+				text,
+				discovery::mode_names::choices_string()
 			);
 		}
 	};

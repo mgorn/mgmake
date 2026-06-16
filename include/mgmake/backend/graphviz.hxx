@@ -4,6 +4,7 @@
 #define MGMAKE_BACKEND_GRAPHVIZ_HXX
 
 #include "../build/request.hxx"
+#include "../cli/options.hxx"
 #include "../dag/artifact.hxx"
 #include "../dag/graph.hxx"
 
@@ -80,7 +81,7 @@ namespace mgmake::backend {
     struct graphviz {
         std::filesystem::path m_output_file = "graph.dot";
 
-        void generate(const dag::graph& graph, const build::request& req) const {
+        void generate(const cli::options&, const dag::graph& graph, const build::request& req) const {
             auto output_path = req.build_dir() / m_output_file;
             if (output_path.has_parent_path()) {
                 std::filesystem::create_directories(output_path.parent_path());

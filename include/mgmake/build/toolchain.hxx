@@ -3,6 +3,9 @@
 #ifndef MGMAKE_BUILD_TOOLCHAIN_HXX
 #define MGMAKE_BUILD_TOOLCHAIN_HXX
 
+#include "../discovery/mode.hxx"
+#include "../discovery/tool_binding.hxx"
+#include "../discovery/tool_role.hxx"
 #include "../sys/platform.hxx"
 
 #include <initializer_list>
@@ -39,6 +42,14 @@ namespace mgmake::build {
         std::string m_cxx;
         std::string m_ar;
         std::string m_linker;
+        std::vector<discovery::tool_binding> m_tools{};
+
+        std::optional<std::string> m_version{};
+        std::optional<std::string> m_sdk_root{};
+        std::optional<std::string> m_toolchain_root{};
+        std::optional<std::string> m_package_root{};
+        std::vector<std::string> m_search_roots{};
+        discovery::mode m_discovery_mode = discovery::mode::exact;
 
         std::vector<std::string> m_compile_flags;
         std::vector<std::string> m_c_flags;
@@ -106,6 +117,134 @@ namespace mgmake::build {
         }
         inline constexpr auto& linker(std::string path) {
             m_linker = std::move(path);
+            return *this;
+        }
+
+        inline constexpr auto& tool(discovery::tool_role role, std::string name) {
+            for (auto& binding : m_tools) {
+                if (binding.m_role == role) {
+                    binding.m_name = std::move(name);
+                    return *this;
+                }
+            }
+
+            m_tools.push_back(discovery::tool_binding{
+                .m_role = role,
+                .m_name = std::move(name)
+            });
+
+            return *this;
+        }
+
+        [[nodiscard]] inline constexpr std::string_view tool(
+            discovery::tool_role role
+        ) const noexcept {
+            for (const auto& binding : m_tools) {
+                if (binding.m_role == role) {
+                    return binding.m_name;
+                }
+            }
+
+            switch (role) {
+                case discovery::tool_role::c_compiler:
+                    return m_cc;
+
+                case discovery::tool_role::cxx_compiler:
+                    return m_cxx;
+
+                case discovery::tool_role::archiver:
+                    return m_ar;
+
+                case discovery::tool_role::linker:
+                    return m_linker;
+
+                default:
+                    return {};
+            }
+        }
+
+        inline constexpr auto& assembler(std::string name) {
+            return tool(discovery::tool_role::assembler, std::move(name));
+        }
+
+        inline constexpr auto& ranlib(std::string name) {
+            return tool(discovery::tool_role::ranlib, std::move(name));
+        }
+
+        inline constexpr auto& librarian(std::string name) {
+            return tool(discovery::tool_role::librarian, std::move(name));
+        }
+
+        inline constexpr auto& shared_linker(std::string name) {
+            return tool(discovery::tool_role::shared_linker, std::move(name));
+        }
+
+        inline constexpr auto& resource_compiler(std::string name) {
+            return tool(discovery::tool_role::resource_compiler, std::move(name));
+        }
+
+        inline constexpr auto& manifest_tool(std::string name) {
+            return tool(discovery::tool_role::manifest_tool, std::move(name));
+        }
+
+        inline constexpr auto& dll_tool(std::string name) {
+            return tool(discovery::tool_role::dll_tool, std::move(name));
+        }
+
+        inline constexpr auto& strip(std::string name) {
+            return tool(discovery::tool_role::strip, std::move(name));
+        }
+
+        inline constexpr auto& objcopy(std::string name) {
+            return tool(discovery::tool_role::objcopy, std::move(name));
+        }
+
+        inline constexpr auto& objdump(std::string name) {
+            return tool(discovery::tool_role::objdump, std::move(name));
+        }
+
+        inline constexpr auto& nm(std::string name) {
+            return tool(discovery::tool_role::nm, std::move(name));
+        }
+
+        inline constexpr auto& readelf(std::string name) {
+            return tool(discovery::tool_role::readelf, std::move(name));
+        }
+
+        inline constexpr auto& cmake(std::string name) {
+            return tool(discovery::tool_role::cmake, std::move(name));
+        }
+
+        inline constexpr auto& pkg_config(std::string name) {
+            return tool(discovery::tool_role::pkg_config, std::move(name));
+        }
+
+        inline constexpr auto& discovery_mode(discovery::mode value) noexcept {
+            m_discovery_mode = value;
+            return *this;
+        }
+
+        [[nodiscard]] inline constexpr discovery::mode discovery_mode() const noexcept {
+            return m_discovery_mode;
+        }
+
+        inline constexpr auto& sdk_root(std::string path) {
+            m_sdk_root = std::move(path);
+            return *this;
+        }
+
+        inline constexpr auto& toolchain_root(std::string path) {
+            m_toolchain_root = std::move(path);
+            return *this;
+        }
+
+        inline constexpr auto& package_root(std::string path) {
+            m_package_root = std::move(path);
+            return *this;
+        }
+
+        inline constexpr auto& add_search_root(std::string path) {
+            m_search_roots.emplace_back(std::move(path));
             return *this;
         }
 
@@ -270,35 +409,68 @@ namespace mgmake::build {
         }
     };
 
-    static constexpr auto tc_clang_mg = build::toolchain{"clang-mg"}
+    inline const auto tc_clang_mg = build::toolchain{"clang-mg"}
         .dialect(build::toolchain::dialect::gcc)
         .cc("clang-mg")
         .cxx("clang-mg++")
         .ar("llvm-ar")
+        .ranlib("llvm-ranlib")
         .linker("clang-mg++")
-        .target_selection(build::toolchain::target_mode::clang_target);
+        .shared_linker("clang-mg++")
+        .resource_compiler("llvm-rc")
+        .strip("llvm-strip")
+        .objcopy("llvm-objcopy")
+        .objdump("llvm-objdump")
+        .nm("llvm-nm")
+        .readelf("llvm-readelf")
+        .target_selection(build::toolchain::target_mode::clang_target)
+        .discovery_mode(discovery::mode::family_fallback);
 
-    static constexpr auto tc_clang = build::toolchain{"clang"}
+    inline const auto tc_clang = build::toolchain{"clang"}
         .dialect(build::toolchain::dialect::gcc)
         .cc("clang")
         .cxx("clang++")
         .ar("llvm-ar")
+        .ranlib("llvm-ranlib")
         .linker("clang++")
-        .target_selection(build::toolchain::target_mode::clang_target);
+        .shared_linker("clang++")
+        .resource_compiler("llvm-rc")
+        .strip("llvm-strip")
+        .objcopy("llvm-objcopy")
+        .objdump("llvm-objdump")
+        .nm("llvm-nm")
+        .readelf("llvm-readelf")
+        .target_selection(build::toolchain::target_mode::clang_target)
+        .discovery_mode(discovery::mode::family_fallback);
 
-    static constexpr auto tc_gcc = build::toolchain{"gcc"}
+    inline const auto tc_gcc = build::toolchain{"gcc"}
         .dialect(build::toolchain::dialect::gcc)
         .cc("gcc")
         .cxx("g++")
         .ar("ar")
-        .linker("g++");
+        .ranlib("ranlib")
+        .linker("g++")
+        .shared_linker("g++")
+        .resource_compiler("windres")
+        .strip("strip")
+        .objcopy("objcopy")
+        .objdump("objdump")
+        .nm("nm")
+        .readelf("readelf")
+        .discovery_mode(discovery::mode::family_fallback);
     
-    static constexpr auto tc_msvc = build::toolchain{"msvc"}
+    inline const auto tc_msvc = build::toolchain{"msvc"}
         .dialect(build::toolchain::dialect::msvc)
         .cc("cl")
         .cxx("cl")
         .ar("lib")
-        .linker("link");
+        .librarian("lib")
+        .linker("link")
+        .shared_linker("link")
+        .resource_compiler("rc")
+        .manifest_tool("mt")
+        .tool(discovery::tool_role::debug_symbol_tool, "mspdbsrv")
+        .discovery_mode(discovery::mode::family_fallback);
 }
 
 #endif
