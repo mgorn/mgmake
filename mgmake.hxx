@@ -7892,7 +7892,7 @@ namespace mgmake::backend {
 #include <string_view>
 
 #if defined(_WIN32)
-	#include <windows.h>
+// skipped duplicate include: include/mgmake/sys/platform.hxx
 	#pragma comment(lib, "Advapi32.lib")
 #endif
 

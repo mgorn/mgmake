@@ -10,7 +10,7 @@
 #include <string_view>
 
 #if defined(_WIN32)
-	#include <windows.h>
+	#include "../../sys/platform.hxx"
 	#pragma comment(lib, "Advapi32.lib")
 #endif
 
