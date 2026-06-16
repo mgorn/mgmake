@@ -22,6 +22,7 @@ namespace mgmake::discovery {
 		const build::request* m_request = nullptr;
 		cache m_cache{};
 		std::vector<resolved_tool> m_resolved_tools{};
+		std::vector<searched_tool_candidate> m_searched{};
 		std::vector<rejected_tool_candidate> m_rejected{};
 		std::vector<std::string> m_notes{};
 		mode m_mode = mode::exact;

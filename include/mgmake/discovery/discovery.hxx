@@ -10,6 +10,8 @@
 #include "tool_binding.hxx"
 #include "resolved_tool.hxx"
 #include "tool_environment.hxx"
+#include "resolved_toolchain.hxx"
+#include "source_role.hxx"
 #include "tool_requirement.hxx"
 #include "backend_requirement.hxx"
 #include "environment.hxx"

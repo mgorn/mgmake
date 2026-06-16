@@ -3,6 +3,7 @@
 #ifndef MGMAKE_DISCOVERY_TOOL_REQUIREMENT_HXX
 #define MGMAKE_DISCOVERY_TOOL_REQUIREMENT_HXX
 
+#include "source_role.hxx"
 #include "tool_family.hxx"
 #include "tool_role.hxx"
 #include "../build/request.hxx"
@@ -54,20 +55,30 @@ namespace mgmake::discovery {
 
 		auto inspect_sources = [&](const auto& target) {
 			for (const auto& source : target.m_sources) {
-				const auto ext = source.extension().string();
+				switch (source_tool_role(source)) {
+					case tool_role::c_compiler:
+						has_c_sources = true;
+						break;
 
-				if (ext == ".c") {
-					has_c_sources = true;
-				} else if (ext == ".cc" || ext == ".cpp" || ext == ".cxx" || ext == ".C") {
-					has_cxx_sources = true;
-				} else if (ext == ".s" || ext == ".S" || ext == ".asm") {
-					has_asm_sources = true;
-				} else if (ext == ".rc") {
-					has_rc_sources = true;
-				} else if (ext == ".idl") {
-					has_idl_sources = true;
-				} else {
-					has_cxx_sources = true;
+					case tool_role::cxx_compiler:
+						has_cxx_sources = true;
+						break;
+
+					case tool_role::assembler:
+						has_asm_sources = true;
+						break;
+
+					case tool_role::resource_compiler:
+						has_rc_sources = true;
+						break;
+
+					case tool_role::midl_compiler:
+						has_idl_sources = true;
+						break;
+
+					default:
+						has_cxx_sources = true;
+						break;
 				}
 			}
 		};

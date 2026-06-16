@@ -265,6 +265,10 @@ namespace mgmake::lower {
 
 		build::append_target_args(command, tc, request());
 
+		for (const auto& arg : request().link_prefix_args()) {
+			command.m_args.emplace_back(arg);
+		}
+
 		const auto shared_flag = build::shared_library_link_flag(platform);
 
 		mgmkassert(
@@ -358,6 +362,10 @@ namespace mgmake::lower {
 		command.m_args.emplace_back(tc.cxx());
 
 		build::append_target_args(command, tc, request());
+
+		for (const auto& arg : request().link_prefix_args()) {
+			command.m_args.emplace_back(arg);
+		}
 
 		for (auto object_id : object_ids) {
 			command.m_args.emplace_back(m_emit.path(object_id).string());

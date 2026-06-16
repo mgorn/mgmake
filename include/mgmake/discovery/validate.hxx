@@ -15,6 +15,10 @@
 #include <string>
 
 namespace mgmake::discovery {
+	[[nodiscard]] inline bool is_ninja_name(std::string_view stem) noexcept {
+		return stem == "ninja" || stem == "ninja-build";
+	}
+
 	[[nodiscard]] inline std::expected<std::string, std::string> capture_command(
 		sys::command_line command
 	) {
@@ -96,8 +100,73 @@ namespace mgmake::discovery {
 		return req.m_expected_family;
 	}
 
+	[[nodiscard]] inline bool is_binutils_role(tool_role role) noexcept {
+		switch (role) {
+			case tool_role::archiver:
+			case tool_role::ranlib:
+			case tool_role::strip:
+			case tool_role::objcopy:
+			case tool_role::objdump:
+			case tool_role::nm:
+			case tool_role::readelf:
+				return true;
+
+			default:
+				return false;
+		}
+	}
+
+	[[nodiscard]] inline bool is_compatible_family(
+		const build::toolchain& tc,
+		tool_role role,
+		tool_family family
+	) {
+		if (family == tool_family::unknown) {
+			return true;
+		}
+
+		const auto tc_name = tc.name();
+
+		if (tc_name.find("clang") != std::string_view::npos) {
+			if (is_binutils_role(role)) {
+				return family == tool_family::llvm_binutils
+					|| family == tool_family::gnu_binutils
+					|| family == tool_family::mingw;
+			}
+
+			return family == tool_family::clang
+				|| family == tool_family::apple_clang
+				|| family == tool_family::clang_cl
+				|| family == tool_family::llvm_binutils
+				|| family == tool_family::mingw;
+		}
+
+		if (tc.dialect() == build::toolchain::dialect::msvc) {
+			return family == tool_family::msvc
+				|| family == tool_family::clang_cl
+				|| family == tool_family::msvc_binutils
+				|| family == tool_family::llvm_binutils;
+		}
+
+		if (tc_name.find("gcc") != std::string_view::npos
+			|| tc.dialect() == build::toolchain::dialect::gcc) {
+			if (is_binutils_role(role)) {
+				return family == tool_family::gnu_binutils
+					|| family == tool_family::llvm_binutils
+					|| family == tool_family::mingw;
+			}
+
+			return family == tool_family::gcc
+				|| family == tool_family::clang
+				|| family == tool_family::apple_clang
+				|| family == tool_family::mingw;
+		}
+
+		return true;
+	}
+
 	[[nodiscard]] inline std::expected<resolved_tool, std::string> validate_candidate(
-		context&,
+		context& ctx,
 		const tool_requirement& req,
 		const tool_candidate& candidate
 	) {
@@ -108,8 +177,12 @@ namespace mgmake::discovery {
 		if (req.m_role == tool_role::generator_ninja) {
 			const auto stem = candidate.m_path.stem().string();
 
-			if (stem != "ninja") {
-				return std::unexpected{"cached or discovered path is not ninja"};
+			if (!is_ninja_name(stem)) {
+				auto version_probe = probe_version(candidate);
+
+				if (!version_probe || version_probe->empty()) {
+					return std::unexpected{"candidate is not a recognized Ninja executable"};
+				}
 			}
 		}
 
@@ -131,6 +204,12 @@ namespace mgmake::discovery {
 		result.m_family = classify_tool_family(req, candidate, version);
 		result.m_target_triple = req.m_target_triple;
 		result.m_provider_root = candidate.m_provider_root;
+
+		if (ctx.m_mode == mode::family_fallback
+			&& !is_compatible_family(ctx.toolchain(), req.m_role, result.m_family)) {
+			return std::unexpected{"candidate belongs to an incompatible tool family"};
+		}
+
 		return result;
 	}
 }

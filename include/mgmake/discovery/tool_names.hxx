@@ -95,6 +95,7 @@ namespace mgmake::discovery {
 				case tool_role::shared_linker: return {"link"};
 				case tool_role::resource_compiler: return {"rc", "llvm-rc"};
 				case tool_role::manifest_tool: return {"mt"};
+				case tool_role::generator_ninja: return {"ninja", "ninja-build"};
 				default: break;
 			}
 		}
@@ -115,6 +116,7 @@ namespace mgmake::discovery {
 				case tool_role::objdump: return {"llvm-objdump", "objdump"};
 				case tool_role::nm: return {"llvm-nm", "nm"};
 				case tool_role::readelf: return {"llvm-readelf", "readelf"};
+				case tool_role::generator_ninja: return {"ninja", "ninja-build"};
 				default: break;
 			}
 		}
@@ -132,6 +134,7 @@ namespace mgmake::discovery {
 			case tool_role::objdump: return {"objdump"};
 			case tool_role::nm: return {"nm"};
 			case tool_role::readelf: return {"readelf"};
+			case tool_role::generator_ninja: return {"ninja", "ninja-build"};
 			default: break;
 		}
 

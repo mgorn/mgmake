@@ -17,6 +17,8 @@
 #include "discovery/tool_binding.hxx"
 #include "discovery/resolved_tool.hxx"
 #include "discovery/tool_environment.hxx"
+#include "discovery/resolved_toolchain.hxx"
+#include "discovery/source_role.hxx"
 #include "build/toolchain.hxx"
 #include "build/toolchain_registry.hxx"
 #include "build/request.hxx"

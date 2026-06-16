@@ -24,6 +24,16 @@ namespace mgmake::discovery {
 				return env;
 			}
 
+			if (auto root = windows::visual_studio_root_from_tools(req)) {
+				windows::visual_studio_instance instance{};
+				instance.m_root = *root;
+
+				auto candidate = windows::visual_studio_environment(instance, req);
+				if (!candidate.empty()) {
+					return candidate;
+				}
+			}
+
 			for (const auto& vs : windows::visual_studio_instances()) {
 				auto candidate = windows::visual_studio_environment(vs, req);
 				if (!candidate.empty()) {

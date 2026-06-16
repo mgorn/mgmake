@@ -6,6 +6,8 @@
 #include "context.hxx"
 #include "../build/target.hxx"
 #include "../build/toolchain.hxx"
+#include "../detail/assert.hxx"
+#include "../discovery/source_role.hxx"
 #include "../sys/command_line.hxx"
 
 #include <cstddef>
@@ -42,10 +44,60 @@ namespace mgmake::lower {
 			auto object_id = m_emit.generated(object_path);
 
 			sys::command_line command{};
-			const bool is_c_source = source.extension().string() == ".c";
-			command.m_args.emplace_back(is_c_source ? tc.cc() : tc.cxx());
+			const auto role = discovery::source_tool_role(source);
+			const bool is_c_source = role == discovery::tool_role::c_compiler;
+			const bool is_cxx_source = role == discovery::tool_role::cxx_compiler;
+			const bool is_resource_source = role == discovery::tool_role::resource_compiler;
+
+			mgmkassert(
+				role != discovery::tool_role::midl_compiler,
+				"mgmake lower: IDL source lowering requires a generated-source model and is not implemented yet"
+			);
+
+			auto tool_path = request().tool_path(role);
+
+			if (tool_path.empty()) {
+				if (is_c_source) {
+					tool_path = tc.cc();
+				} else if (is_resource_source) {
+					tool_path = tc.tool(discovery::tool_role::resource_compiler);
+				} else {
+					tool_path = tc.cxx();
+				}
+			}
+
+			command.m_args.emplace_back(tool_path.string());
+
+			if (is_resource_source) {
+				switch (tc.dialect()) {
+					case build::toolchain::dialect::gcc:
+						command.m_args.emplace_back(source.string());
+						command.m_args.emplace_back(object_path.string());
+						break;
+
+					case build::toolchain::dialect::msvc:
+						command.m_args.emplace_back(std::string{"/fo"} + object_path.string());
+						command.m_args.emplace_back(source.string());
+						break;
+				}
+
+				m_emit.action(
+					std::string{"Compile "} + source.string(),
+					std::string{"Compiles source file '"} + source.string() + "' for target '" + target.m_name + "'.",
+					{ source_id },
+					{ object_id },
+					std::move(command)
+				);
+
+				object_ids.emplace_back(object_id);
+				continue;
+			}
 
 			build::append_target_args(command, tc, request());
+
+			for (const auto& arg : request().compile_prefix_args()) {
+				command.m_args.emplace_back(arg);
+			}
 
 			for (const auto& flag : tc.compile_flags()) {
 				command.m_args.emplace_back(flag);
@@ -55,7 +107,7 @@ namespace mgmake::lower {
 				for (const auto& flag : tc.c_flags()) {
 					command.m_args.emplace_back(flag);
 				}
-			} else {
+			} else if (is_cxx_source) {
 				for (const auto& flag : tc.cxx_flags()) {
 					command.m_args.emplace_back(flag);
 				}

@@ -28,6 +28,11 @@ namespace mgmake::discovery {
 		std::string m_reason{};
 	};
 
+	struct searched_tool_candidate {
+		tool_candidate m_candidate{};
+		std::string m_status{};
+	};
+
 	struct resolved_tool {
 		tool_role m_role{};
 		std::string m_logical_name{};

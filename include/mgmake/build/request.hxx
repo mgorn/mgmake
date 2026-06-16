@@ -3,12 +3,12 @@
 #ifndef MGMAKE_BUILD_REQUEST_HXX
 #define MGMAKE_BUILD_REQUEST_HXX
 
-#include "../discovery/resolved_tool.hxx"
-#include "../discovery/tool_environment.hxx"
+#include "../discovery/resolved_toolchain.hxx"
 #include "toolchain.hxx"
 #include "../sys/platform.hxx"
 
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -19,8 +19,7 @@ namespace mgmake::build {
         std::filesystem::path m_build_dir;
         std::vector<std::string> m_targets; // Which targets to build, empty = build all
         sys::target m_target = sys::g_host_target;
-        std::vector<discovery::resolved_tool> m_discovered_tools{};
-        discovery::tool_environment m_tool_environment{};
+        std::optional<discovery::resolved_toolchain> m_resolved_toolchain{};
 
         [[nodiscard]] inline constexpr const toolchain& toolchain() const {
             return m_tc;
@@ -59,13 +58,11 @@ namespace mgmake::build {
         [[nodiscard]] inline const discovery::resolved_tool* discovered_tool(
             discovery::tool_role role
         ) const noexcept {
-            for (const auto& tool : m_discovered_tools) {
-                if (tool.m_role == role) {
-                    return &tool;
-                }
+            if (!m_resolved_toolchain.has_value()) {
+                return nullptr;
             }
 
-            return nullptr;
+            return m_resolved_toolchain->find(role);
         }
 
         [[nodiscard]] inline std::filesystem::path tool_path(
@@ -80,7 +77,33 @@ namespace mgmake::build {
         }
 
         [[nodiscard]] inline const discovery::tool_environment& tool_environment() const noexcept {
-            return m_tool_environment;
+            static const discovery::tool_environment empty{};
+
+            if (!m_resolved_toolchain.has_value()) {
+                return empty;
+            }
+
+            return m_resolved_toolchain->m_environment;
+        }
+
+        [[nodiscard]] inline const std::vector<std::string>& compile_prefix_args() const noexcept {
+            static const std::vector<std::string> empty{};
+
+            if (!m_resolved_toolchain.has_value()) {
+                return empty;
+            }
+
+            return m_resolved_toolchain->m_compile_prefix_args;
+        }
+
+        [[nodiscard]] inline const std::vector<std::string>& link_prefix_args() const noexcept {
+            static const std::vector<std::string> empty{};
+
+            if (!m_resolved_toolchain.has_value()) {
+                return empty;
+            }
+
+            return m_resolved_toolchain->m_link_prefix_args;
         }
     };
 }

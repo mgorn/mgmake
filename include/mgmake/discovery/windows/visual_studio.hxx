@@ -184,6 +184,27 @@ namespace mgmake::discovery::windows {
 
 		return result;
 	}
+
+	[[nodiscard]] inline std::optional<std::filesystem::path> visual_studio_root_from_tools(
+		const build::request& req
+	) {
+		for (const auto role : {
+				tool_role::c_compiler,
+				tool_role::cxx_compiler,
+				tool_role::librarian,
+				tool_role::archiver,
+				tool_role::linker,
+				tool_role::shared_linker
+			}) {
+			const auto* tool = req.discovered_tool(role);
+
+			if (tool != nullptr && tool->m_provider_root.has_value()) {
+				return tool->m_provider_root;
+			}
+		}
+
+		return std::nullopt;
+	}
 }
 
 namespace mgmake::discovery {

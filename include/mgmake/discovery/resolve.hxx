@@ -4,9 +4,11 @@
 #define MGMAKE_DISCOVERY_RESOLVE_HXX
 
 #include "backend_requirement.hxx"
+#include "android/ndk.hxx"
 #include "diagnostic.hxx"
 #include "environment_provider.hxx"
 #include "providers.hxx"
+#include "resolved_toolchain.hxx"
 #include "validate.hxx"
 
 #include <expected>
@@ -35,6 +37,11 @@ namespace mgmake::discovery {
 		diag.m_needed_because = req.m_needed_because;
 
 		for (const auto& candidate : candidates_for(ctx, req)) {
+			ctx.m_searched.push_back({
+				.m_candidate = candidate,
+				.m_status = "checking"
+			});
+
 			diag.m_searched.emplace_back(
 				std::string{name(candidate.m_provider)} + ": " + candidate.m_path.string()
 			);
@@ -43,9 +50,15 @@ namespace mgmake::discovery {
 
 			if (validated) {
 				ctx.m_resolved_tools.emplace_back(*validated);
+				ctx.m_searched.back().m_status = "accepted";
 				return validated;
 			}
 
+			ctx.m_searched.back().m_status = "rejected";
+			ctx.m_rejected.push_back({
+				.m_candidate = candidate,
+				.m_reason = validated.error()
+			});
 			diag.m_rejected.emplace_back(candidate.m_path.string() + ": " + validated.error());
 
 			if (candidate.m_authoritative) {
@@ -80,15 +93,65 @@ namespace mgmake::discovery {
 		return entry;
 	}
 
-	[[nodiscard]] inline std::expected<build::request, std::string> resolve_request(
+	inline void apply_resolved_toolchain(
+		build::request& req,
+		const resolved_toolchain& tc
+	) {
+		req.m_resolved_toolchain = tc;
+
+		if (const auto* cc = tc.find(tool_role::c_compiler)) {
+			req.m_tc.cc(cc->path_string());
+		}
+
+		if (const auto* cxx = tc.find(tool_role::cxx_compiler)) {
+			req.m_tc.cxx(cxx->path_string());
+		}
+
+		if (const auto* ar = tc.find(tool_role::archiver)) {
+			req.m_tc.ar(ar->path_string());
+		} else if (const auto* lib = tc.find(tool_role::librarian)) {
+			req.m_tc.ar(lib->path_string());
+		}
+
+		if (const auto* linker = tc.find(tool_role::linker)) {
+			req.m_tc.linker(linker->path_string());
+		} else if (const auto* shared = tc.find(tool_role::shared_linker)) {
+			req.m_tc.linker(shared->path_string());
+		}
+
+		for (const auto& tool : tc.m_tools) {
+			switch (tool.m_role) {
+				case tool_role::c_compiler:
+				case tool_role::cxx_compiler:
+				case tool_role::archiver:
+				case tool_role::librarian:
+				case tool_role::linker:
+				case tool_role::shared_linker:
+					break;
+
+				default:
+					req.m_tc.tool(tool.m_role, tool.path_string());
+					break;
+			}
+		}
+	}
+
+	[[nodiscard]] inline std::expected<resolved_toolchain, std::string> resolve_toolchain(
 		const cli::options& opts,
 		const build::request& req,
 		const spec::project& project
 	) {
 		const auto discovery_mode = effective_discovery_mode(opts, req.toolchain());
 
+		resolved_toolchain resolved_tc;
+		resolved_tc.m_name = std::string{req.toolchain().name()};
+		resolved_tc.m_requested_name = std::string{req.toolchain().name()};
+		resolved_tc.m_mode = discovery_mode;
+		resolved_tc.m_host = sys::g_host_target;
+		resolved_tc.m_target = req.target();
+
 		if (discovery_mode == mode::disabled) {
-			return req;
+			return resolved_tc;
 		}
 
 		context ctx;
@@ -105,8 +168,6 @@ namespace mgmake::discovery {
 			ctx.m_cache = load_cache(req);
 		}
 
-		build::request resolved = req;
-
 		for (const auto& requirement : required_tools(opts, req, project)) {
 			auto tool = resolve_tool(ctx, requirement);
 
@@ -118,43 +179,65 @@ namespace mgmake::discovery {
 				continue;
 			}
 
-			resolved.m_discovered_tools.emplace_back(*tool);
-
-			switch (tool->m_role) {
-				case tool_role::c_compiler:
-					resolved.m_tc.cc(tool->path_string());
-					break;
-
-				case tool_role::cxx_compiler:
-					resolved.m_tc.cxx(tool->path_string());
-					break;
-
-				case tool_role::archiver:
-				case tool_role::librarian:
-					resolved.m_tc.ar(tool->path_string());
-					break;
-
-				case tool_role::linker:
-				case tool_role::shared_linker:
-					resolved.m_tc.linker(tool->path_string());
-					break;
-
-				default:
-					resolved.m_tc.tool(tool->m_role, tool->path_string());
-					break;
-			}
+			resolved_tc.m_tools.emplace_back(*tool);
 
 			if (ctx.m_use_cache) {
 				ctx.m_cache.put(make_cache_entry(req, *tool));
 			}
 		}
 
-		resolved.m_tool_environment = discover_tool_environment(opts, resolved, project);
+		for (const auto& tool : resolved_tc.m_tools) {
+			if (tool.m_provider != tool_provider::android_ndk || !tool.m_provider_root.has_value()) {
+				continue;
+			}
+
+			auto args = android::target_sysroot_args(
+				*tool.m_provider_root,
+				android_host_tag(),
+				opts.m_android_abi,
+				opts.m_android_api
+			);
+
+			resolved_tc.m_compile_prefix_args.insert(
+				resolved_tc.m_compile_prefix_args.end(),
+				args.begin(),
+				args.end()
+			);
+			resolved_tc.m_link_prefix_args.insert(
+				resolved_tc.m_link_prefix_args.end(),
+				args.begin(),
+				args.end()
+			);
+			break;
+		}
+
+		resolved_tc.m_searched = std::move(ctx.m_searched);
+		resolved_tc.m_rejected = std::move(ctx.m_rejected);
+
+		build::request bridge = req;
+		apply_resolved_toolchain(bridge, resolved_tc);
+		resolved_tc.m_environment = discover_tool_environment(opts, bridge, project);
 
 		if (ctx.m_use_cache) {
 			save_cache(req, ctx.m_cache);
 		}
 
+		return resolved_tc;
+	}
+
+	[[nodiscard]] inline std::expected<build::request, std::string> resolve_request(
+		const cli::options& opts,
+		const build::request& req,
+		const spec::project& project
+	) {
+		auto toolchain = resolve_toolchain(opts, req, project);
+
+		if (!toolchain) {
+			return std::unexpected{toolchain.error()};
+		}
+
+		build::request resolved = req;
+		apply_resolved_toolchain(resolved, *toolchain);
 		return resolved;
 	}
 

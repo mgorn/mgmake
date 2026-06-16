@@ -30,22 +30,25 @@ namespace mgmake::discovery {
 		const build::request& req,
 		const spec::project& project
 	) {
-		auto resolved_req = resolve_request(opts, req, project);
+		auto resolved_tc = resolve_toolchain(opts, req, project);
 
-		if (!resolved_req) {
-			return std::unexpected{resolved_req.error()};
+		if (!resolved_tc) {
+			return std::unexpected{resolved_tc.error()};
 		}
+
+		build::request resolved_req = req;
+		apply_resolved_toolchain(resolved_req, *resolved_tc);
 
 		std::println("mgmake tools\n");
 		std::println("request:");
-		std::println("  host: {}", target_key(sys::g_host_target));
-		std::println("  target: {}", target_key(resolved_req->target()));
-		std::println("  toolchain: {}", resolved_req->toolchain().name());
+		std::println("  host: {}", target_key(resolved_tc->m_host));
+		std::println("  target: {}", target_key(resolved_tc->m_target));
+		std::println("  toolchain: {}", resolved_tc->m_name);
 		std::println("  backend: {}", cli::backend_name(opts.m_backend));
-		std::println("  discovery mode: {}\n", discovery::name(opts.m_tool_discovery));
+		std::println("  discovery mode: {}\n", discovery::name(resolved_tc->m_mode));
 
 		std::println("target tools:");
-		for (const auto& tool : resolved_req->m_discovered_tools) {
+		for (const auto& tool : resolved_tc->m_tools) {
 			print_resolved_tool(tool);
 		}
 
@@ -54,7 +57,7 @@ namespace mgmake::discovery {
 		if (opts.m_backend == cli::backend_kind::automatic || opts.m_backend == cli::backend_kind::ninja) {
 			auto ninja = resolve_backend_tool(
 				opts,
-				*resolved_req,
+				resolved_req,
 				backend_tool_requirement{
 					.m_role = tool_role::generator_ninja,
 					.m_logical_name = opts.m_ninja.empty() ? "ninja" : opts.m_ninja,
@@ -66,15 +69,41 @@ namespace mgmake::discovery {
 			print_resolved_tool(*ninja);
 		}
 
+		if (opts.m_show_tool_search) {
+			std::println("\nsearch trace:");
+
+			for (const auto& item : resolved_tc->m_searched) {
+				std::println(
+					"  [{}] {}: {} ({})",
+					item.m_status,
+					name(item.m_candidate.m_role),
+					item.m_candidate.m_path.string(),
+					name(item.m_candidate.m_provider)
+				);
+			}
+
+			if (!resolved_tc->m_rejected.empty()) {
+				std::println("\nrejected:");
+
+				for (const auto& rejected : resolved_tc->m_rejected) {
+					std::println(
+						"  {}: {}",
+						rejected.m_candidate.m_path.string(),
+						rejected.m_reason
+					);
+				}
+			}
+		}
+
 		std::println("\nenvironment:");
-		if (resolved_req->m_tool_environment.empty()) {
+		if (resolved_tc->m_environment.empty()) {
 			std::println("  none");
-		} else if (resolved_req->m_tool_environment.m_setup_script.has_value()) {
-			std::println("  setup script: {}", resolved_req->m_tool_environment.m_setup_script->string());
+		} else if (resolved_tc->m_environment.m_setup_script.has_value()) {
+			std::println("  setup script: {}", resolved_tc->m_environment.m_setup_script->string());
 		}
 
 		std::println("\ncache:");
-		std::println("  {}", cache_path(*resolved_req).string());
+		std::println("  {}", cache_path(resolved_req).string());
 		return {};
 	}
 }
