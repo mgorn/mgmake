@@ -5297,7 +5297,26 @@ namespace mgmake::discovery {
 
 namespace mgmake::discovery {
 	[[nodiscard]] inline std::optional<std::string> getenv_string(std::string_view name) {
-		std::string key{name};
+		const std::string key{name};
+
+#if defined(_WIN32) && defined(_MSC_VER)
+		char* value = nullptr;
+		std::size_t size = 0;
+
+		const errno_t err = _dupenv_s(&value, &size, key.c_str());
+
+		if (err != 0 || value == nullptr || value[0] == '\0') {
+			if (value != nullptr) {
+				std::free(value);
+			}
+
+			return std::nullopt;
+		}
+
+		std::string result{value};
+		std::free(value);
+		return result;
+#else
 		const char* value = std::getenv(key.c_str());
 
 		if (value == nullptr || value[0] == '\0') {
@@ -5305,6 +5324,7 @@ namespace mgmake::discovery {
 		}
 
 		return std::string{value};
+#endif
 	}
 
 	[[nodiscard]] inline std::optional<std::filesystem::path> getenv_path(
