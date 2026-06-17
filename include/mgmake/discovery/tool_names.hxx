@@ -15,30 +15,37 @@
 #include <vector>
 
 namespace mgmake::discovery {
-	[[nodiscard]] inline std::string environment_variable_for(tool_role role) {
-		switch (role) {
-			case tool_role::c_compiler: return "MGMK_CC";
-			case tool_role::cxx_compiler: return "MGMK_CXX";
-			case tool_role::archiver: return "MGMK_AR";
-			case tool_role::ranlib: return "MGMK_RANLIB";
-			case tool_role::librarian: return "MGMK_LIB";
-			case tool_role::linker: return "MGMK_LINKER";
-			case tool_role::shared_linker: return "MGMK_SHARED_LINKER";
-			case tool_role::resource_compiler: return "MGMK_RC";
-			case tool_role::manifest_tool: return "MGMK_MT";
-			case tool_role::dll_tool: return "MGMK_DLLTOOL";
-			case tool_role::strip: return "MGMK_STRIP";
-			case tool_role::objcopy: return "MGMK_OBJCOPY";
-			case tool_role::objdump: return "MGMK_OBJDUMP";
-			case tool_role::nm: return "MGMK_NM";
-			case tool_role::readelf: return "MGMK_READELF";
-			case tool_role::cmake: return "MGMK_CMAKE";
-			case tool_role::pkg_config: return "MGMK_PKG_CONFIG";
-			case tool_role::generator_ninja: return "MGMK_NINJA";
-			case tool_role::exe_wrapper: return "MGMK_EXE_WRAPPER";
-			case tool_role::emulator: return "MGMK_EMULATOR";
-			default: return {};
-		}
+	using tool_environment_variables = detail::enum_table<
+		tool_role,
+		detail::enum_entry<tool_role::c_compiler, "MGMK_CC">,
+		detail::enum_entry<tool_role::cxx_compiler, "MGMK_CXX">,
+		detail::enum_entry<tool_role::archiver, "MGMK_AR">,
+		detail::enum_entry<tool_role::ranlib, "MGMK_RANLIB">,
+		detail::enum_entry<tool_role::librarian, "MGMK_LIB">,
+		detail::enum_entry<tool_role::linker, "MGMK_LINKER">,
+		detail::enum_entry<tool_role::shared_linker, "MGMK_SHARED_LINKER">,
+		detail::enum_entry<tool_role::resource_compiler, "MGMK_RC">,
+		detail::enum_entry<tool_role::manifest_tool, "MGMK_MT">,
+		detail::enum_entry<tool_role::dll_tool, "MGMK_DLLTOOL">,
+		detail::enum_entry<tool_role::strip, "MGMK_STRIP">,
+		detail::enum_entry<tool_role::objcopy, "MGMK_OBJCOPY">,
+		detail::enum_entry<tool_role::objdump, "MGMK_OBJDUMP">,
+		detail::enum_entry<tool_role::nm, "MGMK_NM">,
+		detail::enum_entry<tool_role::readelf, "MGMK_READELF">,
+		detail::enum_entry<tool_role::cmake, "MGMK_CMAKE">,
+		detail::enum_entry<tool_role::pkg_config, "MGMK_PKG_CONFIG">,
+		detail::enum_entry<tool_role::generator_ninja, "MGMK_NINJA">,
+		detail::enum_entry<tool_role::exe_wrapper, "MGMK_EXE_WRAPPER">,
+		detail::enum_entry<tool_role::emulator, "MGMK_EMULATOR">
+	>;
+
+	static_assert(tool_environment_variables::has_no_duplicate_values());
+	static_assert(tool_environment_variables::has_no_duplicate_names());
+
+	[[nodiscard]] inline constexpr std::string_view environment_variable_for(
+		tool_role role
+	) noexcept {
+		return tool_environment_variables::to_string(role, {});
 	}
 
 	[[nodiscard]] inline std::string cli_override_for(const cli::options& opts, tool_role role) {

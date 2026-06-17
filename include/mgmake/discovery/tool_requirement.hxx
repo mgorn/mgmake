@@ -36,6 +36,103 @@ namespace mgmake::discovery {
 		}
 	};
 
+	struct project_tool_usage {
+		bool m_has_c_sources = false;
+		bool m_has_cxx_sources = false;
+		bool m_has_asm_sources = false;
+		bool m_has_rc_sources = false;
+		bool m_has_idl_sources = false;
+
+		bool m_has_static_library = false;
+		bool m_has_shared_library = false;
+		bool m_has_executable = false;
+	};
+
+	inline void record_source_role(
+		project_tool_usage& usage,
+		tool_role role
+	) noexcept {
+		switch (role) {
+			case tool_role::c_compiler:
+				usage.m_has_c_sources = true;
+				return;
+
+			case tool_role::cxx_compiler:
+				usage.m_has_cxx_sources = true;
+				return;
+
+			case tool_role::assembler:
+				usage.m_has_asm_sources = true;
+				return;
+
+			case tool_role::resource_compiler:
+				usage.m_has_rc_sources = true;
+				return;
+
+			case tool_role::midl_compiler:
+				usage.m_has_idl_sources = true;
+				return;
+
+			default:
+				usage.m_has_cxx_sources = true;
+				return;
+		}
+	}
+
+	template <typename Source>
+	inline void record_source_file(
+		project_tool_usage& usage,
+		const Source& source
+	) {
+		record_source_role(usage, source_tool_role(source));
+	}
+
+	template <typename Target>
+	inline void record_target_sources(
+		project_tool_usage& usage,
+		const Target& target
+	) {
+		for (const auto& source : target.m_sources) {
+			record_source_file(usage, source);
+		}
+	}
+
+	inline void record_library_kind(
+		project_tool_usage& usage,
+		spec::library::kind kind
+	) noexcept {
+		switch (kind) {
+			case spec::library::kind::interface:
+				return;
+
+			case spec::library::kind::static_lib:
+				usage.m_has_static_library = true;
+				return;
+
+			case spec::library::kind::shared_lib:
+				usage.m_has_shared_library = true;
+				return;
+		}
+	}
+
+	[[nodiscard]] inline project_tool_usage collect_project_tool_usage(
+		const spec::project& project
+	) {
+		project_tool_usage usage{};
+
+		for (const auto& lib : project.m_libraries) {
+			record_target_sources(usage, lib);
+			record_library_kind(usage, lib.m_kind);
+		}
+
+		for (const auto& exe : project.m_executables) {
+			record_target_sources(usage, exe);
+			usage.m_has_executable = true;
+		}
+
+		return usage;
+	}
+
 	[[nodiscard]] inline std::vector<tool_requirement> required_tools(
 		const cli::options&,
 		const build::request& req,
@@ -43,89 +140,29 @@ namespace mgmake::discovery {
 	) {
 		std::vector<tool_requirement> result;
 		const auto& tc = req.toolchain();
+		const auto usage = collect_project_tool_usage(project);
 
-		bool has_c_sources = false;
-		bool has_cxx_sources = false;
-		bool has_asm_sources = false;
-		bool has_rc_sources = false;
-		bool has_idl_sources = false;
-		bool has_static_library = false;
-		bool has_shared_library = false;
-		bool has_executable = false;
-
-		auto inspect_sources = [&](const auto& target) {
-			for (const auto& source : target.m_sources) {
-				switch (source_tool_role(source)) {
-					case tool_role::c_compiler:
-						has_c_sources = true;
-						break;
-
-					case tool_role::cxx_compiler:
-						has_cxx_sources = true;
-						break;
-
-					case tool_role::assembler:
-						has_asm_sources = true;
-						break;
-
-					case tool_role::resource_compiler:
-						has_rc_sources = true;
-						break;
-
-					case tool_role::midl_compiler:
-						has_idl_sources = true;
-						break;
-
-					default:
-						has_cxx_sources = true;
-						break;
-				}
-			}
-		};
-
-		for (const auto& lib : project.m_libraries) {
-			inspect_sources(lib);
-
-			switch (lib.m_kind) {
-				case spec::library::kind::interface:
-					break;
-
-				case spec::library::kind::static_lib:
-					has_static_library = true;
-					break;
-
-				case spec::library::kind::shared_lib:
-					has_shared_library = true;
-					break;
-			}
-		}
-
-		for (const auto& exe : project.m_executables) {
-			inspect_sources(exe);
-			has_executable = true;
-		}
-
-		if (has_c_sources) {
+		if (usage.m_has_c_sources) {
 			result.push_back({tool_role::c_compiler, requirement_strength::required, std::string{tc.tool(tool_role::c_compiler)}, "the project has C sources"});
 		}
 
-		if (has_cxx_sources) {
+		if (usage.m_has_cxx_sources) {
 			result.push_back({tool_role::cxx_compiler, requirement_strength::required, std::string{tc.tool(tool_role::cxx_compiler)}, "the project has C++ sources"});
 		}
 
-		if (has_asm_sources) {
+		if (usage.m_has_asm_sources) {
 			result.push_back({tool_role::assembler, requirement_strength::required, std::string{tc.tool(tool_role::assembler)}, "the project has assembly sources"});
 		}
 
-		if (has_rc_sources) {
+		if (usage.m_has_rc_sources) {
 			result.push_back({tool_role::resource_compiler, requirement_strength::required, std::string{tc.tool(tool_role::resource_compiler)}, "the project has Windows resource sources"});
 		}
 
-		if (has_idl_sources) {
+		if (usage.m_has_idl_sources) {
 			result.push_back({tool_role::midl_compiler, requirement_strength::required, std::string{tc.tool(tool_role::midl_compiler)}, "the project has IDL sources"});
 		}
 
-		if (has_static_library) {
+		if (usage.m_has_static_library) {
 			const auto role = tc.dialect() == build::toolchain::dialect::msvc
 				? tool_role::librarian
 				: tool_role::archiver;
@@ -137,17 +174,21 @@ namespace mgmake::discovery {
 			}
 		}
 
-		if (has_shared_library) {
+		if (usage.m_has_shared_library) {
 			const auto shared = tc.tool(tool_role::shared_linker);
+			const auto role = shared.empty()
+				? tool_role::linker
+				: tool_role::shared_linker;
+
 			result.push_back({
-				shared.empty() ? tool_role::linker : tool_role::shared_linker,
+				role,
 				requirement_strength::required,
 				std::string{shared.empty() ? tc.tool(tool_role::linker) : shared},
 				"the project builds at least one shared library"
 			});
 		}
 
-		if (has_executable) {
+		if (usage.m_has_executable) {
 			result.push_back({tool_role::linker, requirement_strength::required, std::string{tc.tool(tool_role::linker)}, "the project builds at least one executable"});
 		}
 

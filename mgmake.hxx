@@ -4876,7 +4876,7 @@ namespace mgmake::discovery {
 #include <system_error>
 #include <vector>
 
-#if defined(MGMK_PLATFORM_POSIX)
+#ifdef MGMK_PLATFORM_POSIX
 	#include <unistd.h>
 #endif
 
@@ -5278,30 +5278,37 @@ namespace mgmake::discovery {
 #include <vector>
 
 namespace mgmake::discovery {
-	[[nodiscard]] inline std::string environment_variable_for(tool_role role) {
-		switch (role) {
-			case tool_role::c_compiler: return "MGMK_CC";
-			case tool_role::cxx_compiler: return "MGMK_CXX";
-			case tool_role::archiver: return "MGMK_AR";
-			case tool_role::ranlib: return "MGMK_RANLIB";
-			case tool_role::librarian: return "MGMK_LIB";
-			case tool_role::linker: return "MGMK_LINKER";
-			case tool_role::shared_linker: return "MGMK_SHARED_LINKER";
-			case tool_role::resource_compiler: return "MGMK_RC";
-			case tool_role::manifest_tool: return "MGMK_MT";
-			case tool_role::dll_tool: return "MGMK_DLLTOOL";
-			case tool_role::strip: return "MGMK_STRIP";
-			case tool_role::objcopy: return "MGMK_OBJCOPY";
-			case tool_role::objdump: return "MGMK_OBJDUMP";
-			case tool_role::nm: return "MGMK_NM";
-			case tool_role::readelf: return "MGMK_READELF";
-			case tool_role::cmake: return "MGMK_CMAKE";
-			case tool_role::pkg_config: return "MGMK_PKG_CONFIG";
-			case tool_role::generator_ninja: return "MGMK_NINJA";
-			case tool_role::exe_wrapper: return "MGMK_EXE_WRAPPER";
-			case tool_role::emulator: return "MGMK_EMULATOR";
-			default: return {};
-		}
+	using tool_environment_variables = detail::enum_table<
+		tool_role,
+		detail::enum_entry<tool_role::c_compiler, "MGMK_CC">,
+		detail::enum_entry<tool_role::cxx_compiler, "MGMK_CXX">,
+		detail::enum_entry<tool_role::archiver, "MGMK_AR">,
+		detail::enum_entry<tool_role::ranlib, "MGMK_RANLIB">,
+		detail::enum_entry<tool_role::librarian, "MGMK_LIB">,
+		detail::enum_entry<tool_role::linker, "MGMK_LINKER">,
+		detail::enum_entry<tool_role::shared_linker, "MGMK_SHARED_LINKER">,
+		detail::enum_entry<tool_role::resource_compiler, "MGMK_RC">,
+		detail::enum_entry<tool_role::manifest_tool, "MGMK_MT">,
+		detail::enum_entry<tool_role::dll_tool, "MGMK_DLLTOOL">,
+		detail::enum_entry<tool_role::strip, "MGMK_STRIP">,
+		detail::enum_entry<tool_role::objcopy, "MGMK_OBJCOPY">,
+		detail::enum_entry<tool_role::objdump, "MGMK_OBJDUMP">,
+		detail::enum_entry<tool_role::nm, "MGMK_NM">,
+		detail::enum_entry<tool_role::readelf, "MGMK_READELF">,
+		detail::enum_entry<tool_role::cmake, "MGMK_CMAKE">,
+		detail::enum_entry<tool_role::pkg_config, "MGMK_PKG_CONFIG">,
+		detail::enum_entry<tool_role::generator_ninja, "MGMK_NINJA">,
+		detail::enum_entry<tool_role::exe_wrapper, "MGMK_EXE_WRAPPER">,
+		detail::enum_entry<tool_role::emulator, "MGMK_EMULATOR">
+	>;
+
+	static_assert(tool_environment_variables::has_no_duplicate_values());
+	static_assert(tool_environment_variables::has_no_duplicate_names());
+
+	[[nodiscard]] inline constexpr std::string_view environment_variable_for(
+		tool_role role
+	) noexcept {
+		return tool_environment_variables::to_string(role, {});
 	}
 
 	[[nodiscard]] inline std::string cli_override_for(const cli::options& opts, tool_role role) {
@@ -5844,6 +5851,103 @@ namespace mgmake::discovery {
 		}
 	};
 
+	struct project_tool_usage {
+		bool m_has_c_sources = false;
+		bool m_has_cxx_sources = false;
+		bool m_has_asm_sources = false;
+		bool m_has_rc_sources = false;
+		bool m_has_idl_sources = false;
+
+		bool m_has_static_library = false;
+		bool m_has_shared_library = false;
+		bool m_has_executable = false;
+	};
+
+	inline void record_source_role(
+		project_tool_usage& usage,
+		tool_role role
+	) noexcept {
+		switch (role) {
+			case tool_role::c_compiler:
+				usage.m_has_c_sources = true;
+				return;
+
+			case tool_role::cxx_compiler:
+				usage.m_has_cxx_sources = true;
+				return;
+
+			case tool_role::assembler:
+				usage.m_has_asm_sources = true;
+				return;
+
+			case tool_role::resource_compiler:
+				usage.m_has_rc_sources = true;
+				return;
+
+			case tool_role::midl_compiler:
+				usage.m_has_idl_sources = true;
+				return;
+
+			default:
+				usage.m_has_cxx_sources = true;
+				return;
+		}
+	}
+
+	template <typename Source>
+	inline void record_source_file(
+		project_tool_usage& usage,
+		const Source& source
+	) {
+		record_source_role(usage, source_tool_role(source));
+	}
+
+	template <typename Target>
+	inline void record_target_sources(
+		project_tool_usage& usage,
+		const Target& target
+	) {
+		for (const auto& source : target.m_sources) {
+			record_source_file(usage, source);
+		}
+	}
+
+	inline void record_library_kind(
+		project_tool_usage& usage,
+		spec::library::kind kind
+	) noexcept {
+		switch (kind) {
+			case spec::library::kind::interface:
+				return;
+
+			case spec::library::kind::static_lib:
+				usage.m_has_static_library = true;
+				return;
+
+			case spec::library::kind::shared_lib:
+				usage.m_has_shared_library = true;
+				return;
+		}
+	}
+
+	[[nodiscard]] inline project_tool_usage collect_project_tool_usage(
+		const spec::project& project
+	) {
+		project_tool_usage usage{};
+
+		for (const auto& lib : project.m_libraries) {
+			record_target_sources(usage, lib);
+			record_library_kind(usage, lib.m_kind);
+		}
+
+		for (const auto& exe : project.m_executables) {
+			record_target_sources(usage, exe);
+			usage.m_has_executable = true;
+		}
+
+		return usage;
+	}
+
 	[[nodiscard]] inline std::vector<tool_requirement> required_tools(
 		const cli::options&,
 		const build::request& req,
@@ -5851,89 +5955,29 @@ namespace mgmake::discovery {
 	) {
 		std::vector<tool_requirement> result;
 		const auto& tc = req.toolchain();
+		const auto usage = collect_project_tool_usage(project);
 
-		bool has_c_sources = false;
-		bool has_cxx_sources = false;
-		bool has_asm_sources = false;
-		bool has_rc_sources = false;
-		bool has_idl_sources = false;
-		bool has_static_library = false;
-		bool has_shared_library = false;
-		bool has_executable = false;
-
-		auto inspect_sources = [&](const auto& target) {
-			for (const auto& source : target.m_sources) {
-				switch (source_tool_role(source)) {
-					case tool_role::c_compiler:
-						has_c_sources = true;
-						break;
-
-					case tool_role::cxx_compiler:
-						has_cxx_sources = true;
-						break;
-
-					case tool_role::assembler:
-						has_asm_sources = true;
-						break;
-
-					case tool_role::resource_compiler:
-						has_rc_sources = true;
-						break;
-
-					case tool_role::midl_compiler:
-						has_idl_sources = true;
-						break;
-
-					default:
-						has_cxx_sources = true;
-						break;
-				}
-			}
-		};
-
-		for (const auto& lib : project.m_libraries) {
-			inspect_sources(lib);
-
-			switch (lib.m_kind) {
-				case spec::library::kind::interface:
-					break;
-
-				case spec::library::kind::static_lib:
-					has_static_library = true;
-					break;
-
-				case spec::library::kind::shared_lib:
-					has_shared_library = true;
-					break;
-			}
-		}
-
-		for (const auto& exe : project.m_executables) {
-			inspect_sources(exe);
-			has_executable = true;
-		}
-
-		if (has_c_sources) {
+		if (usage.m_has_c_sources) {
 			result.push_back({tool_role::c_compiler, requirement_strength::required, std::string{tc.tool(tool_role::c_compiler)}, "the project has C sources"});
 		}
 
-		if (has_cxx_sources) {
+		if (usage.m_has_cxx_sources) {
 			result.push_back({tool_role::cxx_compiler, requirement_strength::required, std::string{tc.tool(tool_role::cxx_compiler)}, "the project has C++ sources"});
 		}
 
-		if (has_asm_sources) {
+		if (usage.m_has_asm_sources) {
 			result.push_back({tool_role::assembler, requirement_strength::required, std::string{tc.tool(tool_role::assembler)}, "the project has assembly sources"});
 		}
 
-		if (has_rc_sources) {
+		if (usage.m_has_rc_sources) {
 			result.push_back({tool_role::resource_compiler, requirement_strength::required, std::string{tc.tool(tool_role::resource_compiler)}, "the project has Windows resource sources"});
 		}
 
-		if (has_idl_sources) {
+		if (usage.m_has_idl_sources) {
 			result.push_back({tool_role::midl_compiler, requirement_strength::required, std::string{tc.tool(tool_role::midl_compiler)}, "the project has IDL sources"});
 		}
 
-		if (has_static_library) {
+		if (usage.m_has_static_library) {
 			const auto role = tc.dialect() == build::toolchain::dialect::msvc
 				? tool_role::librarian
 				: tool_role::archiver;
@@ -5945,17 +5989,21 @@ namespace mgmake::discovery {
 			}
 		}
 
-		if (has_shared_library) {
+		if (usage.m_has_shared_library) {
 			const auto shared = tc.tool(tool_role::shared_linker);
+			const auto role = shared.empty()
+				? tool_role::linker
+				: tool_role::shared_linker;
+
 			result.push_back({
-				shared.empty() ? tool_role::linker : tool_role::shared_linker,
+				role,
 				requirement_strength::required,
 				std::string{shared.empty() ? tc.tool(tool_role::linker) : shared},
 				"the project builds at least one shared library"
 			});
 		}
 
-		if (has_executable) {
+		if (usage.m_has_executable) {
 			result.push_back({tool_role::linker, requirement_strength::required, std::string{tc.tool(tool_role::linker)}, "the project builds at least one executable"});
 		}
 
@@ -6105,7 +6153,7 @@ namespace mgmake::discovery {
 				.m_logical_name = *value,
 				.m_path = std::filesystem::absolute(*value),
 				.m_provider = tool_provider::environment_override,
-				.m_reason = variable,
+				.m_reason = std::string{variable},
 				.m_priority = 20,
 				.m_authoritative = true
 			});
@@ -6113,7 +6161,7 @@ namespace mgmake::discovery {
 		}
 
 		for (const auto& dir : path_entries()) {
-			add_candidate_if_found(out, req, *value, dir, tool_provider::environment_override, 20, "environment override " + variable);
+			add_candidate_if_found(out, req, *value, dir, tool_provider::environment_override, 20, "environment override " + std::string{variable});
 		}
 	}
 

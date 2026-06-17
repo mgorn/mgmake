@@ -140,7 +140,7 @@ namespace mgmake::discovery {
 				.m_logical_name = *value,
 				.m_path = std::filesystem::absolute(*value),
 				.m_provider = tool_provider::environment_override,
-				.m_reason = variable,
+				.m_reason = std::string{variable},
 				.m_priority = 20,
 				.m_authoritative = true
 			});
@@ -148,7 +148,7 @@ namespace mgmake::discovery {
 		}
 
 		for (const auto& dir : path_entries()) {
-			add_candidate_if_found(out, req, *value, dir, tool_provider::environment_override, 20, "environment override " + variable);
+			add_candidate_if_found(out, req, *value, dir, tool_provider::environment_override, 20, "environment override " + std::string{variable});
 		}
 	}
 

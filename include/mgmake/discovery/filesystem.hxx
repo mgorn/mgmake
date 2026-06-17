@@ -13,7 +13,7 @@
 #include <system_error>
 #include <vector>
 
-#if defined(MGMK_PLATFORM_POSIX)
+#ifdef MGMK_PLATFORM_POSIX
 	#include <unistd.h>
 #endif
 
