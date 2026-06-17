@@ -12,21 +12,10 @@
 #include <string>
 
 namespace mgmake::build {
-	[[nodiscard]] inline std::string effective_target_triple(
-		const toolchain& tc,
-		const request& req
-	) {
-		if (tc.target_triple().has_value()) {
-			return *tc.target_triple();
-		}
-
-		return sys::triple(req.target());
-	}
-
 	inline void append_target_args(
 		sys::command_line& command,
 		const toolchain& tc,
-		const request& req
+		const request&
 	) {
 		switch (tc.target_selection()) {
 			case toolchain::target_mode::implicit:
@@ -34,15 +23,19 @@ namespace mgmake::build {
 				return;
 
 			case toolchain::target_mode::clang_target: {
-				const auto triple = effective_target_triple(tc, req);
+				const auto& triple = tc.target_triple();
+
+				if (!triple.has_value()) {
+					return;
+				}
 
 				mgmkassert(
-					!triple.empty(),
-					"mgmake build: clang target mode requires a non-empty target triple"
+					!triple->empty(),
+					"mgmake build: target triple must not be empty"
 				);
 
 				command.m_args.emplace_back("-target");
-				command.m_args.emplace_back(triple);
+				command.m_args.emplace_back(*triple);
 				return;
 			}
 		}

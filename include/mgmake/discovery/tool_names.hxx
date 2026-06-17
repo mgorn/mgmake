@@ -171,8 +171,6 @@ namespace mgmake::discovery {
 
 		if (req.toolchain().target_triple().has_value()) {
 			triple = *req.toolchain().target_triple();
-		} else {
-			triple = req.target().m_triple;
 		}
 
 		if (triple.empty()) {
