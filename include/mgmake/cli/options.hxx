@@ -21,6 +21,7 @@ namespace mgmake::cli {
 
 		std::vector<std::string> m_targets;
 		std::vector<std::string> m_passthrough_args;
+		std::vector<std::string> m_run_args;
 
 		int m_jobs = 0;
 

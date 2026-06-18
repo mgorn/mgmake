@@ -152,7 +152,7 @@ namespace mgmake::cli {
 			}
 
 			std::println("usage:");
-			std::println("  {} [command] [options] [targets...] [-- passthrough...]", program_name);
+			std::println("  {} [command] [options] [targets...] [-- args...]", program_name);
 			std::println("");
 			std::println("commands:");
 			detail::print_commands_help();
@@ -188,8 +188,12 @@ namespace mgmake::cli {
 				std::string_view arg = args[i];
 
 				if (arg == "--") {
+					auto& out = opts.m_action == action_kind::run
+						? opts.m_run_args
+						: opts.m_passthrough_args;
+
 					for (++i; i < args.size(); ++i) {
-						opts.m_passthrough_args.emplace_back(args[i]);
+						out.emplace_back(args[i]);
 					}
 
 					break;

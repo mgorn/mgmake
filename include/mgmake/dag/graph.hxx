@@ -8,6 +8,8 @@
 #include "artifact.hxx"
 #include "target.hxx"
 
+#include <optional>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -59,6 +61,18 @@ namespace mgmake::dag {
 			mgmkassert(not m_targets.empty(), "Invalid target ID: there are no targets.");
 			mgmkassert(id < m_targets.size(), "Invalid target ID");
 			return m_targets.at(id);
+		}
+
+		[[nodiscard]] inline constexpr std::optional<dag::target::id> find_target(
+			std::string_view name
+		) const {
+			for (dag::target::id id = 0; id < m_targets.size(); ++id) {
+				if (m_targets[id].m_name == name) {
+					return id;
+				}
+			}
+
+			return std::nullopt;
 		}
     };
 }

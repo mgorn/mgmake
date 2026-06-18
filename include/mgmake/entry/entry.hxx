@@ -6,6 +6,7 @@
 #include "../backend/execute.hxx"
 #include "../build/clean.hxx"
 #include "../build/request_from_options.hxx"
+#include "../build/run.hxx"
 #include "../build/toolchain_registry.hxx"
 #include "../cli/help.hxx"
 #include "../cli/parse.hxx"
@@ -152,6 +153,52 @@ namespace mgmake {
 
 		auto resolved_req = std::move(*resolved_req_result);
 		auto graph = proj.graph(resolved_req);
+
+		if (opts.m_action == cli::action_kind::run) {
+			const auto run_target = build::resolve_run_target_name(opts, proj);
+
+			if (!run_target) {
+				std::println(stderr, "{}", run_target.error());
+				return detail::entry_exit_usage_error;
+			}
+
+			auto run_req = resolved_req;
+			run_req.m_targets.clear();
+			run_req.m_targets.emplace_back(*run_target);
+
+			const auto build_result = backend::build_selected_backend(
+				opts,
+				graph,
+				run_req
+			);
+
+			if (!build_result) {
+				std::println(stderr, "{}", build_result.error());
+				return detail::entry_exit_action_failure;
+			}
+
+			const auto executable_path = build::run_target_executable_path(
+				graph,
+				*run_target
+			);
+
+			if (!executable_path) {
+				std::println(stderr, "{}", executable_path.error());
+				return detail::entry_exit_action_failure;
+			}
+
+			const auto run_result = build::invoke_run_target(
+				opts,
+				*executable_path
+			);
+
+			if (!run_result) {
+				std::println(stderr, "{}", run_result.error());
+				return detail::entry_exit_action_failure;
+			}
+
+			return *run_result;
+		}
 
 		const auto action_result = backend::execute_project_action(
 			opts,
