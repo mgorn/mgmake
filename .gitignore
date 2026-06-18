@@ -48,3 +48,4 @@
 *.ninja
 .ninja_log
 .DS_Store
+/.vscode

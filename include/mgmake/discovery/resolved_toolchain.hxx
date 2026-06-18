@@ -10,6 +10,7 @@
 
 #include <string>
 #include <vector>
+#include <initializer_list>
 
 namespace mgmake::discovery {
 	struct resolved_toolchain {
@@ -36,6 +37,18 @@ namespace mgmake::discovery {
 			for (const auto& tool : m_tools) {
 				if (tool.m_role == role) {
 					return &tool;
+				}
+			}
+
+			return nullptr;
+		}
+
+		[[nodiscard]] inline const resolved_tool* find_any(
+			std::initializer_list<tool_role> roles
+		) const noexcept {
+			for (const auto role : roles) {
+				if (const auto* tool = find(role)) {
+					return tool;
 				}
 			}
 

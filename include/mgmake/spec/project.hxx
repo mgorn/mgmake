@@ -6,6 +6,7 @@
 #include "../build/request.hxx"
 #include "../dag/graph.hxx"
 #include "../detail/assert.hxx"
+#include "../ext/fetch.hxx"
 #include "executable.hxx"
 #include "library.hxx"
 
@@ -20,6 +21,7 @@ namespace mgmake::spec {
 		std::string m_name;
 		std::vector<spec::executable> m_executables;
 		std::vector<spec::library> m_libraries;
+		std::vector<ext::fetch> m_fetches;
 
 		inline constexpr project(std::string_view name)
 			: m_name{name} {
@@ -76,6 +78,14 @@ namespace mgmake::spec {
 			return *this;
 		}
 
+		inline constexpr project& add_fetch(const ext::fetch& fetch) {
+			mgmkassert(!fetch.m_name.empty(), "mgmake spec: external fetch has no name");
+			mgmkassert(!find_fetch(fetch.m_name).has_value(), "mgmake spec: external fetch name conflict '" + fetch.m_name + "'");
+
+			m_fetches.emplace_back(fetch);
+			return *this;
+		}
+
 		const std::optional<spec::library::id> find_library(std::string_view name) const {
             for (spec::library::id idx = 0; idx < m_libraries.size(); idx++) {
 				const auto& lib = m_libraries.at(idx);
@@ -104,6 +114,25 @@ namespace mgmake::spec {
 			if (idx >= m_executables.size())
 				return nullptr;
 			return &m_executables.at(idx);
+		}
+
+		const std::optional<ext::fetch::id> find_fetch(std::string_view name) const {
+			for (ext::fetch::id idx = 0; idx < m_fetches.size(); ++idx) {
+				const auto& fetch = m_fetches.at(idx);
+				if (fetch.m_name == name) {
+					return idx;
+				}
+			}
+
+			return std::nullopt;
+		}
+
+		const ext::fetch* get_fetch(const ext::fetch::id idx) const {
+			if (idx >= m_fetches.size()) {
+				return nullptr;
+			}
+
+			return &m_fetches.at(idx);
 		}
 
 		dag::graph graph(const build::request& req) const;

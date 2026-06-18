@@ -8,11 +8,13 @@
 #include "tool_role.hxx"
 #include "../build/request.hxx"
 #include "../cli/options.hxx"
+#include "../ext/fetch.hxx"
 #include "../spec/project.hxx"
 
 #include <filesystem>
 #include <string>
 #include <string_view>
+#include <variant>
 #include <vector>
 
 namespace mgmake::discovery {
@@ -30,9 +32,14 @@ namespace mgmake::discovery {
 		tool_family m_expected_family = tool_family::unknown;
 		object_format m_expected_object_format = object_format::unknown;
 		std::string m_target_triple{};
+		std::vector<tool_role> m_any_of{};
 
 		[[nodiscard]] inline bool required() const noexcept {
 			return m_strength == requirement_strength::required;
+		}
+
+		[[nodiscard]] inline bool is_any_of() const noexcept {
+			return !m_any_of.empty();
 		}
 	};
 
@@ -46,6 +53,11 @@ namespace mgmake::discovery {
 		bool m_has_static_library = false;
 		bool m_has_shared_library = false;
 		bool m_has_executable = false;
+
+		bool m_has_git_fetch = false;
+		bool m_has_archive_fetch = false;
+		bool m_has_zip_fetch = false;
+		bool m_has_tar_fetch = false;
 	};
 
 	inline void record_source_role(
@@ -115,6 +127,37 @@ namespace mgmake::discovery {
 		}
 	}
 
+	inline void record_fetch_tools(
+		project_tool_usage& usage,
+		const ext::fetch& fetch
+	) {
+		if (std::holds_alternative<ext::git_fetch>(fetch.m_data)) {
+			usage.m_has_git_fetch = true;
+			return;
+		}
+
+		if (const auto* archive = std::get_if<ext::archive_fetch>(&fetch.m_data)) {
+			usage.m_has_archive_fetch = true;
+
+			switch (archive->m_format) {
+				case ext::archive_format::zip:
+					usage.m_has_zip_fetch = true;
+					break;
+
+				case ext::archive_format::tar:
+				case ext::archive_format::tar_gz:
+				case ext::archive_format::tar_xz:
+					usage.m_has_tar_fetch = true;
+					break;
+
+				case ext::archive_format::auto_detect:
+					usage.m_has_zip_fetch = true;
+					usage.m_has_tar_fetch = true;
+					break;
+			}
+		}
+	}
+
 	[[nodiscard]] inline project_tool_usage collect_project_tool_usage(
 		const spec::project& project
 	) {
@@ -128,6 +171,10 @@ namespace mgmake::discovery {
 		for (const auto& exe : project.m_executables) {
 			record_target_sources(usage, exe);
 			usage.m_has_executable = true;
+		}
+
+		for (const auto& fetch : project.m_fetches) {
+			record_fetch_tools(usage, fetch);
 		}
 
 		return usage;
@@ -190,6 +237,38 @@ namespace mgmake::discovery {
 
 		if (usage.m_has_executable) {
 			result.push_back({tool_role::linker, requirement_strength::required, std::string{tc.tool(tool_role::linker)}, "the project builds at least one executable"});
+		}
+
+		if (usage.m_has_git_fetch) {
+			result.push_back({
+				.m_role = tool_role::git,
+				.m_strength = requirement_strength::required,
+				.m_needed_because = "the project fetches external git sources"
+			});
+		}
+
+		if (usage.m_has_archive_fetch) {
+			tool_requirement requirement{};
+			requirement.m_any_of = {tool_role::curl, tool_role::wget};
+			requirement.m_strength = requirement_strength::required;
+			requirement.m_needed_because = "the project downloads external archives";
+			result.push_back(std::move(requirement));
+		}
+
+		if (usage.m_has_zip_fetch) {
+			result.push_back({
+				.m_role = tool_role::unzip,
+				.m_strength = requirement_strength::required,
+				.m_needed_because = "the project extracts zip external archives"
+			});
+		}
+
+		if (usage.m_has_tar_fetch) {
+			result.push_back({
+				.m_role = tool_role::tar,
+				.m_strength = requirement_strength::required,
+				.m_needed_because = "the project extracts tar external archives"
+			});
 		}
 
 		if (req.target_platform() == sys::platform::p_windows && tc.dialect() == build::toolchain::dialect::msvc) {

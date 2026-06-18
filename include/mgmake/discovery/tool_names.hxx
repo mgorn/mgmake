@@ -34,6 +34,11 @@ namespace mgmake::discovery {
 		detail::enum_entry<tool_role::readelf, "MGMK_READELF">,
 		detail::enum_entry<tool_role::cmake, "MGMK_CMAKE">,
 		detail::enum_entry<tool_role::pkg_config, "MGMK_PKG_CONFIG">,
+		detail::enum_entry<tool_role::git, "MGMK_GIT">,
+		detail::enum_entry<tool_role::curl, "MGMK_CURL">,
+		detail::enum_entry<tool_role::wget, "MGMK_WGET">,
+		detail::enum_entry<tool_role::unzip, "MGMK_UNZIP">,
+		detail::enum_entry<tool_role::tar, "MGMK_TAR">,
 		detail::enum_entry<tool_role::generator_ninja, "MGMK_NINJA">,
 		detail::enum_entry<tool_role::exe_wrapper, "MGMK_EXE_WRAPPER">,
 		detail::enum_entry<tool_role::emulator, "MGMK_EMULATOR">
@@ -142,6 +147,11 @@ namespace mgmake::discovery {
 			case tool_role::nm: return {"nm"};
 			case tool_role::readelf: return {"readelf"};
 			case tool_role::generator_ninja: return {"ninja", "ninja-build"};
+			case tool_role::git: return {"git"};
+			case tool_role::curl: return {"curl"};
+			case tool_role::wget: return {"wget"};
+			case tool_role::unzip: return {"unzip"};
+			case tool_role::tar: return {"tar"};
 			default: break;
 		}
 

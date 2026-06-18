@@ -1129,6 +1129,116 @@ namespace mgmake::sys {
 // ===== end include/mgmake/sys/command_line.hxx =====
 
 
+// ===== begin include/mgmake/sys/file_command.hxx =====
+#pragma once
+
+#ifndef MGMAKE_SYS_FILE_COMMAND_HXX
+#define MGMAKE_SYS_FILE_COMMAND_HXX
+
+// skipped duplicate include: include/mgmake/sys/command_line.hxx
+// skipped duplicate include: include/mgmake/sys/util.hxx
+
+#include <filesystem>
+#include <string>
+
+namespace mgmake::sys {
+	[[nodiscard]] inline command_line shell_command(std::string command) {
+#if defined(MGMK_PLATFORM_WINDOWS)
+		return command_line{{"cmd", "/C", std::move(command)}};
+#else
+		return command_line{{"/bin/sh", "-c", std::move(command)}};
+#endif
+	}
+
+	[[nodiscard]] inline std::string shell_path(const std::filesystem::path& path) {
+		return shell_escape(path.string());
+	}
+
+	[[nodiscard]] inline command_line remove_path_command(const std::filesystem::path& path) {
+#if defined(MGMK_PLATFORM_WINDOWS)
+		return shell_command("if exist " + shell_path(path) + " rmdir /S /Q " + shell_path(path) + " & if exist " + shell_path(path) + " del /F /Q " + shell_path(path));
+#else
+		return shell_command("rm -rf " + shell_path(path));
+#endif
+	}
+
+	[[nodiscard]] inline command_line make_directory_command(const std::filesystem::path& path) {
+#if defined(MGMK_PLATFORM_WINDOWS)
+		return shell_command("if not exist " + shell_path(path) + " mkdir " + shell_path(path));
+#else
+		return shell_command("mkdir -p " + shell_path(path));
+#endif
+	}
+
+	[[nodiscard]] inline command_line move_command(
+		const std::filesystem::path& from,
+		const std::filesystem::path& to
+	) {
+#if defined(MGMK_PLATFORM_WINDOWS)
+		return shell_command("move /Y " + shell_path(from) + " " + shell_path(to));
+#else
+		return shell_command("mv " + shell_path(from) + " " + shell_path(to));
+#endif
+	}
+
+	[[nodiscard]] inline command_line copy_directory_command(
+		const std::filesystem::path& from,
+		const std::filesystem::path& to
+	) {
+#if defined(MGMK_PLATFORM_WINDOWS)
+		return shell_command("xcopy /E /I /Y " + shell_path(from) + " " + shell_path(to));
+#else
+		return shell_command("cp -R " + shell_path(from) + " " + shell_path(to));
+#endif
+	}
+
+	[[nodiscard]] inline command_line touch_command(const std::filesystem::path& path) {
+#if defined(MGMK_PLATFORM_WINDOWS)
+		return shell_command("type nul > " + shell_path(path));
+#else
+		return shell_command("touch " + shell_path(path));
+#endif
+	}
+
+	[[nodiscard]] inline command_line validate_path_command(
+		const std::filesystem::path& path,
+		const std::filesystem::path& stamp
+	) {
+#if defined(MGMK_PLATFORM_WINDOWS)
+		return shell_command("if not exist " + shell_path(path) + " exit /B 1 & type nul > " + shell_path(stamp));
+#else
+		return shell_command("test -e " + shell_path(path) + " && touch " + shell_path(stamp));
+#endif
+	}
+
+	[[nodiscard]] inline command_line reset_directory_stamp_command(
+		const std::filesystem::path& directory,
+		const std::filesystem::path& stamp
+	) {
+#if defined(MGMK_PLATFORM_WINDOWS)
+		return shell_command("if exist " + shell_path(directory) + " rmdir /S /Q " + shell_path(directory) + " & mkdir " + shell_path(directory) + " & type nul > " + shell_path(stamp));
+#else
+		return shell_command("rm -rf " + shell_path(directory) + " && mkdir -p " + shell_path(directory) + " && touch " + shell_path(stamp));
+#endif
+	}
+
+	[[nodiscard]] inline command_line normalize_directory_stamp_command(
+		const std::filesystem::path& from,
+		const std::filesystem::path& to,
+		const std::filesystem::path& stamp
+	) {
+#if defined(MGMK_PLATFORM_WINDOWS)
+		return shell_command("if exist " + shell_path(to) + " rmdir /S /Q " + shell_path(to) + " & move /Y " + shell_path(from) + " " + shell_path(to) + " & type nul > " + shell_path(stamp));
+#else
+		return shell_command("rm -rf " + shell_path(to) + " && mv " + shell_path(from) + " " + shell_path(to) + " && touch " + shell_path(stamp));
+#endif
+	}
+}
+
+#endif
+// ===== end include/mgmake/sys/file_command.hxx =====
+
+
 // ===== begin include/mgmake/discovery/tool_role.hxx =====
 #pragma once
 
@@ -1172,6 +1282,11 @@ namespace mgmake::discovery {
 		generator_xcode,
 		cmake,
 		pkg_config,
+		git,
+		curl,
+		wget,
+		unzip,
+		tar,
 		exe_wrapper,
 		emulator,
 		count
@@ -1210,6 +1325,11 @@ namespace mgmake::discovery {
 		detail::enum_entry<tool_role::generator_xcode, "xcodebuild">,
 		detail::enum_entry<tool_role::cmake, "cmake">,
 		detail::enum_entry<tool_role::pkg_config, "pkg-config">,
+		detail::enum_entry<tool_role::git, "git">,
+		detail::enum_entry<tool_role::curl, "curl">,
+		detail::enum_entry<tool_role::wget, "wget">,
+		detail::enum_entry<tool_role::unzip, "unzip">,
+		detail::enum_entry<tool_role::tar, "tar">,
 		detail::enum_entry<tool_role::exe_wrapper, "exe wrapper">,
 		detail::enum_entry<tool_role::emulator, "emulator">
 	>;
@@ -1693,6 +1813,7 @@ namespace mgmake::discovery {
 
 #include <string>
 #include <vector>
+#include <initializer_list>
 
 namespace mgmake::discovery {
 	struct resolved_toolchain {
@@ -1719,6 +1840,18 @@ namespace mgmake::discovery {
 			for (const auto& tool : m_tools) {
 				if (tool.m_role == role) {
 					return &tool;
+				}
+			}
+
+			return nullptr;
+		}
+
+		[[nodiscard]] inline const resolved_tool* find_any(
+			std::initializer_list<tool_role> roles
+		) const noexcept {
+			for (const auto role : roles) {
+				if (const auto* tool = find(role)) {
+					return tool;
 				}
 			}
 
@@ -2339,6 +2472,7 @@ namespace mgmake::build {
 // skipped duplicate include: include/mgmake/sys/platform.hxx
 
 #include <filesystem>
+#include <initializer_list>
 #include <optional>
 #include <string>
 #include <utility>
@@ -2401,6 +2535,27 @@ namespace mgmake::build {
             std::filesystem::path fallback = {}
         ) const {
             if (const auto* tool = discovered_tool(role)) {
+                return tool->m_path;
+            }
+
+            return fallback;
+        }
+
+        [[nodiscard]] inline const discovery::resolved_tool* discovered_tool_any(
+            std::initializer_list<discovery::tool_role> roles
+        ) const noexcept {
+            if (!m_resolved_toolchain.has_value()) {
+                return nullptr;
+            }
+
+            return m_resolved_toolchain->find_any(roles);
+        }
+
+        [[nodiscard]] inline std::filesystem::path tool_path_any(
+            std::initializer_list<discovery::tool_role> roles,
+            std::filesystem::path fallback = {}
+        ) const {
+            if (const auto* tool = discovered_tool_any(roles)) {
                 return tool->m_path;
             }
 
@@ -3165,6 +3320,149 @@ namespace mgmake::dag {
 // skipped duplicate include: include/mgmake/dag/graph.hxx
 // skipped duplicate include: include/mgmake/detail/assert.hxx
 
+// ===== begin include/mgmake/ext/fetch.hxx =====
+#pragma once
+
+#ifndef MGMAKE_EXT_FETCH_HXX
+#define MGMAKE_EXT_FETCH_HXX
+
+// skipped duplicate include: include/mgmake/detail/assert.hxx
+
+#include <filesystem>
+#include <string>
+#include <string_view>
+#include <variant>
+#include <vector>
+
+namespace mgmake::ext {
+	enum struct archive_format {
+		auto_detect,
+		zip,
+		tar,
+		tar_gz,
+		tar_xz
+	};
+
+	struct git_fetch {
+		std::string m_url;
+		std::string m_ref;
+		bool m_shallow = true;
+		bool m_submodules = false;
+	};
+
+	struct archive_fetch {
+		std::string m_url;
+		archive_format m_format = archive_format::auto_detect;
+		std::string m_sha256;
+		std::filesystem::path m_strip_prefix;
+	};
+
+	struct local_fetch {
+		std::filesystem::path m_path;
+	};
+
+	struct fetch {
+		using id = std::vector<fetch>::size_type;
+
+		std::string m_name;
+		std::variant<git_fetch, archive_fetch, local_fetch> m_data;
+
+		explicit fetch(std::string_view name)
+			: m_name{name}
+			, m_data{local_fetch{}} {
+			mgmkassert(!m_name.empty(), "mgmake ext: fetch has no name");
+		}
+
+		fetch& git(std::string_view url) {
+			mgmkassert(!url.empty(), "mgmake ext: git fetch has no URL");
+			m_data = git_fetch{.m_url = std::string{url}};
+			return *this;
+		}
+
+		fetch& archive(std::string_view url) {
+			mgmkassert(!url.empty(), "mgmake ext: archive fetch has no URL");
+			m_data = archive_fetch{.m_url = std::string{url}};
+			return *this;
+		}
+
+		fetch& zip(std::string_view url) {
+			archive(url);
+			std::get<archive_fetch>(m_data).m_format = archive_format::zip;
+			return *this;
+		}
+
+		fetch& tar(std::string_view url) {
+			archive(url);
+			std::get<archive_fetch>(m_data).m_format = archive_format::tar;
+			return *this;
+		}
+
+		fetch& tar_gz(std::string_view url) {
+			archive(url);
+			std::get<archive_fetch>(m_data).m_format = archive_format::tar_gz;
+			return *this;
+		}
+
+		fetch& tar_xz(std::string_view url) {
+			archive(url);
+			std::get<archive_fetch>(m_data).m_format = archive_format::tar_xz;
+			return *this;
+		}
+
+		fetch& local(const std::filesystem::path& path) {
+			mgmkassert(!path.empty(), "mgmake ext: local fetch has no path");
+			m_data = local_fetch{.m_path = path};
+			return *this;
+		}
+
+		fetch& ref(std::string_view value) {
+			mgmkassert(std::holds_alternative<git_fetch>(m_data), "mgmake ext: ref() requires a git fetch");
+			std::get<git_fetch>(m_data).m_ref = std::string{value};
+			return *this;
+		}
+
+		fetch& branch(std::string_view value) {
+			return ref(value);
+		}
+
+		fetch& tag(std::string_view value) {
+			return ref(value);
+		}
+
+		fetch& commit(std::string_view value) {
+			return ref(value);
+		}
+
+		fetch& sha256(std::string_view value) {
+			mgmkassert(std::holds_alternative<archive_fetch>(m_data), "mgmake ext: sha256() requires an archive fetch");
+			std::get<archive_fetch>(m_data).m_sha256 = std::string{value};
+			return *this;
+		}
+
+		fetch& strip_prefix(const std::filesystem::path& value) {
+			mgmkassert(std::holds_alternative<archive_fetch>(m_data), "mgmake ext: strip_prefix() requires an archive fetch");
+			std::get<archive_fetch>(m_data).m_strip_prefix = value;
+			return *this;
+		}
+
+		fetch& submodules(bool enabled = true) {
+			mgmkassert(std::holds_alternative<git_fetch>(m_data), "mgmake ext: submodules() requires a git fetch");
+			std::get<git_fetch>(m_data).m_submodules = enabled;
+			return *this;
+		}
+
+		fetch& shallow(bool enabled = true) {
+			mgmkassert(std::holds_alternative<git_fetch>(m_data), "mgmake ext: shallow() requires a git fetch");
+			std::get<git_fetch>(m_data).m_shallow = enabled;
+			return *this;
+		}
+	};
+}
+
+#endif
+// ===== end include/mgmake/ext/fetch.hxx =====
+
+
 // ===== begin include/mgmake/spec/executable.hxx =====
 #pragma once
 
@@ -3339,6 +3637,7 @@ namespace mgmake::spec {
 		std::string m_name;
 		std::vector<spec::executable> m_executables;
 		std::vector<spec::library> m_libraries;
+		std::vector<ext::fetch> m_fetches;
 
 		inline constexpr project(std::string_view name)
 			: m_name{name} {
@@ -3395,6 +3694,14 @@ namespace mgmake::spec {
 			return *this;
 		}
 
+		inline constexpr project& add_fetch(const ext::fetch& fetch) {
+			mgmkassert(!fetch.m_name.empty(), "mgmake spec: external fetch has no name");
+			mgmkassert(!find_fetch(fetch.m_name).has_value(), "mgmake spec: external fetch name conflict '" + fetch.m_name + "'");
+
+			m_fetches.emplace_back(fetch);
+			return *this;
+		}
+
 		const std::optional<spec::library::id> find_library(std::string_view name) const {
             for (spec::library::id idx = 0; idx < m_libraries.size(); idx++) {
 				const auto& lib = m_libraries.at(idx);
@@ -3423,6 +3730,25 @@ namespace mgmake::spec {
 			if (idx >= m_executables.size())
 				return nullptr;
 			return &m_executables.at(idx);
+		}
+
+		const std::optional<ext::fetch::id> find_fetch(std::string_view name) const {
+			for (ext::fetch::id idx = 0; idx < m_fetches.size(); ++idx) {
+				const auto& fetch = m_fetches.at(idx);
+				if (fetch.m_name == name) {
+					return idx;
+				}
+			}
+
+			return std::nullopt;
+		}
+
+		const ext::fetch* get_fetch(const ext::fetch::id idx) const {
+			if (idx >= m_fetches.size()) {
+				return nullptr;
+			}
+
+			return &m_fetches.at(idx);
 		}
 
 		dag::graph graph(const build::request& req) const;
@@ -5784,6 +6110,11 @@ namespace mgmake::discovery {
 		detail::enum_entry<tool_role::readelf, "MGMK_READELF">,
 		detail::enum_entry<tool_role::cmake, "MGMK_CMAKE">,
 		detail::enum_entry<tool_role::pkg_config, "MGMK_PKG_CONFIG">,
+		detail::enum_entry<tool_role::git, "MGMK_GIT">,
+		detail::enum_entry<tool_role::curl, "MGMK_CURL">,
+		detail::enum_entry<tool_role::wget, "MGMK_WGET">,
+		detail::enum_entry<tool_role::unzip, "MGMK_UNZIP">,
+		detail::enum_entry<tool_role::tar, "MGMK_TAR">,
 		detail::enum_entry<tool_role::generator_ninja, "MGMK_NINJA">,
 		detail::enum_entry<tool_role::exe_wrapper, "MGMK_EXE_WRAPPER">,
 		detail::enum_entry<tool_role::emulator, "MGMK_EMULATOR">
@@ -5892,6 +6223,11 @@ namespace mgmake::discovery {
 			case tool_role::nm: return {"nm"};
 			case tool_role::readelf: return {"readelf"};
 			case tool_role::generator_ninja: return {"ninja", "ninja-build"};
+			case tool_role::git: return {"git"};
+			case tool_role::curl: return {"curl"};
+			case tool_role::wget: return {"wget"};
+			case tool_role::unzip: return {"unzip"};
+			case tool_role::tar: return {"tar"};
 			default: break;
 		}
 
@@ -5959,11 +6295,13 @@ namespace mgmake::discovery {
 // skipped duplicate include: include/mgmake/discovery/tool_role.hxx
 // skipped duplicate include: include/mgmake/build/request.hxx
 // skipped duplicate include: include/mgmake/cli/options.hxx
+// skipped duplicate include: include/mgmake/ext/fetch.hxx
 // skipped duplicate include: include/mgmake/spec/project.hxx
 
 #include <filesystem>
 #include <string>
 #include <string_view>
+#include <variant>
 #include <vector>
 
 namespace mgmake::discovery {
@@ -5981,9 +6319,14 @@ namespace mgmake::discovery {
 		tool_family m_expected_family = tool_family::unknown;
 		object_format m_expected_object_format = object_format::unknown;
 		std::string m_target_triple{};
+		std::vector<tool_role> m_any_of{};
 
 		[[nodiscard]] inline bool required() const noexcept {
 			return m_strength == requirement_strength::required;
+		}
+
+		[[nodiscard]] inline bool is_any_of() const noexcept {
+			return !m_any_of.empty();
 		}
 	};
 
@@ -5997,6 +6340,11 @@ namespace mgmake::discovery {
 		bool m_has_static_library = false;
 		bool m_has_shared_library = false;
 		bool m_has_executable = false;
+
+		bool m_has_git_fetch = false;
+		bool m_has_archive_fetch = false;
+		bool m_has_zip_fetch = false;
+		bool m_has_tar_fetch = false;
 	};
 
 	inline void record_source_role(
@@ -6066,6 +6414,37 @@ namespace mgmake::discovery {
 		}
 	}
 
+	inline void record_fetch_tools(
+		project_tool_usage& usage,
+		const ext::fetch& fetch
+	) {
+		if (std::holds_alternative<ext::git_fetch>(fetch.m_data)) {
+			usage.m_has_git_fetch = true;
+			return;
+		}
+
+		if (const auto* archive = std::get_if<ext::archive_fetch>(&fetch.m_data)) {
+			usage.m_has_archive_fetch = true;
+
+			switch (archive->m_format) {
+				case ext::archive_format::zip:
+					usage.m_has_zip_fetch = true;
+					break;
+
+				case ext::archive_format::tar:
+				case ext::archive_format::tar_gz:
+				case ext::archive_format::tar_xz:
+					usage.m_has_tar_fetch = true;
+					break;
+
+				case ext::archive_format::auto_detect:
+					usage.m_has_zip_fetch = true;
+					usage.m_has_tar_fetch = true;
+					break;
+			}
+		}
+	}
+
 	[[nodiscard]] inline project_tool_usage collect_project_tool_usage(
 		const spec::project& project
 	) {
@@ -6079,6 +6458,10 @@ namespace mgmake::discovery {
 		for (const auto& exe : project.m_executables) {
 			record_target_sources(usage, exe);
 			usage.m_has_executable = true;
+		}
+
+		for (const auto& fetch : project.m_fetches) {
+			record_fetch_tools(usage, fetch);
 		}
 
 		return usage;
@@ -6141,6 +6524,38 @@ namespace mgmake::discovery {
 
 		if (usage.m_has_executable) {
 			result.push_back({tool_role::linker, requirement_strength::required, std::string{tc.tool(tool_role::linker)}, "the project builds at least one executable"});
+		}
+
+		if (usage.m_has_git_fetch) {
+			result.push_back({
+				.m_role = tool_role::git,
+				.m_strength = requirement_strength::required,
+				.m_needed_because = "the project fetches external git sources"
+			});
+		}
+
+		if (usage.m_has_archive_fetch) {
+			tool_requirement requirement{};
+			requirement.m_any_of = {tool_role::curl, tool_role::wget};
+			requirement.m_strength = requirement_strength::required;
+			requirement.m_needed_because = "the project downloads external archives";
+			result.push_back(std::move(requirement));
+		}
+
+		if (usage.m_has_zip_fetch) {
+			result.push_back({
+				.m_role = tool_role::unzip,
+				.m_strength = requirement_strength::required,
+				.m_needed_because = "the project extracts zip external archives"
+			});
+		}
+
+		if (usage.m_has_tar_fetch) {
+			result.push_back({
+				.m_role = tool_role::tar,
+				.m_strength = requirement_strength::required,
+				.m_needed_because = "the project extracts tar external archives"
+			});
 		}
 
 		if (req.target_platform() == sys::platform::p_windows && tc.dialect() == build::toolchain::dialect::msvc) {
@@ -7278,6 +7693,42 @@ namespace mgmake::discovery {
 		return std::unexpected{std::string{}};
 	}
 
+	[[nodiscard]] inline std::expected<resolved_tool, std::string> resolve_tool_requirement(
+		context& ctx,
+		const tool_requirement& requirement
+	) {
+		if (!requirement.is_any_of()) {
+			return resolve_tool(ctx, requirement);
+		}
+
+		std::string errors;
+
+		for (const auto role : requirement.m_any_of) {
+			auto candidate_requirement = requirement;
+			candidate_requirement.m_role = role;
+			candidate_requirement.m_any_of.clear();
+			candidate_requirement.m_logical_name.clear();
+
+			auto resolved = resolve_tool(ctx, candidate_requirement);
+			if (resolved) {
+				return resolved;
+			}
+
+			if (!resolved.error().empty()) {
+				if (!errors.empty()) {
+					errors += "\n";
+				}
+				errors += resolved.error();
+			}
+		}
+
+		return std::unexpected{
+			"mgmake discovery: failed to satisfy tool requirement: " +
+			requirement.m_needed_because +
+			(errors.empty() ? std::string{} : "\n" + errors)
+		};
+	}
+
 	[[nodiscard]] inline cache_entry make_cache_entry(
 		const build::request& req,
 		const resolved_tool& tool
@@ -7372,7 +7823,7 @@ namespace mgmake::discovery {
 		}
 
 		for (const auto& requirement : required_tools(opts, req, project)) {
-			auto tool = resolve_tool(ctx, requirement);
+			auto tool = resolve_tool_requirement(ctx, requirement);
 
 			if (!tool) {
 				if (requirement.required()) {
@@ -8028,6 +8479,7 @@ namespace mgmake::backend {
 #endif
 // ===== end include/mgmake/backend/execute.hxx =====
 
+// skipped duplicate include: include/mgmake/ext/fetch.hxx
 // skipped duplicate include: include/mgmake/spec/executable.hxx
 
 // ===== begin include/mgmake/spec/executable_impl.hxx =====
@@ -8572,6 +9024,29 @@ namespace mgmake::lower {
 // ===== end include/mgmake/lower/usage.hxx =====
 
 
+// ===== begin include/mgmake/lower/fetched.hxx =====
+#pragma once
+
+#ifndef MGMAKE_LOWER_FETCHED_HXX
+#define MGMAKE_LOWER_FETCHED_HXX
+
+// skipped duplicate include: include/mgmake/dag/artifact.hxx
+// skipped duplicate include: include/mgmake/dag/target.hxx
+
+#include <filesystem>
+
+namespace mgmake::lower {
+	struct fetched {
+		dag::target::id m_target{};
+		dag::artifact::id m_stamp{};
+		std::filesystem::path m_source_dir;
+	};
+}
+
+#endif
+// ===== end include/mgmake/lower/fetched.hxx =====
+
+
 // ===== begin include/mgmake/lower/emitter.hxx =====
 #pragma once
 
@@ -8613,7 +9088,8 @@ namespace mgmake::lower {
 			std::string description,
 			std::vector<dag::artifact::id> inputs,
 			std::vector<dag::artifact::id> outputs,
-			sys::command_line command
+			sys::command_line command,
+			std::filesystem::path working_directory
 		) {
 			return m_graph.create_action(
 				std::move(name),
@@ -8622,7 +9098,24 @@ namespace mgmake::lower {
 				std::move(outputs),
 				false,
 				std::move(command),
-				std::filesystem::path{}
+				std::move(working_directory)
+			);
+		}
+
+		dag::action::id action(
+			std::string name,
+			std::string description,
+			std::vector<dag::artifact::id> inputs,
+			std::vector<dag::artifact::id> outputs,
+			sys::command_line command
+		) {
+			return action(
+				std::move(name),
+				std::move(description),
+				std::move(inputs),
+				std::move(outputs),
+				std::move(command),
+				{}
 			);
 		}
 
@@ -8643,13 +9136,16 @@ namespace mgmake::lower {
 #define MGMK_LOWER_CONTEXT_HXX
 
 // skipped duplicate include: include/mgmake/lower/emitter.hxx
+// skipped duplicate include: include/mgmake/lower/fetched.hxx
 // skipped duplicate include: include/mgmake/lower/target.hxx
 // skipped duplicate include: include/mgmake/lower/usage.hxx
 // skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/ext/fetch.hxx
 // skipped duplicate include: include/mgmake/spec/executable.hxx
 // skipped duplicate include: include/mgmake/spec/library.hxx
 
 #include <filesystem>
+#include <map>
 #include <optional>
 #include <set>
 #include <string>
@@ -8690,6 +9186,8 @@ namespace mgmake::lower {
 
 		const lower::target& lower_library(spec::library::id id);
 		void lower_executable(spec::executable::id id);
+		const lower::fetched& lower_fetch(ext::fetch::id id);
+		lower::fetched lower_fetch_value(const ext::fetch& fetch);
 
 		lower::usage use_libraries(
 			const std::set<std::string>& libraries,
@@ -8718,8 +9216,26 @@ namespace mgmake::lower {
 			lower::usage usage
 		);
 
+		lower::fetched lower_git_fetch(
+			const ext::fetch& fetch,
+			const ext::git_fetch& git
+		);
+
+		lower::fetched lower_archive_fetch(
+			const ext::fetch& fetch,
+			const ext::archive_fetch& archive
+		);
+
+		lower::fetched lower_local_fetch(
+			const ext::fetch& fetch,
+			const ext::local_fetch& local
+		);
+
 		std::vector<std::optional<lower::target>> m_libraries;
 		std::set<spec::library::id> m_active_libraries;
+		std::vector<std::optional<lower::fetched>> m_fetches;
+		std::set<std::string> m_active_fetches;
+		std::map<std::string, lower::fetched> m_named_fetches;
 	};
 }
 
@@ -8900,9 +9416,13 @@ namespace mgmake::lower {
 // skipped duplicate include: include/mgmake/build/artifact_names.hxx
 // skipped duplicate include: include/mgmake/build/target.hxx
 // skipped duplicate include: include/mgmake/detail/assert.hxx
+// skipped duplicate include: include/mgmake/discovery/tool_role.hxx
+// skipped duplicate include: include/mgmake/ext/fetch.hxx
 // skipped duplicate include: include/mgmake/spec/project.hxx
 // skipped duplicate include: include/mgmake/sys/command_line.hxx
+// skipped duplicate include: include/mgmake/sys/file_command.hxx
 
+#include <algorithm>
 #include <filesystem>
 #include <set>
 #include <string>
@@ -8911,6 +9431,170 @@ namespace mgmake::lower {
 #include <vector>
 
 namespace mgmake::lower {
+	[[nodiscard]] inline std::filesystem::path fetch_root(const build::request& req) {
+		return req.build_dir() / "ext";
+	}
+
+	[[nodiscard]] inline std::filesystem::path fetch_source_dir(
+		const build::request& req,
+		std::string_view name
+	) {
+		return fetch_root(req) / "src" / std::string{name};
+	}
+
+	[[nodiscard]] inline std::filesystem::path fetch_tmp_dir(
+		const build::request& req,
+		std::string_view name
+	) {
+		return fetch_root(req) / "tmp" / std::string{name};
+	}
+
+	[[nodiscard]] inline std::filesystem::path fetch_stamp(
+		const build::request& req,
+		std::string_view name,
+		std::string_view suffix
+	) {
+		return fetch_root(req) / "stamp" / (std::string{name} + "." + std::string{suffix});
+	}
+
+	[[nodiscard]] inline std::filesystem::path archive_extension(ext::archive_format format) {
+		switch (format) {
+			case ext::archive_format::zip: return ".zip";
+			case ext::archive_format::tar: return ".tar";
+			case ext::archive_format::tar_gz: return ".tar.gz";
+			case ext::archive_format::tar_xz: return ".tar.xz";
+			case ext::archive_format::auto_detect: return ".archive";
+		}
+
+		return ".archive";
+	}
+
+	[[nodiscard]] inline std::filesystem::path fetch_archive_path(
+		const build::request& req,
+		std::string_view name,
+		ext::archive_format format
+	) {
+		return fetch_root(req) / "archive" / (std::string{name} + archive_extension(format).string());
+	}
+
+	[[nodiscard]] inline bool string_ends_with(std::string_view text, std::string_view suffix) noexcept {
+		return text.size() >= suffix.size() && text.substr(text.size() - suffix.size()) == suffix;
+	}
+
+	[[nodiscard]] inline ext::archive_format resolve_archive_format(
+		const ext::archive_fetch& archive
+	) {
+		if (archive.m_format != ext::archive_format::auto_detect) {
+			return archive.m_format;
+		}
+
+		std::string url = archive.m_url;
+		std::ranges::transform(url, url.begin(), [](unsigned char ch) {
+			return static_cast<char>(std::tolower(ch));
+		});
+
+		if (string_ends_with(url, ".zip")) {
+			return ext::archive_format::zip;
+		}
+
+		if (string_ends_with(url, ".tar")) {
+			return ext::archive_format::tar;
+		}
+
+		if (string_ends_with(url, ".tar.gz") || string_ends_with(url, ".tgz")) {
+			return ext::archive_format::tar_gz;
+		}
+
+		if (string_ends_with(url, ".tar.xz") || string_ends_with(url, ".txz")) {
+			return ext::archive_format::tar_xz;
+		}
+
+		mgmkassert(false, "mgmake lower: archive format auto-detect could not infer archive type from URL '" + archive.m_url + "'");
+		return ext::archive_format::auto_detect;
+	}
+
+	[[nodiscard]] inline sys::command_line archive_download_command(
+		const build::request& req,
+		const std::filesystem::path& archive_path,
+		std::string_view url
+	) {
+		const auto* downloader = req.discovered_tool_any({
+			discovery::tool_role::curl,
+			discovery::tool_role::wget
+		});
+
+		mgmkassert(downloader != nullptr, "mgmake lower: archive fetch requires curl or wget");
+
+		sys::command_line command{};
+		command.m_args.emplace_back(downloader->path_string());
+
+		switch (downloader->m_role) {
+			case discovery::tool_role::curl:
+				command.m_args.emplace_back("-L");
+				command.m_args.emplace_back("-o");
+				command.m_args.emplace_back(archive_path.string());
+				command.m_args.emplace_back(std::string{url});
+				break;
+
+			case discovery::tool_role::wget:
+				command.m_args.emplace_back("-O");
+				command.m_args.emplace_back(archive_path.string());
+				command.m_args.emplace_back(std::string{url});
+				break;
+
+			default:
+				mgmkassert(false, "mgmake lower: unsupported archive downloader");
+				break;
+		}
+
+		return command;
+	}
+
+	[[nodiscard]] inline sys::command_line archive_extract_command(
+		const build::request& req,
+		ext::archive_format format,
+		const std::filesystem::path& archive_path,
+		const std::filesystem::path& tmp_dir
+	) {
+		sys::command_line command{};
+
+		switch (format) {
+			case ext::archive_format::zip: {
+				const auto unzip = req.tool_path(discovery::tool_role::unzip, "unzip");
+				command.m_args.emplace_back(unzip.string());
+				command.m_args.emplace_back(archive_path.string());
+				command.m_args.emplace_back("-d");
+				command.m_args.emplace_back(tmp_dir.string());
+				break;
+			}
+
+			case ext::archive_format::tar:
+			case ext::archive_format::tar_gz:
+			case ext::archive_format::tar_xz: {
+				const auto tar = req.tool_path(discovery::tool_role::tar, "tar");
+				command.m_args.emplace_back(tar.string());
+
+				switch (format) {
+					case ext::archive_format::tar: command.m_args.emplace_back("-xf"); break;
+					case ext::archive_format::tar_gz: command.m_args.emplace_back("-xzf"); break;
+					case ext::archive_format::tar_xz: command.m_args.emplace_back("-xJf"); break;
+					default: break;
+				}
+
+				command.m_args.emplace_back(archive_path.string());
+				command.m_args.emplace_back("-C");
+				command.m_args.emplace_back(tmp_dir.string());
+				break;
+			}
+
+			case ext::archive_format::auto_detect:
+				mgmkassert(false, "mgmake lower: archive format auto-detect must be resolved before extraction");
+				break;
+		}
+
+		return command;
+	}
+
 	inline context::context(
 		dag::graph& graph,
 		const build::request& req,
@@ -8919,7 +9603,216 @@ namespace mgmake::lower {
 		: m_req{req}
 		, m_project{project}
 		, m_emit{graph}
-		, m_libraries(project.m_libraries.size()) {}
+		, m_libraries(project.m_libraries.size())
+		, m_fetches(project.m_fetches.size()) {}
+
+	inline const lower::fetched& context::lower_fetch(ext::fetch::id id) {
+		mgmkassert(id < m_project.m_fetches.size(), "mgmake lower: invalid fetch id");
+
+		if (m_fetches.at(id).has_value()) {
+			return m_fetches.at(id).value();
+		}
+
+		const auto& fetch = m_project.m_fetches.at(id);
+		m_fetches.at(id) = lower_fetch_value(fetch);
+		return m_fetches.at(id).value();
+	}
+
+	inline lower::fetched context::lower_fetch_value(const ext::fetch& fetch) {
+		mgmkassert(!fetch.m_name.empty(), "mgmake lower: fetch has no name");
+
+		if (auto existing = m_named_fetches.find(fetch.m_name); existing != m_named_fetches.end()) {
+			return existing->second;
+		}
+
+		mgmkassert(
+			!m_active_fetches.contains(fetch.m_name),
+			"mgmake lower: cyclic fetch dependency involving '" + fetch.m_name + "'"
+		);
+		m_active_fetches.emplace(fetch.m_name);
+
+		lower::fetched result{};
+
+		if (const auto* git = std::get_if<ext::git_fetch>(&fetch.m_data)) {
+			result = lower_git_fetch(fetch, *git);
+		} else if (const auto* archive = std::get_if<ext::archive_fetch>(&fetch.m_data)) {
+			result = lower_archive_fetch(fetch, *archive);
+		} else if (const auto* local = std::get_if<ext::local_fetch>(&fetch.m_data)) {
+			result = lower_local_fetch(fetch, *local);
+		} else {
+			mgmkassert(false, "mgmake lower: unsupported fetch kind for '" + fetch.m_name + "'");
+		}
+
+		m_active_fetches.erase(fetch.m_name);
+		m_named_fetches.emplace(fetch.m_name, result);
+		return result;
+	}
+
+	inline lower::fetched context::lower_git_fetch(
+		const ext::fetch& fetch,
+		const ext::git_fetch& git
+	) {
+		const auto src_dir = fetch_source_dir(request(), fetch.m_name);
+		const auto prepare_stamp = fetch_stamp(request(), fetch.m_name, "prepare");
+		const auto final_stamp = fetch_stamp(request(), fetch.m_name, "fetch");
+
+		const auto prepare_id = m_emit.generated(prepare_stamp);
+		const auto source_id = m_emit.generated(src_dir);
+		const auto stamp_id = m_emit.generated(final_stamp);
+
+		m_emit.action(
+			"Prepare fetch " + fetch.m_name,
+			"Prepares external fetch '" + fetch.m_name + "'.",
+			{},
+			{prepare_id},
+			sys::reset_directory_stamp_command(src_dir, prepare_stamp)
+		);
+
+		const auto* git_tool = request().discovered_tool(discovery::tool_role::git);
+		const auto git_path = git_tool ? git_tool->path_string() : std::string{"git"};
+
+		sys::command_line clone{};
+		clone.m_args.emplace_back(git_path);
+		clone.m_args.emplace_back("clone");
+
+		if (git.m_shallow) {
+			clone.m_args.emplace_back("--depth");
+			clone.m_args.emplace_back("1");
+		}
+
+		if (git.m_submodules) {
+			clone.m_args.emplace_back("--recurse-submodules");
+		}
+
+		if (!git.m_ref.empty()) {
+			clone.m_args.emplace_back("--branch");
+			clone.m_args.emplace_back(git.m_ref);
+		}
+
+		clone.m_args.emplace_back(git.m_url);
+		clone.m_args.emplace_back(src_dir.string());
+
+		m_emit.action(
+			"Clone fetch " + fetch.m_name,
+			"Clones external git source '" + fetch.m_name + "'.",
+			{prepare_id},
+			{source_id},
+			std::move(clone)
+		);
+
+		m_emit.action(
+			"Stamp fetch " + fetch.m_name,
+			"Marks external fetch '" + fetch.m_name + "' complete.",
+			{source_id},
+			{stamp_id},
+			sys::touch_command(final_stamp)
+		);
+
+		dag::target dag_target{
+			"ext:fetch:" + fetch.m_name,
+			{stamp_id},
+			{}
+		};
+
+		return lower::fetched{
+			.m_target = m_emit.target(std::move(dag_target)),
+			.m_stamp = stamp_id,
+			.m_source_dir = src_dir
+		};
+	}
+
+	inline lower::fetched context::lower_archive_fetch(
+		const ext::fetch& fetch,
+		const ext::archive_fetch& archive
+	) {
+		const auto format = resolve_archive_format(archive);
+		const auto src_dir = fetch_source_dir(request(), fetch.m_name);
+		const auto tmp_dir = fetch_tmp_dir(request(), fetch.m_name);
+		const auto archive_path = fetch_archive_path(request(), fetch.m_name, format);
+		const auto prepare_stamp = fetch_stamp(request(), fetch.m_name, "prepare");
+		const auto final_stamp = fetch_stamp(request(), fetch.m_name, "fetch");
+
+		const auto prepare_id = m_emit.generated(prepare_stamp);
+		const auto archive_id = m_emit.generated(archive_path);
+		const auto tmp_id = m_emit.generated(tmp_dir);
+		const auto stamp_id = m_emit.generated(final_stamp);
+
+		m_emit.action(
+			"Prepare fetch " + fetch.m_name,
+			"Prepares external archive fetch '" + fetch.m_name + "'.",
+			{},
+			{prepare_id},
+			sys::reset_directory_stamp_command(tmp_dir, prepare_stamp)
+		);
+
+		m_emit.action(
+			"Download fetch " + fetch.m_name,
+			"Downloads external archive source '" + fetch.m_name + "'.",
+			{prepare_id},
+			{archive_id},
+			archive_download_command(request(), archive_path, archive.m_url)
+		);
+
+		m_emit.action(
+			"Extract fetch " + fetch.m_name,
+			"Extracts external archive source '" + fetch.m_name + "'.",
+			{archive_id, prepare_id},
+			{tmp_id},
+			archive_extract_command(request(), format, archive_path, tmp_dir)
+		);
+
+		const auto normalized_from = archive.m_strip_prefix.empty()
+			? tmp_dir
+			: tmp_dir / archive.m_strip_prefix;
+
+		m_emit.action(
+			"Normalize fetch " + fetch.m_name,
+			"Normalizes external archive source '" + fetch.m_name + "'.",
+			{tmp_id},
+			{stamp_id},
+			sys::normalize_directory_stamp_command(normalized_from, src_dir, final_stamp)
+		);
+
+		dag::target dag_target{
+			"ext:fetch:" + fetch.m_name,
+			{stamp_id},
+			{}
+		};
+
+		return lower::fetched{
+			.m_target = m_emit.target(std::move(dag_target)),
+			.m_stamp = stamp_id,
+			.m_source_dir = src_dir
+		};
+	}
+
+	inline lower::fetched context::lower_local_fetch(
+		const ext::fetch& fetch,
+		const ext::local_fetch& local
+	) {
+		const auto stamp_path = fetch_stamp(request(), fetch.m_name, "fetch");
+		const auto stamp_id = m_emit.generated(stamp_path);
+
+		m_emit.action(
+			"Validate fetch " + fetch.m_name,
+			"Validates local external source '" + fetch.m_name + "'.",
+			{},
+			{stamp_id},
+			sys::validate_path_command(local.m_path, stamp_path)
+		);
+
+		dag::target dag_target{
+			"ext:fetch:" + fetch.m_name,
+			{stamp_id},
+			{}
+		};
+
+		return lower::fetched{
+			.m_target = m_emit.target(std::move(dag_target)),
+			.m_stamp = stamp_id,
+			.m_source_dir = local.m_path
+		};
+	}
 
 	inline lower::usage context::use_libraries(
 		const std::set<std::string>& libraries,
@@ -9317,6 +10210,10 @@ namespace mgmake::spec {
 	inline dag::graph project::graph(const build::request& req) const {
 		dag::graph result{};
 		lower::context ctx{result, req, *this};
+
+		for (ext::fetch::id id = 0; id < m_fetches.size(); ++id) {
+			ctx.lower_fetch(id);
+		}
 
 		for (spec::library::id id = 0; id < m_libraries.size(); ++id) {
 			ctx.lower_library(id);

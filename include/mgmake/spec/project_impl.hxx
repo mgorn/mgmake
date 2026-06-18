@@ -11,6 +11,10 @@ namespace mgmake::spec {
 		dag::graph result{};
 		lower::context ctx{result, req, *this};
 
+		for (ext::fetch::id id = 0; id < m_fetches.size(); ++id) {
+			ctx.lower_fetch(id);
+		}
+
 		for (spec::library::id id = 0; id < m_libraries.size(); ++id) {
 			ctx.lower_library(id);
 		}

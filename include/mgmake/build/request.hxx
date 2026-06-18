@@ -8,6 +8,7 @@
 #include "../sys/platform.hxx"
 
 #include <filesystem>
+#include <initializer_list>
 #include <optional>
 #include <string>
 #include <utility>
@@ -70,6 +71,27 @@ namespace mgmake::build {
             std::filesystem::path fallback = {}
         ) const {
             if (const auto* tool = discovered_tool(role)) {
+                return tool->m_path;
+            }
+
+            return fallback;
+        }
+
+        [[nodiscard]] inline const discovery::resolved_tool* discovered_tool_any(
+            std::initializer_list<discovery::tool_role> roles
+        ) const noexcept {
+            if (!m_resolved_toolchain.has_value()) {
+                return nullptr;
+            }
+
+            return m_resolved_toolchain->find_any(roles);
+        }
+
+        [[nodiscard]] inline std::filesystem::path tool_path_any(
+            std::initializer_list<discovery::tool_role> roles,
+            std::filesystem::path fallback = {}
+        ) const {
+            if (const auto* tool = discovered_tool_any(roles)) {
                 return tool->m_path;
             }
 

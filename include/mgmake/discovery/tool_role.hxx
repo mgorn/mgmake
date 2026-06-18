@@ -40,6 +40,11 @@ namespace mgmake::discovery {
 		generator_xcode,
 		cmake,
 		pkg_config,
+		git,
+		curl,
+		wget,
+		unzip,
+		tar,
 		exe_wrapper,
 		emulator,
 		count
@@ -78,6 +83,11 @@ namespace mgmake::discovery {
 		detail::enum_entry<tool_role::generator_xcode, "xcodebuild">,
 		detail::enum_entry<tool_role::cmake, "cmake">,
 		detail::enum_entry<tool_role::pkg_config, "pkg-config">,
+		detail::enum_entry<tool_role::git, "git">,
+		detail::enum_entry<tool_role::curl, "curl">,
+		detail::enum_entry<tool_role::wget, "wget">,
+		detail::enum_entry<tool_role::unzip, "unzip">,
+		detail::enum_entry<tool_role::tar, "tar">,
 		detail::enum_entry<tool_role::exe_wrapper, "exe wrapper">,
 		detail::enum_entry<tool_role::emulator, "emulator">
 	>;

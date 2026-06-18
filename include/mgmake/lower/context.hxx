@@ -4,13 +4,16 @@
 #define MGMK_LOWER_CONTEXT_HXX
 
 #include "emitter.hxx"
+#include "fetched.hxx"
 #include "target.hxx"
 #include "usage.hxx"
 #include "../build/request.hxx"
+#include "../ext/fetch.hxx"
 #include "../spec/executable.hxx"
 #include "../spec/library.hxx"
 
 #include <filesystem>
+#include <map>
 #include <optional>
 #include <set>
 #include <string>
@@ -51,6 +54,8 @@ namespace mgmake::lower {
 
 		const lower::target& lower_library(spec::library::id id);
 		void lower_executable(spec::executable::id id);
+		const lower::fetched& lower_fetch(ext::fetch::id id);
+		lower::fetched lower_fetch_value(const ext::fetch& fetch);
 
 		lower::usage use_libraries(
 			const std::set<std::string>& libraries,
@@ -79,8 +84,26 @@ namespace mgmake::lower {
 			lower::usage usage
 		);
 
+		lower::fetched lower_git_fetch(
+			const ext::fetch& fetch,
+			const ext::git_fetch& git
+		);
+
+		lower::fetched lower_archive_fetch(
+			const ext::fetch& fetch,
+			const ext::archive_fetch& archive
+		);
+
+		lower::fetched lower_local_fetch(
+			const ext::fetch& fetch,
+			const ext::local_fetch& local
+		);
+
 		std::vector<std::optional<lower::target>> m_libraries;
 		std::set<spec::library::id> m_active_libraries;
+		std::vector<std::optional<lower::fetched>> m_fetches;
+		std::set<std::string> m_active_fetches;
+		std::map<std::string, lower::fetched> m_named_fetches;
 	};
 }
 

@@ -38,7 +38,8 @@ namespace mgmake::lower {
 			std::string description,
 			std::vector<dag::artifact::id> inputs,
 			std::vector<dag::artifact::id> outputs,
-			sys::command_line command
+			sys::command_line command,
+			std::filesystem::path working_directory
 		) {
 			return m_graph.create_action(
 				std::move(name),
@@ -47,7 +48,24 @@ namespace mgmake::lower {
 				std::move(outputs),
 				false,
 				std::move(command),
-				std::filesystem::path{}
+				std::move(working_directory)
+			);
+		}
+
+		dag::action::id action(
+			std::string name,
+			std::string description,
+			std::vector<dag::artifact::id> inputs,
+			std::vector<dag::artifact::id> outputs,
+			sys::command_line command
+		) {
+			return action(
+				std::move(name),
+				std::move(description),
+				std::move(inputs),
+				std::move(outputs),
+				std::move(command),
+				{}
 			);
 		}
 

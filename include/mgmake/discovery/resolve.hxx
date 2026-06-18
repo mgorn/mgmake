@@ -75,6 +75,42 @@ namespace mgmake::discovery {
 		return std::unexpected{std::string{}};
 	}
 
+	[[nodiscard]] inline std::expected<resolved_tool, std::string> resolve_tool_requirement(
+		context& ctx,
+		const tool_requirement& requirement
+	) {
+		if (!requirement.is_any_of()) {
+			return resolve_tool(ctx, requirement);
+		}
+
+		std::string errors;
+
+		for (const auto role : requirement.m_any_of) {
+			auto candidate_requirement = requirement;
+			candidate_requirement.m_role = role;
+			candidate_requirement.m_any_of.clear();
+			candidate_requirement.m_logical_name.clear();
+
+			auto resolved = resolve_tool(ctx, candidate_requirement);
+			if (resolved) {
+				return resolved;
+			}
+
+			if (!resolved.error().empty()) {
+				if (!errors.empty()) {
+					errors += "\n";
+				}
+				errors += resolved.error();
+			}
+		}
+
+		return std::unexpected{
+			"mgmake discovery: failed to satisfy tool requirement: " +
+			requirement.m_needed_because +
+			(errors.empty() ? std::string{} : "\n" + errors)
+		};
+	}
+
 	[[nodiscard]] inline cache_entry make_cache_entry(
 		const build::request& req,
 		const resolved_tool& tool
@@ -169,7 +205,7 @@ namespace mgmake::discovery {
 		}
 
 		for (const auto& requirement : required_tools(opts, req, project)) {
-			auto tool = resolve_tool(ctx, requirement);
+			auto tool = resolve_tool_requirement(ctx, requirement);
 
 			if (!tool) {
 				if (requirement.required()) {
