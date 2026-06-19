@@ -7,11 +7,17 @@
 #include "util.hxx"
 
 #include <cstdlib>
+#include <print>
 #include <span>
 #include <string_view>
 #include <vector>
 
 namespace mgmake::sys {
+	struct command_run_options {
+		bool m_verbose = false;
+		bool m_dry_run = false;
+	};
+
 	struct command_line {
 		std::vector<std::string> m_args;
 
@@ -41,8 +47,16 @@ namespace mgmake::sys {
             return result;
 		}
 
-		auto invoke() const {
+		auto invoke(command_run_options opts = {}) const {
 			const auto command = full_command();
+
+			if (opts.m_verbose || opts.m_dry_run) {
+				std::println("{}", command);
+			}
+
+			if (opts.m_dry_run) {
+				return 0;
+			}
 
 #if defined(MGMK_PLATFORM_WINDOWS)
 			std::string shell_command;

@@ -105,7 +105,10 @@ namespace mgmake::build {
 			command.m_args.emplace_back(arg);
 		}
 
-		return command.invoke();
+		return command.invoke({
+			.m_verbose = opts.m_verbose,
+			.m_dry_run = opts.m_dry_run
+		});
 	}
 }
 

@@ -263,11 +263,21 @@ namespace mgmake::backend {
 			command.m_args.emplace_back("-f");
 			command.m_args.emplace_back(output_path.string());
 
+			if (opts.m_dry_run) {
+				command.m_args.emplace_back("-n");
+			}
+
+			if (opts.m_verbose || opts.m_dry_run) {
+				command.m_args.emplace_back("-v");
+			}
+
 			for (const auto& target : req.m_targets) {
 				command.m_args.emplace_back(target);
 			}
 
-			const auto exit_code = command.invoke();
+			const auto exit_code = command.invoke({
+				.m_verbose = opts.m_verbose || opts.m_dry_run
+			});
 
 			if (exit_code != 0) {
 				return std::unexpected(

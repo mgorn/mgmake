@@ -1035,11 +1035,17 @@ namespace mgmake::sys {
 // skipped duplicate include: include/mgmake/sys/util.hxx
 
 #include <cstdlib>
+#include <print>
 #include <span>
 #include <string_view>
 #include <vector>
 
 namespace mgmake::sys {
+	struct command_run_options {
+		bool m_verbose = false;
+		bool m_dry_run = false;
+	};
+
 	struct command_line {
 		std::vector<std::string> m_args;
 
@@ -1069,8 +1075,16 @@ namespace mgmake::sys {
             return result;
 		}
 
-		auto invoke() const {
+		auto invoke(command_run_options opts = {}) const {
 			const auto command = full_command();
+
+			if (opts.m_verbose || opts.m_dry_run) {
+				std::println("{}", command);
+			}
+
+			if (opts.m_dry_run) {
+				return 0;
+			}
 
 #if defined(MGMK_PLATFORM_WINDOWS)
 			std::string shell_command;
@@ -3098,15 +3112,34 @@ namespace mgmake::build {
 #define MGMAKE_BUILD_CLEAN_HXX
 
 // skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/sys/command_line.hxx
 
 #include <expected>
+#include <print>
 #include <filesystem>
 #include <string>
 
 namespace mgmake::build {
+	inline void print_clean_command(const build::request& req) {
+#if defined(MGMK_PLATFORM_WINDOWS)
+		std::println("rmdir /s /q {}", sys::shell_escape(req.build_dir().string()));
+#else
+		std::println("rm -rf {}", sys::shell_escape(req.build_dir().string()));
+#endif
+	}
+
 	[[nodiscard]] inline std::expected<void, std::string> clean(
-		const build::request& req
+		const build::request& req,
+		sys::command_run_options run_options = {}
 	) {
+		if (run_options.m_verbose || run_options.m_dry_run) {
+			print_clean_command(req);
+		}
+
+		if (run_options.m_dry_run) {
+			return {};
+		}
+
 		std::error_code ec;
 		std::filesystem::remove_all(req.build_dir(), ec);
 
@@ -3930,7 +3963,10 @@ namespace mgmake::build {
 			command.m_args.emplace_back(arg);
 		}
 
-		return command.invoke();
+		return command.invoke({
+			.m_verbose = opts.m_verbose,
+			.m_dry_run = opts.m_dry_run
+		});
 	}
 }
 
@@ -8200,11 +8236,21 @@ namespace mgmake::backend {
 			command.m_args.emplace_back("-f");
 			command.m_args.emplace_back(output_path.string());
 
+			if (opts.m_dry_run) {
+				command.m_args.emplace_back("-n");
+			}
+
+			if (opts.m_verbose || opts.m_dry_run) {
+				command.m_args.emplace_back("-v");
+			}
+
 			for (const auto& target : req.m_targets) {
 				command.m_args.emplace_back(target);
 			}
 
-			const auto exit_code = command.invoke();
+			const auto exit_code = command.invoke({
+				.m_verbose = opts.m_verbose || opts.m_dry_run
+			});
 
 			if (exit_code != 0) {
 				return std::unexpected(
@@ -10355,7 +10401,10 @@ namespace mgmake {
 		auto req = std::move(*req_result);
 
 		if (opts.m_action == cli::action_kind::clean) {
-			const auto clean_result = build::clean(req);
+			const auto clean_result = build::clean(req, {
+				.m_verbose = opts.m_verbose,
+				.m_dry_run = opts.m_dry_run
+			});
 
 			if (!clean_result) {
 				std::println(stderr, "{}", clean_result.error());
@@ -10417,7 +10466,10 @@ namespace mgmake {
 		auto req = std::move(*req_result);
 
 		if (opts.m_action == cli::action_kind::clean) {
-			const auto clean_result = build::clean(req);
+			const auto clean_result = build::clean(req, {
+				.m_verbose = opts.m_verbose,
+				.m_dry_run = opts.m_dry_run
+			});
 
 			if (!clean_result) {
 				std::println(stderr, "{}", clean_result.error());

@@ -56,7 +56,10 @@ namespace mgmake {
 		auto req = std::move(*req_result);
 
 		if (opts.m_action == cli::action_kind::clean) {
-			const auto clean_result = build::clean(req);
+			const auto clean_result = build::clean(req, {
+				.m_verbose = opts.m_verbose,
+				.m_dry_run = opts.m_dry_run
+			});
 
 			if (!clean_result) {
 				std::println(stderr, "{}", clean_result.error());
@@ -118,7 +121,10 @@ namespace mgmake {
 		auto req = std::move(*req_result);
 
 		if (opts.m_action == cli::action_kind::clean) {
-			const auto clean_result = build::clean(req);
+			const auto clean_result = build::clean(req, {
+				.m_verbose = opts.m_verbose,
+				.m_dry_run = opts.m_dry_run
+			});
 
 			if (!clean_result) {
 				std::println(stderr, "{}", clean_result.error());
