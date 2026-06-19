@@ -7478,6 +7478,7 @@ namespace mgmake::discovery {
 			result.push_back({
 				.m_role = tool_role::cmake,
 				.m_strength = requirement_strength::required,
+				.m_logical_name = "cmake",
 				.m_needed_because = "the project configures external CMake projects"
 			});
 		}
