@@ -10411,10 +10411,10 @@ namespace mgmake::prep {
 	}
 
 
-	[[nodiscard]] inline std::filesystem::path fetch_complete_marker(
+	[[nodiscard]] inline std::filesystem::path git_fetch_complete_marker(
 		const std::filesystem::path& source_dir
 	) {
-		return source_dir / ".mgmake-fetch-complete";
+		return source_dir / ".git";
 	}
 
 	[[nodiscard]] inline sys::command_line git_clone_command(
@@ -10625,7 +10625,7 @@ namespace mgmake::prep {
 		const ext::git_fetch& git
 	) {
 		const auto src_dir = fetch_source_dir(request(), fetch.m_name);
-		const auto complete_marker = fetch_complete_marker(src_dir);
+		const auto complete_marker = git_fetch_complete_marker(src_dir);
 		const auto stamp_id = m_emit.generated(complete_marker);
 
 
