@@ -113,37 +113,40 @@ namespace mgmake::lower {
 		const build::request& req,
 		const ext::cmake& cmake_project,
 		const prep::cmake_project& prepared,
-		const ext::provider_ref& provider,
-		const std::filesystem::path& stamp
+		const ext::provider_ref& provider
 	) {
-		const auto cmake_path = req.tool_path(discovery::tool_role::cmake, "cmake");
-		std::string command = sys::shell_path(cmake_path);
-		command += " --build ";
-		command += sys::shell_path(prepared.m_build_dir);
+		sys::command_line command;
+		command.m_args.emplace_back(req.tool_path(discovery::tool_role::cmake, "cmake").string());
+		command.m_args.emplace_back("--build");
+		command.m_args.emplace_back(prepared.m_build_dir.string());
 
 		const auto target = cmake_project.m_install
 			? cmake_project.m_install_target
 			: provider.m_target;
 
 		if (!target.empty()) {
-			command += " --target ";
-			command += sys::shell_escape(target);
+			command.m_args.emplace_back("--target");
+			command.m_args.emplace_back(target);
 		}
 
 		if (!cmake_project.m_build_config.empty()) {
-			command += " --config ";
-			command += sys::shell_escape(cmake_project.m_build_config);
+			command.m_args.emplace_back("--config");
+			command.m_args.emplace_back(cmake_project.m_build_config);
 		}
 
-		command += " && ";
-#if defined(MGMK_PLATFORM_WINDOWS)
-		command += "type nul > ";
-		command += sys::shell_path(stamp);
-#else
-		command += "touch ";
-		command += sys::shell_path(stamp);
-#endif
-		return sys::shell_command(std::move(command));
+		return command;
+	}
+
+	[[nodiscard]] inline sys::command_line cmake_touch_command(
+		const build::request& req,
+		const std::filesystem::path& path
+	) {
+		sys::command_line command;
+		command.m_args.emplace_back(req.tool_path(discovery::tool_role::cmake, "cmake").string());
+		command.m_args.emplace_back("-E");
+		command.m_args.emplace_back("touch");
+		command.m_args.emplace_back(path.string());
+		return command;
 	}
 #endif
 
@@ -556,16 +559,29 @@ namespace mgmake::lower {
 		const auto stamp = provider_target_stamp(request(), provider);
 		const auto stamp_id = m_emit.generated(stamp);
 
-		std::vector<dag::artifact::id> outputs{stamp_id};
-		outputs.insert(outputs.end(), extra_outputs.begin(), extra_outputs.end());
+		std::vector<dag::artifact::id> build_outputs{extra_outputs.begin(), extra_outputs.end()};
+
+		if (build_outputs.empty()) {
+			build_outputs.emplace_back(stamp_id);
+		}
 
 		m_emit.action(
 			"Build CMake target " + provider.m_project + ":" + provider.m_target,
 			"Builds external CMake target '" + provider.m_target + "' from project '" + provider.m_project + "'.",
 			{},
-			outputs,
-			cmake_build_command(request(), *cmake_spec, *prepared, provider, stamp)
+			build_outputs,
+			cmake_build_command(request(), *cmake_spec, *prepared, provider)
 		);
+
+		if (!extra_outputs.empty()) {
+			m_emit.action(
+				"Stamp CMake target " + provider.m_project + ":" + provider.m_target,
+				"Marks external CMake target '" + provider.m_target + "' from project '" + provider.m_project + "' as ready.",
+				build_outputs,
+				{stamp_id},
+				cmake_touch_command(request(), stamp)
+			);
+		}
 
 		dag::target dag_target{
 			"ext:cmake:" + provider.m_project + ":" + provider.m_target,

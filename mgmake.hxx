@@ -10253,32 +10253,6 @@ namespace mgmake::prep {
 		return fetch_root(req) / "install" / std::string{name};
 	}
 
-	[[nodiscard]] inline std::filesystem::path cmake_stamp(
-		const build::request& req,
-		std::string_view name,
-		std::string_view suffix
-	) {
-		return fetch_root(req) / "stamp" / (std::string{name} + ".cmake." + std::string{suffix});
-	}
-
-	[[nodiscard]] inline std::string cmake_shell_arg(const std::filesystem::path& path) {
-		return sys::shell_escape(path.string());
-	}
-
-	[[nodiscard]] inline std::string cmake_shell_arg(std::string_view value) {
-		return sys::shell_escape(std::string{value});
-	}
-
-	[[nodiscard]] inline std::string shell_touch_command_text(
-		const std::filesystem::path& path
-	) {
-#if defined(MGMK_PLATFORM_WINDOWS)
-		return "type nul > " + sys::shell_path(path);
-#else
-		return "touch " + sys::shell_path(path);
-#endif
-	}
-
 	[[nodiscard]] inline sys::command_line cmake_write_query_command(
 		const std::filesystem::path& query_path
 	) {
@@ -10298,46 +10272,45 @@ namespace mgmake::prep {
 #endif
 	}
 
+	[[nodiscard]] inline std::filesystem::path cmake_configure_output(
+		const std::filesystem::path& build_dir
+	) {
+		return build_dir / "CMakeCache.txt";
+	}
+
 	[[nodiscard]] inline sys::command_line cmake_configure_command(
 		const build::request& req,
 		const ext::cmake& cmake_project,
 		const std::filesystem::path& source_dir,
 		const std::filesystem::path& build_dir,
-		const std::filesystem::path& install_dir,
-		const std::filesystem::path& stamp
+		const std::filesystem::path& install_dir
 	) {
-		const auto cmake_path = req.tool_path(discovery::tool_role::cmake, "cmake");
-		std::string command = cmake_shell_arg(cmake_path);
-		command += " -S ";
-		command += sys::shell_path(source_dir);
-		command += " -B ";
-		command += sys::shell_path(build_dir);
-		command += " -DCMAKE_INSTALL_PREFIX=";
-		command += sys::shell_path(install_dir);
+		sys::command_line command;
+		command.m_args.emplace_back(req.tool_path(discovery::tool_role::cmake, "cmake").string());
+		command.m_args.emplace_back("-S");
+		command.m_args.emplace_back(source_dir.string());
+		command.m_args.emplace_back("-B");
+		command.m_args.emplace_back(build_dir.string());
+		command.m_args.emplace_back("-DCMAKE_INSTALL_PREFIX=" + install_dir.string());
 
 		if (!cmake_project.m_generator.empty()) {
-			command += " -G ";
-			command += cmake_shell_arg(std::string_view{cmake_project.m_generator});
+			command.m_args.emplace_back("-G");
+			command.m_args.emplace_back(cmake_project.m_generator);
 		}
 
 		if (!cmake_project.m_build_config.empty()) {
-			command += " -DCMAKE_BUILD_TYPE=";
-			command += cmake_shell_arg(std::string_view{cmake_project.m_build_config});
+			command.m_args.emplace_back("-DCMAKE_BUILD_TYPE=" + cmake_project.m_build_config);
 		}
 
 		for (const auto& [key, value] : cmake_project.m_defines) {
-			command += " -D";
-			command += cmake_shell_arg(std::string_view{key + "=" + value});
+			command.m_args.emplace_back("-D" + key + "=" + value);
 		}
 
 		for (const auto& arg : cmake_project.m_args) {
-			command += " ";
-			command += cmake_shell_arg(std::string_view{arg});
+			command.m_args.emplace_back(arg);
 		}
 
-		command += " && ";
-		command += shell_touch_command_text(stamp);
-		return sys::shell_command(std::move(command));
+		return command;
 	}
 #endif
 
@@ -10562,10 +10535,10 @@ namespace mgmake::prep {
 		const auto build_dir = cmake_build_dir(request(), cmake_project.m_name);
 		const auto install_dir = cmake_install_dir(request(), cmake_project.m_name);
 		const auto query_path = ext::cmake_file_api::query_file(build_dir);
-		const auto configure_stamp = cmake_stamp(request(), cmake_project.m_name, "configure");
+		const auto configure_output = cmake_configure_output(build_dir);
 
 		const auto query_id = m_emit.generated(query_path);
-		const auto configure_id = m_emit.generated(configure_stamp);
+		const auto configure_id = m_emit.generated(configure_output);
 
 		m_emit.action(
 			"Write CMake File API query " + cmake_project.m_name,
@@ -10585,8 +10558,7 @@ namespace mgmake::prep {
 				cmake_project,
 				source_dir,
 				build_dir,
-				install_dir,
-				configure_stamp
+				install_dir
 			)
 		);
 
@@ -11172,37 +11144,40 @@ namespace mgmake::lower {
 		const build::request& req,
 		const ext::cmake& cmake_project,
 		const prep::cmake_project& prepared,
-		const ext::provider_ref& provider,
-		const std::filesystem::path& stamp
+		const ext::provider_ref& provider
 	) {
-		const auto cmake_path = req.tool_path(discovery::tool_role::cmake, "cmake");
-		std::string command = sys::shell_path(cmake_path);
-		command += " --build ";
-		command += sys::shell_path(prepared.m_build_dir);
+		sys::command_line command;
+		command.m_args.emplace_back(req.tool_path(discovery::tool_role::cmake, "cmake").string());
+		command.m_args.emplace_back("--build");
+		command.m_args.emplace_back(prepared.m_build_dir.string());
 
 		const auto target = cmake_project.m_install
 			? cmake_project.m_install_target
 			: provider.m_target;
 
 		if (!target.empty()) {
-			command += " --target ";
-			command += sys::shell_escape(target);
+			command.m_args.emplace_back("--target");
+			command.m_args.emplace_back(target);
 		}
 
 		if (!cmake_project.m_build_config.empty()) {
-			command += " --config ";
-			command += sys::shell_escape(cmake_project.m_build_config);
+			command.m_args.emplace_back("--config");
+			command.m_args.emplace_back(cmake_project.m_build_config);
 		}
 
-		command += " && ";
-#if defined(MGMK_PLATFORM_WINDOWS)
-		command += "type nul > ";
-		command += sys::shell_path(stamp);
-#else
-		command += "touch ";
-		command += sys::shell_path(stamp);
-#endif
-		return sys::shell_command(std::move(command));
+		return command;
+	}
+
+	[[nodiscard]] inline sys::command_line cmake_touch_command(
+		const build::request& req,
+		const std::filesystem::path& path
+	) {
+		sys::command_line command;
+		command.m_args.emplace_back(req.tool_path(discovery::tool_role::cmake, "cmake").string());
+		command.m_args.emplace_back("-E");
+		command.m_args.emplace_back("touch");
+		command.m_args.emplace_back(path.string());
+		return command;
 	}
 #endif
 
@@ -11615,16 +11590,29 @@ namespace mgmake::lower {
 		const auto stamp = provider_target_stamp(request(), provider);
 		const auto stamp_id = m_emit.generated(stamp);
 
-		std::vector<dag::artifact::id> outputs{stamp_id};
-		outputs.insert(outputs.end(), extra_outputs.begin(), extra_outputs.end());
+		std::vector<dag::artifact::id> build_outputs{extra_outputs.begin(), extra_outputs.end()};
+
+		if (build_outputs.empty()) {
+			build_outputs.emplace_back(stamp_id);
+		}
 
 		m_emit.action(
 			"Build CMake target " + provider.m_project + ":" + provider.m_target,
 			"Builds external CMake target '" + provider.m_target + "' from project '" + provider.m_project + "'.",
 			{},
-			outputs,
-			cmake_build_command(request(), *cmake_spec, *prepared, provider, stamp)
+			build_outputs,
+			cmake_build_command(request(), *cmake_spec, *prepared, provider)
 		);
+
+		if (!extra_outputs.empty()) {
+			m_emit.action(
+				"Stamp CMake target " + provider.m_project + ":" + provider.m_target,
+				"Marks external CMake target '" + provider.m_target + "' from project '" + provider.m_project + "' as ready.",
+				build_outputs,
+				{stamp_id},
+				cmake_touch_command(request(), stamp)
+			);
+		}
 
 		dag::target dag_target{
 			"ext:cmake:" + provider.m_project + ":" + provider.m_target,
