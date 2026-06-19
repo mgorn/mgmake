@@ -455,7 +455,7 @@ namespace mgmake::prep {
 			"Clones external git source '" + fetch.m_name + "'.",
 			{},
 			{stamp_id},
-			git_clone_command(git_path, git, src_dir, complete_marker)
+			git_clone_command(git_path, git, src_dir)
 		);
 
 		dag::target dag_target{
