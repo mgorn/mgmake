@@ -4,12 +4,14 @@
 #define MGMAKE_ENTRY_ENTRY_HXX
 
 #include "../backend/execute.hxx"
+#include "../prep/executor.hxx"
 #include "../build/clean.hxx"
 #include "../build/request_from_options.hxx"
 #include "../build/run.hxx"
 #include "../build/toolchain_registry.hxx"
 #include "../cli/help.hxx"
 #include "../cli/parse.hxx"
+#include "../detail/graphviz.hxx"
 #include "../detail/project_factory.hxx"
 #include "../discovery/discovery.hxx"
 #include "../spec/project.hxx"
@@ -158,7 +160,66 @@ namespace mgmake {
 		}
 
 		auto resolved_req = std::move(*resolved_req_result);
-		auto graph = proj.graph(resolved_req);
+		auto prep_result = proj.prepare(resolved_req);
+
+		if (opts.m_action == cli::action_kind::graph) {
+			const std::string graph_kind = opts.m_targets.empty()
+				? std::string{"build"}
+				: opts.m_targets.front();
+
+			const auto graph_dir = resolved_req.build_dir() / "graph";
+
+			if (graph_kind == "discovery" || graph_kind == "prep") {
+				detail::write_graphviz_dot_file(
+					prep_result.m_dag,
+					graph_dir / "discovery.dot"
+				);
+				return detail::entry_exit_success;
+			}
+		}
+
+		auto prep_execute_result = prep::execute(
+			opts,
+			prep_result
+		);
+
+		if (!prep_execute_result) {
+			std::println(stderr, "{}", prep_execute_result.error());
+			return detail::entry_exit_action_failure;
+		}
+
+		if (opts.m_action == cli::action_kind::graph) {
+			const std::string graph_kind = opts.m_targets.empty()
+				? std::string{"build"}
+				: opts.m_targets.front();
+
+			const auto graph_dir = resolved_req.build_dir() / "graph";
+
+			if (graph_kind == "all") {
+				detail::write_graphviz_dot_file(
+					prep_result.m_dag,
+					graph_dir / "discovery.dot"
+				);
+			}
+
+			if (graph_kind == "build" || graph_kind == "all") {
+				auto build_graph = proj.build(resolved_req, prep_result);
+				detail::write_graphviz_dot_file(
+					build_graph,
+					graph_dir / "build.dot"
+				);
+				return detail::entry_exit_success;
+			}
+
+			std::println(
+				stderr,
+				"mgmake: unknown graph kind '{}'; expected discovery, build, or all",
+				graph_kind
+			);
+			return detail::entry_exit_usage_error;
+		}
+
+		auto graph = proj.build(resolved_req, prep_result);
 
 		if (opts.m_action == cli::action_kind::run) {
 			const auto run_target = build::resolve_run_target_name(opts, proj);

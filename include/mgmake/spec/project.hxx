@@ -7,6 +7,7 @@
 #include "../dag/graph.hxx"
 #include "../detail/assert.hxx"
 #include "../ext/fetch.hxx"
+#include "../prep/result.hxx"
 #include "executable.hxx"
 #include "library.hxx"
 
@@ -135,7 +136,12 @@ namespace mgmake::spec {
 			return &m_fetches.at(idx);
 		}
 
-		dag::graph graph(const build::request& req) const;
+		prep::result prepare(const build::request& req) const;
+
+		dag::graph build(
+			const build::request& req,
+			const prep::result& prepared
+		) const;
 
 	private:
 		inline constexpr void assert_known_libraries_for(

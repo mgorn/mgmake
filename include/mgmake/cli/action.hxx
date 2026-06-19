@@ -16,6 +16,7 @@ namespace mgmake::cli {
 		clean,
 		run,
 		tools,
+		graph,
 		help,
 		version,
 
@@ -29,6 +30,7 @@ namespace mgmake::cli {
 		detail::enum_entry<action_kind::clean, "clean">,
 		detail::enum_entry<action_kind::run, "run">,
 		detail::enum_entry<action_kind::tools, "tools">,
+		detail::enum_entry<action_kind::graph, "graph">,
 		detail::enum_entry<action_kind::help, "help">,
 		detail::enum_entry<action_kind::version, "version">
 	>;
@@ -48,6 +50,7 @@ namespace mgmake::cli {
 		detail::enum_entry<action_kind::tools, "tools">,
 		detail::enum_entry<action_kind::tools, "toolchains">,
 		detail::enum_entry<action_kind::tools, "toolchain-info">,
+		detail::enum_entry<action_kind::graph, "graph">,
 		detail::enum_entry<action_kind::help, "help">,
 		detail::enum_entry<action_kind::version, "version">
 	>;
@@ -78,6 +81,10 @@ namespace mgmake::cli {
 		detail::enum_entry<
 			action_kind::tools,
 			"Show discovered build tools and discovery diagnostics."
+		>,
+		detail::enum_entry<
+			action_kind::graph,
+			"Write graph visualization files."
 		>,
 		detail::enum_entry<
 			action_kind::help,

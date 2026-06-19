@@ -3,7 +3,6 @@
 #ifndef MGMAKE_BACKEND_REGISTRY_HXX
 #define MGMAKE_BACKEND_REGISTRY_HXX
 
-#include "graphviz.hxx"
 #include "ninja.hxx"
 #include "../cli/backend.hxx"
 
@@ -25,10 +24,6 @@ namespace mgmake::backend {
 		using type = backend::ninja;
 	};
 
-	template <>
-	struct for_kind<cli::backend_kind::graphviz> {
-		using type = backend::graphviz<>;
-	};
 
 	template <cli::backend_kind Kind>
 	using for_kind_t = typename for_kind<Kind>::type;

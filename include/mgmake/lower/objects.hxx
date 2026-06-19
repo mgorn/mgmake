@@ -86,7 +86,7 @@ namespace mgmake::lower {
 					std::string{"Compiles source file '"} + source.string() + "' for target '" + target.m_name + "'.",
 					{ source_id },
 					{ object_id },
-					std::move(command)
+					command
 				);
 
 				object_ids.emplace_back(object_id);
@@ -145,7 +145,7 @@ namespace mgmake::lower {
 				std::string{"Compiles source file '"} + source.string() + "' for target '" + target.m_name + "'.",
 				{ source_id },
 				{ object_id },
-				std::move(command)
+				command
 			);
 
 			object_ids.emplace_back(object_id);

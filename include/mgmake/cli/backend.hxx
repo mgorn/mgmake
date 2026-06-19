@@ -11,7 +11,6 @@
 namespace mgmake::cli {
 	enum struct backend_kind {
 		automatic,
-		graphviz,
 		ninja,
 		make,
 		direct,
@@ -22,7 +21,6 @@ namespace mgmake::cli {
 	using backend_kind_names = detail::enum_table<
 		backend_kind,
 		detail::enum_entry<backend_kind::automatic, "auto">,
-		detail::enum_entry<backend_kind::graphviz, "graphviz">,
 		detail::enum_entry<backend_kind::ninja, "ninja">,
 		detail::enum_entry<backend_kind::make, "make">,
 		detail::enum_entry<backend_kind::direct, "direct">
@@ -37,9 +35,6 @@ namespace mgmake::cli {
 		backend_kind,
 		detail::enum_entry<backend_kind::automatic, "auto">,
 		detail::enum_entry<backend_kind::automatic, "automatic">,
-		detail::enum_entry<backend_kind::graphviz, "graphviz">,
-		detail::enum_entry<backend_kind::graphviz, "dot">,
-		detail::enum_entry<backend_kind::graphviz, "graph">,
 		detail::enum_entry<backend_kind::ninja, "ninja">,
 		detail::enum_entry<backend_kind::make, "make">,
 		detail::enum_entry<backend_kind::make, "makefile">,

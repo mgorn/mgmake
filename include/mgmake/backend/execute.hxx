@@ -79,8 +79,6 @@ namespace mgmake::backend {
 			case cli::backend_kind::ninja:
 				return backend::build<cli::backend_kind::ninja>(opts, graph, req);
 
-			case cli::backend_kind::graphviz:
-				return backend::build<cli::backend_kind::graphviz>(opts, graph, req);
 
 			case cli::backend_kind::make:
 				return backend::build<cli::backend_kind::make>(opts, graph, req);
@@ -109,8 +107,9 @@ namespace mgmake::backend {
 				return backend::build<Kind>(opts, graph, req);
 
 			case cli::action_kind::run:
+			case cli::action_kind::graph:
 				return std::unexpected{
-					"mgmake: internal error: run must be handled by the entry point"
+					"mgmake: internal error: this action must be handled by the entry point"
 				};
 
 			case cli::action_kind::clean:
@@ -142,10 +141,6 @@ namespace mgmake::backend {
 					cli::backend_kind::ninja
 				>(opts, req, graph);
 
-			case cli::backend_kind::graphviz:
-				return execute_project_action_for_backend<
-					cli::backend_kind::graphviz
-				>(opts, req, graph);
 
 			case cli::backend_kind::make:
 				return execute_project_action_for_backend<
