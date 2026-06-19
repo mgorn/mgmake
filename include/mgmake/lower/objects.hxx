@@ -13,6 +13,7 @@
 #include <cstddef>
 #include <filesystem>
 #include <set>
+#include <span>
 #include <string>
 #include <utility>
 #include <vector>
@@ -21,7 +22,8 @@ namespace mgmake::lower {
 	template<typename target_t>
 	inline std::vector<dag::artifact::id> context::lower_objects(
 		const target_t& target,
-		const std::set<std::filesystem::path>& include_dirs
+		const std::set<std::filesystem::path>& include_dirs,
+		std::span<const dag::artifact::id> usage_inputs
 	) {
 		const auto& tc = toolchain();
 
@@ -42,6 +44,13 @@ namespace mgmake::lower {
 				(std::to_string(source_index++) + std::string{ object_extension });
 
 			auto object_id = m_emit.generated(object_path);
+
+			std::vector<dag::artifact::id> compile_inputs{source_id};
+			compile_inputs.insert(
+				compile_inputs.end(),
+				usage_inputs.begin(),
+				usage_inputs.end()
+			);
 
 			sys::command_line command{};
 			const auto role = discovery::source_tool_role(source);
@@ -84,7 +93,7 @@ namespace mgmake::lower {
 				m_emit.action(
 					std::string{"Compile "} + source.string(),
 					std::string{"Compiles source file '"} + source.string() + "' for target '" + target.m_name + "'.",
-					{ source_id },
+					compile_inputs,
 					{ object_id },
 					command
 				);
@@ -143,7 +152,7 @@ namespace mgmake::lower {
 			m_emit.action(
 				std::string{"Compile "} + source.string(),
 				std::string{"Compiles source file '"} + source.string() + "' for target '" + target.m_name + "'.",
-				{ source_id },
+				compile_inputs,
 				{ object_id },
 				command
 			);

@@ -178,6 +178,11 @@ namespace mgmake::lower {
 			);
 
 			result.m_include_dirs.insert_range(dep.m_include_dirs);
+			result.m_usage_inputs.insert(
+				result.m_usage_inputs.end(),
+				dep.m_usage_inputs.begin(),
+				dep.m_usage_inputs.end()
+			);
 		}
 
 		return result;
@@ -259,6 +264,7 @@ namespace mgmake::lower {
 		lowered.m_dag_target = m_emit.target(dag_target);
 		lowered.m_linkable_artifacts = std::move(link_inputs);
 		lowered.m_include_dirs = std::move(include_dirs);
+		lowered.m_usage_inputs = std::move(usage.m_usage_inputs);
 		return lowered;
 	}
 
@@ -276,7 +282,7 @@ namespace mgmake::lower {
 		auto include_dirs = lib.include_dirs();
 		include_dirs.insert_range(usage.m_include_dirs);
 
-		auto object_ids = lower_objects(lib, include_dirs);
+		auto object_ids = lower_objects(lib, include_dirs, usage.m_usage_inputs);
 
 		std::filesystem::path archive_path;
 
@@ -330,10 +336,13 @@ namespace mgmake::lower {
 			}
 		}
 
+		std::vector<dag::artifact::id> inputs = object_ids;
+		inputs.insert(inputs.end(), usage.m_usage_inputs.begin(), usage.m_usage_inputs.end());
+
 		m_emit.action(
 			std::string{"Build static library "} + lib.m_name,
 			std::string{"Builds static library target '"} + lib.m_name + "'.",
-			object_ids,
+			inputs,
 			{ archive_id },
 			command
 		);
@@ -353,6 +362,7 @@ namespace mgmake::lower {
 			usage.m_link_inputs.end()
 		);
 		lowered.m_include_dirs = std::move(include_dirs);
+		lowered.m_usage_inputs = std::move(usage.m_usage_inputs);
 		return lowered;
 	}
 
@@ -375,7 +385,7 @@ namespace mgmake::lower {
 		auto include_dirs = lib.include_dirs();
 		include_dirs.insert_range(usage.m_include_dirs);
 
-		auto object_ids = lower_objects(lib, include_dirs);
+		auto object_ids = lower_objects(lib, include_dirs, usage.m_usage_inputs);
 
 		const auto platform = request().target_platform();
 		std::filesystem::path shared_path =
@@ -424,6 +434,7 @@ namespace mgmake::lower {
 
 		std::vector<dag::artifact::id> inputs = object_ids;
 		inputs.insert(inputs.end(), usage.m_link_inputs.begin(), usage.m_link_inputs.end());
+		inputs.insert(inputs.end(), usage.m_usage_inputs.begin(), usage.m_usage_inputs.end());
 
 		m_emit.action(
 			std::string{"Build shared library "} + lib.m_name,
@@ -448,6 +459,7 @@ namespace mgmake::lower {
 			usage.m_link_inputs.end()
 		);
 		lowered.m_include_dirs = std::move(include_dirs);
+		lowered.m_usage_inputs = std::move(usage.m_usage_inputs);
 		return lowered;
 	}
 
@@ -482,9 +494,10 @@ namespace mgmake::lower {
 		auto include_dirs = exe.include_dirs();
 		include_dirs.insert_range(usage.m_include_dirs);
 
-		auto object_ids = lower_objects(exe, include_dirs);
+		auto object_ids = lower_objects(exe, include_dirs, usage.m_usage_inputs);
 		std::vector<dag::artifact::id> inputs = object_ids;
 		inputs.insert(inputs.end(), usage.m_link_inputs.begin(), usage.m_link_inputs.end());
+		inputs.insert(inputs.end(), usage.m_usage_inputs.begin(), usage.m_usage_inputs.end());
 
 		std::filesystem::path output =
 			request().build_dir() /
@@ -545,7 +558,7 @@ namespace mgmake::lower {
 	}
 
 #ifdef MGMK_ENABLE_EXT_CMAKE
-	inline dag::target::id context::lower_cmake_target(
+	inline lower::cmake_target context::lower_cmake_target(
 		const ext::provider_ref& provider,
 		std::span<const dag::artifact::id> extra_outputs
 	) {
@@ -589,7 +602,10 @@ namespace mgmake::lower {
 			{}
 		};
 
-		return m_emit.target(dag_target);
+		return lower::cmake_target{
+			.m_dag_target = m_emit.target(dag_target),
+			.m_ready_stamp = stamp_id
+		};
 	}
 
 	inline lower::target context::lower_provider_library(
@@ -628,8 +644,9 @@ namespace mgmake::lower {
 			lowered.m_linkable_artifacts.emplace_back(artifact_id);
 		}
 
-		dag::target::id provider_target = lower_cmake_target(provider, provider_outputs);
-		usage.m_dag_dependencies.emplace(provider_target);
+		auto provider_target = lower_cmake_target(provider, provider_outputs);
+		usage.m_dag_dependencies.emplace(provider_target.m_dag_target);
+		usage.m_usage_inputs.emplace_back(provider_target.m_ready_stamp);
 
 		lowered.m_linkable_artifacts.insert(
 			lowered.m_linkable_artifacts.end(),
@@ -637,6 +654,7 @@ namespace mgmake::lower {
 			usage.m_link_inputs.end()
 		);
 		lowered.m_include_dirs = std::move(include_dirs);
+		lowered.m_usage_inputs = std::move(usage.m_usage_inputs);
 
 		dag::target dag_target{
 			lib.m_name,
@@ -674,8 +692,9 @@ namespace mgmake::lower {
 		mgmkassert(!artifact_path.empty(), "mgmake lower: unable to resolve artifact for provider-backed executable '" + exe.m_name + "'");
 		const auto artifact_id = m_emit.generated(artifact_path);
 		const std::array provider_outputs{artifact_id};
-		dag::target::id provider_target = lower_cmake_target(provider, provider_outputs);
-		usage.m_dag_dependencies.emplace(provider_target);
+		auto provider_target = lower_cmake_target(provider, provider_outputs);
+		usage.m_dag_dependencies.emplace(provider_target.m_dag_target);
+		usage.m_usage_inputs.emplace_back(provider_target.m_ready_stamp);
 
 		dag::target dag_target{
 			exe.m_name,

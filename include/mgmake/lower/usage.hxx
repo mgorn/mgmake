@@ -15,6 +15,7 @@ namespace mgmake::lower {
 		std::set<std::filesystem::path> m_include_dirs;
 		std::vector<dag::artifact::id> m_link_inputs;
 		std::set<dag::target::id> m_dag_dependencies;
+		std::vector<dag::artifact::id> m_usage_inputs;
 	};
 }
 

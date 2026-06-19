@@ -17,6 +17,8 @@ namespace mgmake::lower {
 		std::vector<dag::artifact::id> m_linkable_artifacts;
 		// Include dirs inherited by consumers of this lowered target.
 		std::set<std::filesystem::path> m_include_dirs;
+		// Artifacts that must exist before consumers use this target's usage data.
+		std::vector<dag::artifact::id> m_usage_inputs;
 	};
 }
 

@@ -9922,6 +9922,8 @@ namespace mgmake::lower {
 		std::vector<dag::artifact::id> m_linkable_artifacts;
 		// Include dirs inherited by consumers of this lowered target.
 		std::set<std::filesystem::path> m_include_dirs;
+		// Artifacts that must exist before consumers use this target's usage data.
+		std::vector<dag::artifact::id> m_usage_inputs;
 	};
 }
 
@@ -9947,6 +9949,7 @@ namespace mgmake::lower {
 		std::set<std::filesystem::path> m_include_dirs;
 		std::vector<dag::artifact::id> m_link_inputs;
 		std::set<dag::target::id> m_dag_dependencies;
+		std::vector<dag::artifact::id> m_usage_inputs;
 	};
 }
 
@@ -10407,6 +10410,61 @@ namespace mgmake::prep {
 		return command;
 	}
 
+
+	[[nodiscard]] inline std::filesystem::path fetch_complete_marker(
+		const std::filesystem::path& source_dir
+	) {
+		return source_dir / ".mgmake-fetch-complete";
+	}
+
+	[[nodiscard]] inline sys::command_line git_clone_complete_command(
+		const std::string& git_path,
+		const ext::git_fetch& git,
+		const std::filesystem::path& source_dir,
+		const std::filesystem::path& complete_marker
+	) {
+		std::string command;
+#if defined(MGMK_PLATFORM_WINDOWS)
+		command += "if exist ";
+		command += sys::shell_path(source_dir);
+		command += " rmdir /S /Q ";
+		command += sys::shell_path(source_dir);
+		command += " && ";
+#else
+		command += "rm -rf ";
+		command += sys::shell_path(source_dir);
+		command += " && ";
+#endif
+		command += sys::shell_path(git_path);
+		command += " clone";
+
+		if (git.m_shallow) {
+			command += " --depth 1";
+		}
+
+		if (git.m_submodules) {
+			command += " --recurse-submodules";
+		}
+
+		if (!git.m_ref.empty()) {
+			command += " --branch ";
+			command += sys::shell_escape(git.m_ref);
+		}
+
+		command += ' ';
+		command += sys::shell_escape(git.m_url);
+		command += ' ';
+		command += sys::shell_path(source_dir);
+
+#if defined(MGMK_PLATFORM_WINDOWS)
+		command += " && type nul > ";
+#else
+		command += " && touch ";
+#endif
+		command += sys::shell_path(complete_marker);
+		return sys::shell_command(std::move(command));
+	}
+
 	[[nodiscard]] inline sys::command_line archive_extract_command(
 		const build::request& req,
 		ext::archive_format format,
@@ -10587,59 +10645,19 @@ namespace mgmake::prep {
 		const ext::git_fetch& git
 	) {
 		const auto src_dir = fetch_source_dir(request(), fetch.m_name);
-		const auto prepare_stamp = fetch_stamp(request(), fetch.m_name, "prepare");
-		const auto final_stamp = fetch_stamp(request(), fetch.m_name, "fetch");
+		const auto complete_marker = fetch_complete_marker(src_dir);
+		const auto stamp_id = m_emit.generated(complete_marker);
 
-		const auto prepare_id = m_emit.generated(prepare_stamp);
-		const auto source_id = m_emit.generated(src_dir);
-		const auto stamp_id = m_emit.generated(final_stamp);
-
-		m_emit.action(
-			"Prepare fetch " + fetch.m_name,
-			"Prepares external fetch '" + fetch.m_name + "'.",
-			{},
-			{prepare_id},
-			sys::reset_directory_stamp_command(src_dir, prepare_stamp)
-		);
 
 		const auto* git_tool = request().discovered_tool(discovery::tool_role::git);
 		const auto git_path = git_tool ? git_tool->path_string() : std::string{"git"};
 
-		sys::command_line clone{};
-		clone.m_args.emplace_back(git_path);
-		clone.m_args.emplace_back("clone");
-
-		if (git.m_shallow) {
-			clone.m_args.emplace_back("--depth");
-			clone.m_args.emplace_back("1");
-		}
-
-		if (git.m_submodules) {
-			clone.m_args.emplace_back("--recurse-submodules");
-		}
-
-		if (!git.m_ref.empty()) {
-			clone.m_args.emplace_back("--branch");
-			clone.m_args.emplace_back(git.m_ref);
-		}
-
-		clone.m_args.emplace_back(git.m_url);
-		clone.m_args.emplace_back(src_dir.string());
-
 		m_emit.action(
 			"Clone fetch " + fetch.m_name,
 			"Clones external git source '" + fetch.m_name + "'.",
-			{prepare_id},
-			{source_id},
-			clone
-		);
-
-		m_emit.action(
-			"Stamp fetch " + fetch.m_name,
-			"Marks external fetch '" + fetch.m_name + "' complete.",
-			{source_id},
+			{},
 			{stamp_id},
-			sys::touch_command(final_stamp)
+			git_clone_complete_command(git_path, git, src_dir, complete_marker)
 		);
 
 		dag::target dag_target{
@@ -10780,6 +10798,13 @@ namespace mgmake::spec {
 }
 
 namespace mgmake::lower {
+#ifdef MGMK_ENABLE_EXT_CMAKE
+	struct cmake_target {
+		dag::target::id m_dag_target{};
+		dag::artifact::id m_ready_stamp{};
+	};
+#endif
+
 	struct context {
 		const build::request& m_req;
 		const spec::project& m_project;
@@ -10812,7 +10837,7 @@ namespace mgmake::lower {
 		const lower::target& lower_library(spec::library::id id);
 		void lower_executable(spec::executable::id id);
 #ifdef MGMK_ENABLE_EXT_CMAKE
-		dag::target::id lower_cmake_target(
+		lower::cmake_target lower_cmake_target(
 			const ext::provider_ref& provider,
 			std::span<const dag::artifact::id> outputs
 		);
@@ -10826,7 +10851,8 @@ namespace mgmake::lower {
 		template<typename target_t>
 		std::vector<dag::artifact::id> lower_objects(
 			const target_t& target,
-			const std::set<std::filesystem::path>& include_dirs
+			const std::set<std::filesystem::path>& include_dirs,
+			std::span<const dag::artifact::id> usage_inputs
 		);
 
 	private:
@@ -10882,6 +10908,7 @@ namespace mgmake::lower {
 #include <cstddef>
 #include <filesystem>
 #include <set>
+#include <span>
 #include <string>
 #include <utility>
 #include <vector>
@@ -10890,7 +10917,8 @@ namespace mgmake::lower {
 	template<typename target_t>
 	inline std::vector<dag::artifact::id> context::lower_objects(
 		const target_t& target,
-		const std::set<std::filesystem::path>& include_dirs
+		const std::set<std::filesystem::path>& include_dirs,
+		std::span<const dag::artifact::id> usage_inputs
 	) {
 		const auto& tc = toolchain();
 
@@ -10911,6 +10939,13 @@ namespace mgmake::lower {
 				(std::to_string(source_index++) + std::string{ object_extension });
 
 			auto object_id = m_emit.generated(object_path);
+
+			std::vector<dag::artifact::id> compile_inputs{source_id};
+			compile_inputs.insert(
+				compile_inputs.end(),
+				usage_inputs.begin(),
+				usage_inputs.end()
+			);
 
 			sys::command_line command{};
 			const auto role = discovery::source_tool_role(source);
@@ -10953,7 +10988,7 @@ namespace mgmake::lower {
 				m_emit.action(
 					std::string{"Compile "} + source.string(),
 					std::string{"Compiles source file '"} + source.string() + "' for target '" + target.m_name + "'.",
-					{ source_id },
+					compile_inputs,
 					{ object_id },
 					command
 				);
@@ -11012,7 +11047,7 @@ namespace mgmake::lower {
 			m_emit.action(
 				std::string{"Compile "} + source.string(),
 				std::string{"Compiles source file '"} + source.string() + "' for target '" + target.m_name + "'.",
-				{ source_id },
+				compile_inputs,
 				{ object_id },
 				command
 			);
@@ -11209,6 +11244,11 @@ namespace mgmake::lower {
 			);
 
 			result.m_include_dirs.insert_range(dep.m_include_dirs);
+			result.m_usage_inputs.insert(
+				result.m_usage_inputs.end(),
+				dep.m_usage_inputs.begin(),
+				dep.m_usage_inputs.end()
+			);
 		}
 
 		return result;
@@ -11290,6 +11330,7 @@ namespace mgmake::lower {
 		lowered.m_dag_target = m_emit.target(dag_target);
 		lowered.m_linkable_artifacts = std::move(link_inputs);
 		lowered.m_include_dirs = std::move(include_dirs);
+		lowered.m_usage_inputs = std::move(usage.m_usage_inputs);
 		return lowered;
 	}
 
@@ -11307,7 +11348,7 @@ namespace mgmake::lower {
 		auto include_dirs = lib.include_dirs();
 		include_dirs.insert_range(usage.m_include_dirs);
 
-		auto object_ids = lower_objects(lib, include_dirs);
+		auto object_ids = lower_objects(lib, include_dirs, usage.m_usage_inputs);
 
 		std::filesystem::path archive_path;
 
@@ -11361,10 +11402,13 @@ namespace mgmake::lower {
 			}
 		}
 
+		std::vector<dag::artifact::id> inputs = object_ids;
+		inputs.insert(inputs.end(), usage.m_usage_inputs.begin(), usage.m_usage_inputs.end());
+
 		m_emit.action(
 			std::string{"Build static library "} + lib.m_name,
 			std::string{"Builds static library target '"} + lib.m_name + "'.",
-			object_ids,
+			inputs,
 			{ archive_id },
 			command
 		);
@@ -11384,6 +11428,7 @@ namespace mgmake::lower {
 			usage.m_link_inputs.end()
 		);
 		lowered.m_include_dirs = std::move(include_dirs);
+		lowered.m_usage_inputs = std::move(usage.m_usage_inputs);
 		return lowered;
 	}
 
@@ -11406,7 +11451,7 @@ namespace mgmake::lower {
 		auto include_dirs = lib.include_dirs();
 		include_dirs.insert_range(usage.m_include_dirs);
 
-		auto object_ids = lower_objects(lib, include_dirs);
+		auto object_ids = lower_objects(lib, include_dirs, usage.m_usage_inputs);
 
 		const auto platform = request().target_platform();
 		std::filesystem::path shared_path =
@@ -11455,6 +11500,7 @@ namespace mgmake::lower {
 
 		std::vector<dag::artifact::id> inputs = object_ids;
 		inputs.insert(inputs.end(), usage.m_link_inputs.begin(), usage.m_link_inputs.end());
+		inputs.insert(inputs.end(), usage.m_usage_inputs.begin(), usage.m_usage_inputs.end());
 
 		m_emit.action(
 			std::string{"Build shared library "} + lib.m_name,
@@ -11479,6 +11525,7 @@ namespace mgmake::lower {
 			usage.m_link_inputs.end()
 		);
 		lowered.m_include_dirs = std::move(include_dirs);
+		lowered.m_usage_inputs = std::move(usage.m_usage_inputs);
 		return lowered;
 	}
 
@@ -11513,9 +11560,10 @@ namespace mgmake::lower {
 		auto include_dirs = exe.include_dirs();
 		include_dirs.insert_range(usage.m_include_dirs);
 
-		auto object_ids = lower_objects(exe, include_dirs);
+		auto object_ids = lower_objects(exe, include_dirs, usage.m_usage_inputs);
 		std::vector<dag::artifact::id> inputs = object_ids;
 		inputs.insert(inputs.end(), usage.m_link_inputs.begin(), usage.m_link_inputs.end());
+		inputs.insert(inputs.end(), usage.m_usage_inputs.begin(), usage.m_usage_inputs.end());
 
 		std::filesystem::path output =
 			request().build_dir() /
@@ -11576,7 +11624,7 @@ namespace mgmake::lower {
 	}
 
 #ifdef MGMK_ENABLE_EXT_CMAKE
-	inline dag::target::id context::lower_cmake_target(
+	inline lower::cmake_target context::lower_cmake_target(
 		const ext::provider_ref& provider,
 		std::span<const dag::artifact::id> extra_outputs
 	) {
@@ -11620,7 +11668,10 @@ namespace mgmake::lower {
 			{}
 		};
 
-		return m_emit.target(dag_target);
+		return lower::cmake_target{
+			.m_dag_target = m_emit.target(dag_target),
+			.m_ready_stamp = stamp_id
+		};
 	}
 
 	inline lower::target context::lower_provider_library(
@@ -11659,8 +11710,9 @@ namespace mgmake::lower {
 			lowered.m_linkable_artifacts.emplace_back(artifact_id);
 		}
 
-		dag::target::id provider_target = lower_cmake_target(provider, provider_outputs);
-		usage.m_dag_dependencies.emplace(provider_target);
+		auto provider_target = lower_cmake_target(provider, provider_outputs);
+		usage.m_dag_dependencies.emplace(provider_target.m_dag_target);
+		usage.m_usage_inputs.emplace_back(provider_target.m_ready_stamp);
 
 		lowered.m_linkable_artifacts.insert(
 			lowered.m_linkable_artifacts.end(),
@@ -11668,6 +11720,7 @@ namespace mgmake::lower {
 			usage.m_link_inputs.end()
 		);
 		lowered.m_include_dirs = std::move(include_dirs);
+		lowered.m_usage_inputs = std::move(usage.m_usage_inputs);
 
 		dag::target dag_target{
 			lib.m_name,
@@ -11705,8 +11758,9 @@ namespace mgmake::lower {
 		mgmkassert(!artifact_path.empty(), "mgmake lower: unable to resolve artifact for provider-backed executable '" + exe.m_name + "'");
 		const auto artifact_id = m_emit.generated(artifact_path);
 		const std::array provider_outputs{artifact_id};
-		dag::target::id provider_target = lower_cmake_target(provider, provider_outputs);
-		usage.m_dag_dependencies.emplace(provider_target);
+		auto provider_target = lower_cmake_target(provider, provider_outputs);
+		usage.m_dag_dependencies.emplace(provider_target.m_dag_target);
+		usage.m_usage_inputs.emplace_back(provider_target.m_ready_stamp);
 
 		dag::target dag_target{
 			exe.m_name,

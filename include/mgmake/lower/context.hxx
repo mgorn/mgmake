@@ -23,6 +23,13 @@ namespace mgmake::spec {
 }
 
 namespace mgmake::lower {
+#ifdef MGMK_ENABLE_EXT_CMAKE
+	struct cmake_target {
+		dag::target::id m_dag_target{};
+		dag::artifact::id m_ready_stamp{};
+	};
+#endif
+
 	struct context {
 		const build::request& m_req;
 		const spec::project& m_project;
@@ -55,7 +62,7 @@ namespace mgmake::lower {
 		const lower::target& lower_library(spec::library::id id);
 		void lower_executable(spec::executable::id id);
 #ifdef MGMK_ENABLE_EXT_CMAKE
-		dag::target::id lower_cmake_target(
+		lower::cmake_target lower_cmake_target(
 			const ext::provider_ref& provider,
 			std::span<const dag::artifact::id> outputs
 		);
@@ -69,7 +76,8 @@ namespace mgmake::lower {
 		template<typename target_t>
 		std::vector<dag::artifact::id> lower_objects(
 			const target_t& target,
-			const std::set<std::filesystem::path>& include_dirs
+			const std::set<std::filesystem::path>& include_dirs,
+			std::span<const dag::artifact::id> usage_inputs
 		);
 
 	private:

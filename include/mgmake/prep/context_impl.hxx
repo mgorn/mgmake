@@ -228,6 +228,61 @@ namespace mgmake::prep {
 		return command;
 	}
 
+
+	[[nodiscard]] inline std::filesystem::path fetch_complete_marker(
+		const std::filesystem::path& source_dir
+	) {
+		return source_dir / ".mgmake-fetch-complete";
+	}
+
+	[[nodiscard]] inline sys::command_line git_clone_complete_command(
+		const std::string& git_path,
+		const ext::git_fetch& git,
+		const std::filesystem::path& source_dir,
+		const std::filesystem::path& complete_marker
+	) {
+		std::string command;
+#if defined(MGMK_PLATFORM_WINDOWS)
+		command += "if exist ";
+		command += sys::shell_path(source_dir);
+		command += " rmdir /S /Q ";
+		command += sys::shell_path(source_dir);
+		command += " && ";
+#else
+		command += "rm -rf ";
+		command += sys::shell_path(source_dir);
+		command += " && ";
+#endif
+		command += sys::shell_path(git_path);
+		command += " clone";
+
+		if (git.m_shallow) {
+			command += " --depth 1";
+		}
+
+		if (git.m_submodules) {
+			command += " --recurse-submodules";
+		}
+
+		if (!git.m_ref.empty()) {
+			command += " --branch ";
+			command += sys::shell_escape(git.m_ref);
+		}
+
+		command += ' ';
+		command += sys::shell_escape(git.m_url);
+		command += ' ';
+		command += sys::shell_path(source_dir);
+
+#if defined(MGMK_PLATFORM_WINDOWS)
+		command += " && type nul > ";
+#else
+		command += " && touch ";
+#endif
+		command += sys::shell_path(complete_marker);
+		return sys::shell_command(std::move(command));
+	}
+
 	[[nodiscard]] inline sys::command_line archive_extract_command(
 		const build::request& req,
 		ext::archive_format format,
@@ -408,59 +463,19 @@ namespace mgmake::prep {
 		const ext::git_fetch& git
 	) {
 		const auto src_dir = fetch_source_dir(request(), fetch.m_name);
-		const auto prepare_stamp = fetch_stamp(request(), fetch.m_name, "prepare");
-		const auto final_stamp = fetch_stamp(request(), fetch.m_name, "fetch");
+		const auto complete_marker = fetch_complete_marker(src_dir);
+		const auto stamp_id = m_emit.generated(complete_marker);
 
-		const auto prepare_id = m_emit.generated(prepare_stamp);
-		const auto source_id = m_emit.generated(src_dir);
-		const auto stamp_id = m_emit.generated(final_stamp);
-
-		m_emit.action(
-			"Prepare fetch " + fetch.m_name,
-			"Prepares external fetch '" + fetch.m_name + "'.",
-			{},
-			{prepare_id},
-			sys::reset_directory_stamp_command(src_dir, prepare_stamp)
-		);
 
 		const auto* git_tool = request().discovered_tool(discovery::tool_role::git);
 		const auto git_path = git_tool ? git_tool->path_string() : std::string{"git"};
 
-		sys::command_line clone{};
-		clone.m_args.emplace_back(git_path);
-		clone.m_args.emplace_back("clone");
-
-		if (git.m_shallow) {
-			clone.m_args.emplace_back("--depth");
-			clone.m_args.emplace_back("1");
-		}
-
-		if (git.m_submodules) {
-			clone.m_args.emplace_back("--recurse-submodules");
-		}
-
-		if (!git.m_ref.empty()) {
-			clone.m_args.emplace_back("--branch");
-			clone.m_args.emplace_back(git.m_ref);
-		}
-
-		clone.m_args.emplace_back(git.m_url);
-		clone.m_args.emplace_back(src_dir.string());
-
 		m_emit.action(
 			"Clone fetch " + fetch.m_name,
 			"Clones external git source '" + fetch.m_name + "'.",
-			{prepare_id},
-			{source_id},
-			clone
-		);
-
-		m_emit.action(
-			"Stamp fetch " + fetch.m_name,
-			"Marks external fetch '" + fetch.m_name + "' complete.",
-			{source_id},
+			{},
 			{stamp_id},
-			sys::touch_command(final_stamp)
+			git_clone_complete_command(git_path, git, src_dir, complete_marker)
 		);
 
 		dag::target dag_target{
