@@ -235,52 +235,32 @@ namespace mgmake::prep {
 		return source_dir / ".mgmake-fetch-complete";
 	}
 
-	[[nodiscard]] inline sys::command_line git_clone_complete_command(
+	[[nodiscard]] inline sys::command_line git_clone_command(
 		const std::string& git_path,
 		const ext::git_fetch& git,
-		const std::filesystem::path& source_dir,
-		const std::filesystem::path& complete_marker
+		const std::filesystem::path& source_dir
 	) {
-		std::string command;
-#if defined(MGMK_PLATFORM_WINDOWS)
-		command += "if exist ";
-		command += sys::shell_path(source_dir);
-		command += " rmdir /S /Q ";
-		command += sys::shell_path(source_dir);
-		command += " && ";
-#else
-		command += "rm -rf ";
-		command += sys::shell_path(source_dir);
-		command += " && ";
-#endif
-		command += sys::shell_path(git_path);
-		command += " clone";
+		sys::command_line command{};
+		command.m_args.emplace_back(git_path);
+		command.m_args.emplace_back("clone");
 
 		if (git.m_shallow) {
-			command += " --depth 1";
+			command.m_args.emplace_back("--depth");
+			command.m_args.emplace_back("1");
 		}
 
 		if (git.m_submodules) {
-			command += " --recurse-submodules";
+			command.m_args.emplace_back("--recurse-submodules");
 		}
 
 		if (!git.m_ref.empty()) {
-			command += " --branch ";
-			command += sys::shell_escape(git.m_ref);
+			command.m_args.emplace_back("--branch");
+			command.m_args.emplace_back(git.m_ref);
 		}
 
-		command += ' ';
-		command += sys::shell_escape(git.m_url);
-		command += ' ';
-		command += sys::shell_path(source_dir);
-
-#if defined(MGMK_PLATFORM_WINDOWS)
-		command += " && type nul > ";
-#else
-		command += " && touch ";
-#endif
-		command += sys::shell_path(complete_marker);
-		return sys::shell_command(std::move(command));
+		command.m_args.emplace_back(git.m_url);
+		command.m_args.emplace_back(source_dir.string());
+		return command;
 	}
 
 	[[nodiscard]] inline sys::command_line archive_extract_command(
@@ -475,7 +455,7 @@ namespace mgmake::prep {
 			"Clones external git source '" + fetch.m_name + "'.",
 			{},
 			{stamp_id},
-			git_clone_complete_command(git_path, git, src_dir, complete_marker)
+			git_clone_command(git_path, git, src_dir, complete_marker)
 		);
 
 		dag::target dag_target{
