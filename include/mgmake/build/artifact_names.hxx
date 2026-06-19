@@ -41,6 +41,36 @@ namespace mgmake::build {
 		return shared_library_extensions::to_string(platform, "");
 	}
 
+	using static_library_prefixes = detail::enum_table<
+		sys::platform,
+		detail::enum_entry<sys::platform::p_linux, "lib">,
+		detail::enum_entry<sys::platform::p_macos, "lib">,
+		detail::enum_entry<sys::platform::p_other_posix, "lib">
+	>;
+
+	static_assert(static_library_prefixes::has_no_empty_names());
+	static_assert(static_library_prefixes::has_no_duplicate_values());
+
+	[[nodiscard]] inline constexpr std::string_view static_library_prefix(
+		sys::platform platform
+	) noexcept {
+		return static_library_prefixes::to_string(platform, "");
+	}
+
+	using static_library_extensions = detail::enum_table<
+		sys::platform,
+		detail::enum_entry<sys::platform::p_windows, ".lib">
+	>;
+
+	static_assert(static_library_extensions::has_no_empty_names());
+	static_assert(static_library_extensions::has_no_duplicate_values());
+
+	[[nodiscard]] inline constexpr std::string_view static_library_extension(
+		sys::platform platform
+	) noexcept {
+		return static_library_extensions::to_string(platform, ".a");
+	}
+
 	using shared_library_link_flags = detail::enum_table<
 		sys::platform,
 		detail::enum_entry<sys::platform::p_windows, "-shared">,

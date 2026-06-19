@@ -15,6 +15,7 @@
 #include <optional>
 #include <set>
 #include <string_view>
+#include <span>
 #include <vector>
 
 namespace mgmake::spec {
@@ -53,6 +54,12 @@ namespace mgmake::lower {
 
 		const lower::target& lower_library(spec::library::id id);
 		void lower_executable(spec::executable::id id);
+#ifdef MGMK_ENABLE_EXT_CMAKE
+		dag::target::id lower_cmake_target(
+			const ext::provider_ref& provider,
+			std::span<const dag::artifact::id> outputs
+		);
+#endif
 
 		lower::usage use_libraries(
 			const std::set<std::string>& libraries,
@@ -80,6 +87,18 @@ namespace mgmake::lower {
 			const spec::library& lib,
 			lower::usage usage
 		);
+
+#ifdef MGMK_ENABLE_EXT_CMAKE
+		lower::target lower_provider_library(
+			const spec::library& lib,
+			lower::usage usage
+		);
+
+		void lower_provider_executable(
+			const spec::executable& exe,
+			lower::usage usage
+		);
+#endif
 
 		std::vector<std::optional<lower::target>> m_libraries;
 		std::set<spec::library::id> m_active_libraries;

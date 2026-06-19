@@ -7,6 +7,9 @@
 #include "../dag/graph.hxx"
 #include "../detail/assert.hxx"
 #include "../ext/fetch.hxx"
+#ifdef MGMK_ENABLE_EXT_CMAKE
+#include "../ext/cmake.hxx"
+#endif
 #include "../prep/result.hxx"
 #include "executable.hxx"
 #include "library.hxx"
@@ -23,24 +26,32 @@ namespace mgmake::spec {
 		std::vector<spec::executable> m_executables;
 		std::vector<spec::library> m_libraries;
 		std::vector<ext::fetch> m_fetches;
+#ifdef MGMK_ENABLE_EXT_CMAKE
+		std::vector<ext::cmake> m_cmake_projects;
+#endif
 
 		inline constexpr project(std::string_view name)
 			: m_name{name} {
 			mgmkassert(not m_name.empty(), "mgmake spec: project has no name");
 		}
 
-		inline constexpr project& add_target(const spec::executable& exe) {
+		inline project& add_target(const spec::executable& exe) {
 			mgmkassert(not exe.m_name.empty(), "mgmake spec: executable target has no name");
             mgmkassert(not find_library(exe.m_name).has_value(), "mgmake spec: target name conflict '" + exe.m_name + "'");
             mgmkassert(not find_executable(exe.m_name).has_value(), "mgmake spec: target name conflict '" + exe.m_name + "'");
-			mgmkassert(not exe.m_sources.empty(), "mgmake spec: executable target '" + exe.m_name + "' has no sources");
+			if (!exe.provider_backed()) {
+				mgmkassert(not exe.m_sources.empty(), "mgmake spec: executable target '" + exe.m_name + "' has no sources");
+			}
+#ifdef MGMK_ENABLE_EXT_CMAKE
+			assert_known_provider_for(exe.m_provider, exe.m_name);
+#endif
 
 			assert_known_libraries_for(exe.m_linked_libraries, exe.m_name);
 
 			m_executables.emplace_back(exe);
 			return *this;
 		}
-		inline constexpr project& add_target(const spec::library& lib) {
+		inline project& add_target(const spec::library& lib) {
 			mgmkassert(not lib.m_name.empty(), "mgmake spec: library target has no name");
             mgmkassert(not find_executable(lib.m_name).has_value(), "mgmake spec: target name conflict '" + lib.m_name + "'");
 			mgmkassert(not find_library(lib.m_name).has_value(), "mgmake spec: target name conflict '" + lib.m_name + "'");
@@ -54,17 +65,21 @@ namespace mgmake::spec {
 					break;
 
 				case spec::library::kind::static_lib:
-					mgmkassert(
-						not lib.m_sources.empty(),
-						"mgmake spec: static library '" + lib.m_name + "' has no sources"
-					);
+					if (!lib.provider_backed()) {
+						mgmkassert(
+							not lib.m_sources.empty(),
+							"mgmake spec: static library '" + lib.m_name + "' has no sources"
+						);
+					}
 					break;
 
 				case spec::library::kind::shared_lib:
-					mgmkassert(
-						not lib.m_sources.empty(),
-						"mgmake spec: shared library '" + lib.m_name + "' has no sources"
-					);
+					if (!lib.provider_backed()) {
+						mgmkassert(
+							not lib.m_sources.empty(),
+							"mgmake spec: shared library '" + lib.m_name + "' has no sources"
+						);
+					}
 					break;
 
 				default:
@@ -72,6 +87,9 @@ namespace mgmake::spec {
 					break;
 			}
 
+#ifdef MGMK_ENABLE_EXT_CMAKE
+			assert_known_provider_for(lib.m_provider, lib.m_name);
+#endif
 			assert_known_libraries_for(lib.m_linked_libraries, lib.m_name);
 			assert_library_link_closure_is_acyclic(lib);
 
@@ -79,13 +97,22 @@ namespace mgmake::spec {
 			return *this;
 		}
 
-		inline constexpr project& add_fetch(const ext::fetch& fetch) {
+		inline project& add_fetch(const ext::fetch& fetch) {
 			mgmkassert(!fetch.m_name.empty(), "mgmake spec: external fetch has no name");
 			mgmkassert(!find_fetch(fetch.m_name).has_value(), "mgmake spec: external fetch name conflict '" + fetch.m_name + "'");
 
 			m_fetches.emplace_back(fetch);
 			return *this;
 		}
+
+#ifdef MGMK_ENABLE_EXT_CMAKE
+		inline project& add_ext(const ext::cmake& cmake_project) {
+			mgmkassert(!cmake_project.m_name.empty(), "mgmake spec: external CMake project has no name");
+			mgmkassert(!find_cmake(cmake_project.m_name).has_value(), "mgmake spec: external CMake project name conflict '" + cmake_project.m_name + "'");
+			m_cmake_projects.emplace_back(cmake_project);
+			return *this;
+		}
+#endif
 
 		const std::optional<spec::library::id> find_library(std::string_view name) const {
             for (spec::library::id idx = 0; idx < m_libraries.size(); idx++) {
@@ -136,6 +163,27 @@ namespace mgmake::spec {
 			return &m_fetches.at(idx);
 		}
 
+#ifdef MGMK_ENABLE_EXT_CMAKE
+		const std::optional<ext::cmake::id> find_cmake(std::string_view name) const {
+			for (ext::cmake::id idx = 0; idx < m_cmake_projects.size(); ++idx) {
+				const auto& cmake_project = m_cmake_projects.at(idx);
+				if (cmake_project.m_name == name) {
+					return idx;
+				}
+			}
+
+			return std::nullopt;
+		}
+
+		const ext::cmake* get_cmake(const ext::cmake::id idx) const {
+			if (idx >= m_cmake_projects.size()) {
+				return nullptr;
+			}
+
+			return &m_cmake_projects.at(idx);
+		}
+#endif
+
 		prep::result prepare(const build::request& req) const;
 
 		dag::graph build(
@@ -144,6 +192,27 @@ namespace mgmake::spec {
 		) const;
 
 	private:
+#ifdef MGMK_ENABLE_EXT_CMAKE
+		inline void assert_known_provider_for(
+			const std::optional<ext::provider_ref>& provider,
+			std::string_view owner_name
+		) const {
+			if (!provider.has_value()) {
+				return;
+			}
+
+			switch (provider->m_kind) {
+				case ext::provider_kind::cmake:
+					mgmkassert(
+						find_cmake(provider->m_project).has_value(),
+						"mgmake spec: target '" + std::string{owner_name} +
+							"' uses unknown CMake project '" + provider->m_project + "'"
+					);
+					break;
+			}
+		}
+#endif
+
 		inline constexpr void assert_known_libraries_for(
 			const std::set<std::string>& libraries,
 			std::string_view owner_name

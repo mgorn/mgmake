@@ -7,6 +7,9 @@
 #include "../cli/options.hxx"
 #include "../dag/graph.hxx"
 #include "../sys/command_line.hxx"
+#ifdef MGMK_ENABLE_EXT_CMAKE
+#include "../ext/cmake/file_api.hxx"
+#endif
 
 #include <expected>
 #include <filesystem>
@@ -104,6 +107,14 @@ namespace mgmake::prep {
 				};
 			}
 		}
+
+#ifdef MGMK_ENABLE_EXT_CMAKE
+		if (!opts.m_dry_run) {
+			for (auto& [name, cmake_project] : result.m_cmake_projects) {
+				ext::cmake_file_api::load_reply_targets(cmake_project);
+			}
+		}
+#endif
 
 		return {};
 	}

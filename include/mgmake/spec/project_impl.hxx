@@ -18,6 +18,12 @@ namespace mgmake::spec {
 			ctx.fetch(id);
 		}
 
+#ifdef MGMK_ENABLE_EXT_CMAKE
+		for (ext::cmake::id id = 0; id < m_cmake_projects.size(); ++id) {
+			ctx.cmake(id);
+		}
+#endif
+
 		return result;
 	}
 

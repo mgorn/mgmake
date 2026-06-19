@@ -51,11 +51,15 @@
 #include "backend/registry.hxx"
 #include "backend/capabilities.hxx"
 #include "backend/execute.hxx"
+#include "ext/provider_ref.hxx"
 #include "ext/fetch.hxx"
 #include "spec/executable.hxx"
 #include "spec/executable_impl.hxx"
 #include "spec/library.hxx"
 #include "spec/library_impl.hxx"
+#ifdef MGMK_ENABLE_EXT_CMAKE
+#include "ext/cmake.hxx"
+#endif
 #include "spec/project.hxx"
 #include "discovery/discovery.hxx"
 #include "lower/target.hxx"

@@ -44,6 +44,10 @@ namespace mgmake::spec {
 			m_include_dirs.emplace(file);
 			return self();
 		}
+		inline constexpr auto& include_dir(const std::filesystem::path& file) {
+			return add_include_dir(file);
+		}
+
 		inline constexpr auto& include_dirs() const {
 			return m_include_dirs;
 		}

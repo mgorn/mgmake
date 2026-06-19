@@ -7,6 +7,10 @@
 #include "../detail/assert.hxx"
 #include "../discovery/tool_role.hxx"
 #include "../ext/fetch.hxx"
+#ifdef MGMK_ENABLE_EXT_CMAKE
+#include "../ext/cmake/file_api.hxx"
+#include "../ext/cmake.hxx"
+#endif
 #include "../spec/project.hxx"
 #include "../sys/command_line.hxx"
 #include "../sys/file_command.hxx"
@@ -47,6 +51,116 @@ namespace mgmake::prep {
 	) {
 		return fetch_root(req) / "stamp" / (std::string{name} + "." + std::string{suffix});
 	}
+
+#ifdef MGMK_ENABLE_EXT_CMAKE
+	[[nodiscard]] inline std::filesystem::path cmake_source_dir(
+		const build::request& req,
+		std::string_view name
+	) {
+		return fetch_root(req) / "src" / std::string{name};
+	}
+
+	[[nodiscard]] inline std::filesystem::path cmake_build_dir(
+		const build::request& req,
+		std::string_view name
+	) {
+		return fetch_root(req) / "build" / std::string{name};
+	}
+
+	[[nodiscard]] inline std::filesystem::path cmake_install_dir(
+		const build::request& req,
+		std::string_view name
+	) {
+		return fetch_root(req) / "install" / std::string{name};
+	}
+
+	[[nodiscard]] inline std::filesystem::path cmake_stamp(
+		const build::request& req,
+		std::string_view name,
+		std::string_view suffix
+	) {
+		return fetch_root(req) / "stamp" / (std::string{name} + ".cmake." + std::string{suffix});
+	}
+
+	[[nodiscard]] inline std::string cmake_shell_arg(const std::filesystem::path& path) {
+		return sys::shell_escape(path.string());
+	}
+
+	[[nodiscard]] inline std::string cmake_shell_arg(std::string_view value) {
+		return sys::shell_escape(std::string{value});
+	}
+
+	[[nodiscard]] inline std::string shell_touch_command_text(
+		const std::filesystem::path& path
+	) {
+#if defined(MGMK_PLATFORM_WINDOWS)
+		return "type nul > " + sys::shell_path(path);
+#else
+		return "touch " + sys::shell_path(path);
+#endif
+	}
+
+	[[nodiscard]] inline sys::command_line cmake_write_query_command(
+		const std::filesystem::path& query_path
+	) {
+		const auto query_dir = query_path.parent_path();
+		const auto query_text = ext::cmake_file_api::codemodel_query_text();
+#if defined(MGMK_PLATFORM_WINDOWS)
+		return sys::shell_command(
+			"if not exist " + sys::shell_path(query_dir) + " mkdir " + sys::shell_path(query_dir) +
+			" & echo " + query_text + " > " + sys::shell_path(query_path)
+		);
+#else
+		return sys::shell_command(
+			"mkdir -p " + sys::shell_path(query_dir) +
+			" && printf %s " + sys::shell_escape(query_text) +
+			" > " + sys::shell_path(query_path)
+		);
+#endif
+	}
+
+	[[nodiscard]] inline sys::command_line cmake_configure_command(
+		const build::request& req,
+		const ext::cmake& cmake_project,
+		const std::filesystem::path& source_dir,
+		const std::filesystem::path& build_dir,
+		const std::filesystem::path& install_dir,
+		const std::filesystem::path& stamp
+	) {
+		const auto cmake_path = req.tool_path(discovery::tool_role::cmake, "cmake");
+		std::string command = cmake_shell_arg(cmake_path);
+		command += " -S ";
+		command += sys::shell_path(source_dir);
+		command += " -B ";
+		command += sys::shell_path(build_dir);
+		command += " -DCMAKE_INSTALL_PREFIX=";
+		command += sys::shell_path(install_dir);
+
+		if (!cmake_project.m_generator.empty()) {
+			command += " -G ";
+			command += cmake_shell_arg(std::string_view{cmake_project.m_generator});
+		}
+
+		if (!cmake_project.m_build_config.empty()) {
+			command += " -DCMAKE_BUILD_TYPE=";
+			command += cmake_shell_arg(std::string_view{cmake_project.m_build_config});
+		}
+
+		for (const auto& [key, value] : cmake_project.m_defines) {
+			command += " -D";
+			command += cmake_shell_arg(std::string_view{key + "=" + value});
+		}
+
+		for (const auto& arg : cmake_project.m_args) {
+			command += " ";
+			command += cmake_shell_arg(std::string_view{arg});
+		}
+
+		command += " && ";
+		command += shell_touch_command_text(stamp);
+		return sys::shell_command(std::move(command));
+	}
+#endif
 
 	[[nodiscard]] inline std::filesystem::path archive_extension(ext::archive_format format) {
 		switch (format) {
@@ -195,7 +309,11 @@ namespace mgmake::prep {
 		, m_req{req}
 		, m_project{project}
 		, m_emit{result.m_dag}
-		, m_fetches(project.m_fetches.size()) {}
+		, m_fetches(project.m_fetches.size())
+#ifdef MGMK_ENABLE_EXT_CMAKE
+		, m_cmake_projects(project.m_cmake_projects.size())
+#endif
+	{}
 
 	inline const prep::fetched& context::fetch(ext::fetch::id id) {
 		mgmkassert(id < m_project.m_fetches.size(), "mgmake prep: invalid fetch id");
@@ -239,6 +357,79 @@ namespace mgmake::prep {
 		m_result.m_fetches.insert_or_assign(fetch.m_name, result);
 		return result;
 	}
+
+
+#ifdef MGMK_ENABLE_EXT_CMAKE
+	inline const prep::cmake_project& context::cmake(ext::cmake::id id) {
+		mgmkassert(id < m_project.m_cmake_projects.size(), "mgmake prep: invalid CMake project id");
+
+		if (m_cmake_projects.at(id).has_value()) {
+			return m_cmake_projects.at(id).value();
+		}
+
+		const auto& cmake_project = m_project.m_cmake_projects.at(id);
+		m_cmake_projects.at(id) = cmake_value(cmake_project);
+		return m_cmake_projects.at(id).value();
+	}
+
+	inline prep::cmake_project context::cmake_value(
+		const ext::cmake& cmake_project
+	) {
+		mgmkassert(!cmake_project.m_name.empty(), "mgmake prep: CMake project has no name");
+		mgmkassert(cmake_project.m_source.has_value(), "mgmake prep: CMake project '" + cmake_project.m_name + "' has no source");
+
+		const auto fetched = fetch_value(cmake_project.m_source.value());
+		const auto source_dir = fetched.m_source_dir;
+		const auto build_dir = cmake_build_dir(request(), cmake_project.m_name);
+		const auto install_dir = cmake_install_dir(request(), cmake_project.m_name);
+		const auto query_path = ext::cmake_file_api::query_file(build_dir);
+		const auto configure_stamp = cmake_stamp(request(), cmake_project.m_name, "configure");
+
+		const auto query_id = m_emit.generated(query_path);
+		const auto configure_id = m_emit.generated(configure_stamp);
+
+		m_emit.action(
+			"Write CMake File API query " + cmake_project.m_name,
+			"Writes CMake File API query for external project '" + cmake_project.m_name + "'.",
+			{fetched.m_stamp},
+			{query_id},
+			cmake_write_query_command(query_path)
+		);
+
+		m_emit.action(
+			"Configure CMake project " + cmake_project.m_name,
+			"Configures external CMake project '" + cmake_project.m_name + "'.",
+			{query_id},
+			{configure_id},
+			cmake_configure_command(
+				request(),
+				cmake_project,
+				source_dir,
+				build_dir,
+				install_dir,
+				configure_stamp
+			)
+		);
+
+		dag::target dag_target{
+			"ext:cmake:configure:" + cmake_project.m_name,
+			{configure_id},
+			{fetched.m_target}
+		};
+		m_emit.target(dag_target);
+
+		prep::cmake_project result{};
+		result.m_source_dir = source_dir;
+		result.m_build_dir = build_dir;
+		result.m_install_dir = install_dir;
+		result.m_usage_root = cmake_project.m_install
+			? ext::output_root::install_dir
+			: ext::output_root::build_dir;
+
+		m_result.m_cmake_projects.insert_or_assign(cmake_project.m_name, result);
+		return result;
+	}
+#endif
 
 	inline prep::fetched context::git_fetch(
 		const ext::fetch& fetch,

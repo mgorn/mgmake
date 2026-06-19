@@ -58,6 +58,9 @@ namespace mgmake::discovery {
 		bool m_has_archive_fetch = false;
 		bool m_has_zip_fetch = false;
 		bool m_has_tar_fetch = false;
+#ifdef MGMK_ENABLE_EXT_CMAKE
+		bool m_has_cmake_projects = false;
+#endif
 	};
 
 	inline void record_source_role(
@@ -165,17 +168,33 @@ namespace mgmake::discovery {
 
 		for (const auto& lib : project.m_libraries) {
 			record_target_sources(usage, lib);
-			record_library_kind(usage, lib.m_kind);
+
+			if (!lib.provider_backed()) {
+				record_library_kind(usage, lib.m_kind);
+			}
 		}
 
 		for (const auto& exe : project.m_executables) {
 			record_target_sources(usage, exe);
-			usage.m_has_executable = true;
+
+			if (!exe.provider_backed()) {
+				usage.m_has_executable = true;
+			}
 		}
 
 		for (const auto& fetch : project.m_fetches) {
 			record_fetch_tools(usage, fetch);
 		}
+
+#ifdef MGMK_ENABLE_EXT_CMAKE
+		for (const auto& cmake_project : project.m_cmake_projects) {
+			usage.m_has_cmake_projects = true;
+
+			if (cmake_project.m_source.has_value()) {
+				record_fetch_tools(usage, cmake_project.m_source.value());
+			}
+		}
+#endif
 
 		return usage;
 	}
@@ -270,6 +289,16 @@ namespace mgmake::discovery {
 				.m_needed_because = "the project extracts tar external archives"
 			});
 		}
+
+#ifdef MGMK_ENABLE_EXT_CMAKE
+		if (usage.m_has_cmake_projects) {
+			result.push_back({
+				.m_role = tool_role::cmake,
+				.m_strength = requirement_strength::required,
+				.m_needed_because = "the project configures external CMake projects"
+			});
+		}
+#endif
 
 		if (req.target_platform() == sys::platform::p_windows && tc.dialect() == build::toolchain::dialect::msvc) {
 			if (!tc.tool(tool_role::manifest_tool).empty()) {
