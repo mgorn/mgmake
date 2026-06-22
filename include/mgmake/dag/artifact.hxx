@@ -3,7 +3,10 @@
 #ifndef MGMAKE_DAG_ARTIFACT_HXX
 #define MGMAKE_DAG_ARTIFACT_HXX
 
+#include "../detail/hashes.hxx"
+
 #include <filesystem>
+#include <system_error>
 #include <vector>
 
 namespace mgmake::dag {
@@ -16,6 +19,72 @@ namespace mgmake::dag {
             phony // Fake placeholder
         } m_kind = kind::source;
         std::filesystem::path m_path;
+
+        [[nodiscard]] inline const std::filesystem::path& path() const noexcept {
+            return m_path;
+        }
+
+        [[nodiscard]] inline bool is_phony() const noexcept {
+            return m_kind == kind::phony;
+        }
+
+        [[nodiscard]] inline bool exists() const {
+            if (is_phony()) {
+                return true;
+            }
+
+            std::error_code ec;
+            return std::filesystem::exists(m_path, ec);
+        }
+
+        [[nodiscard]] inline bool is_regular_file() const {
+            if (is_phony()) {
+                return false;
+            }
+
+            std::error_code ec;
+            return std::filesystem::is_regular_file(m_path, ec);
+        }
+
+        [[nodiscard]] inline bool is_dirty(const detail::hashes& hashes) const {
+            if (is_phony()) {
+                return false;
+            }
+
+            if (!exists()) {
+                return true;
+            }
+
+            if (!is_regular_file()) {
+                return false;
+            }
+
+            return hashes.is_dirty(m_path);
+        }
+
+        [[nodiscard]] inline bool check(detail::hashes& hashes) const {
+            if (is_phony()) {
+                return false;
+            }
+
+            if (!exists()) {
+                return true;
+            }
+
+            if (!is_regular_file()) {
+                return false;
+            }
+
+            return hashes.check(m_path);
+        }
+
+        inline void update(detail::hashes& hashes) const {
+            if (is_phony()) {
+                return;
+            }
+
+            hashes.update(m_path);
+        }
     };
 }
 

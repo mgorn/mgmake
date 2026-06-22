@@ -12,6 +12,7 @@
 #include "../cli/help.hxx"
 #include "../cli/parse.hxx"
 #include "../detail/graphviz.hxx"
+#include "../detail/hashes.hxx"
 #include "../detail/project_factory.hxx"
 #include "../discovery/discovery.hxx"
 #include "../spec/project.hxx"
@@ -160,6 +161,7 @@ namespace mgmake {
 		}
 
 		auto resolved_req = std::move(*resolved_req_result);
+		auto hashes = detail::hashes::load(resolved_req);
 		auto prep_result = proj.prepare(resolved_req);
 
 		if (opts.m_action == cli::action_kind::graph) {
@@ -180,7 +182,8 @@ namespace mgmake {
 
 		auto prep_execute_result = prep::execute(
 			opts,
-			prep_result
+			prep_result,
+			hashes
 		);
 
 		if (!prep_execute_result) {
@@ -208,6 +211,11 @@ namespace mgmake {
 					build_graph,
 					graph_dir / "build.dot"
 				);
+
+				if (!opts.m_dry_run) {
+					hashes.store(resolved_req);
+				}
+
 				return detail::entry_exit_success;
 			}
 
@@ -236,12 +244,17 @@ namespace mgmake {
 			const auto build_result = backend::build_selected_backend(
 				opts,
 				graph,
-				run_req
+				run_req,
+				hashes
 			);
 
 			if (!build_result) {
 				std::println(stderr, "{}", build_result.error());
 				return detail::entry_exit_action_failure;
+			}
+
+			if (!opts.m_dry_run) {
+				hashes.store(resolved_req);
 			}
 
 			const auto executable_path = build::run_target_executable_path(
@@ -270,12 +283,17 @@ namespace mgmake {
 		const auto action_result = backend::execute_project_action(
 			opts,
 			resolved_req,
-			graph
+			graph,
+			hashes
 		);
 
 		if (!action_result) {
 			std::println(stderr, "{}", action_result.error());
 			return detail::entry_exit_action_failure;
+		}
+
+		if (!opts.m_dry_run) {
+			hashes.store(resolved_req);
 		}
 
 		return detail::entry_exit_success;

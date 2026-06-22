@@ -6,6 +6,7 @@
 #include "result.hxx"
 #include "../cli/options.hxx"
 #include "../dag/graph.hxx"
+#include "../detail/hashes.hxx"
 #include "../sys/command_line.hxx"
 #ifdef MGMK_ENABLE_EXT_CMAKE
 #include "../ext/cmake/file_api.hxx"
@@ -19,34 +20,42 @@
 
 
 namespace mgmake::prep {
-	[[nodiscard]] inline bool output_exists(
-		const dag::graph& graph,
-		dag::artifact::id id
-	) {
-		const auto& artifact = graph.artifact(id);
-
-		if (artifact.m_kind == dag::artifact::kind::phony) {
-			return true;
-		}
-
-		return std::filesystem::exists(artifact.m_path);
-	}
-
 	[[nodiscard]] inline bool action_is_up_to_date(
 		const dag::graph& graph,
-		const dag::action& action
+		const dag::action& action,
+		detail::hashes& hashes
 	) {
 		if (action.m_always_run || action.m_outputs.empty()) {
 			return false;
 		}
 
+		for (const auto input : action.m_inputs) {
+			if (graph.artifact(input).check(hashes)) {
+				return false;
+			}
+		}
+
 		for (const auto output : action.m_outputs) {
-			if (!output_exists(graph, output)) {
+			if (graph.artifact(output).check(hashes)) {
 				return false;
 			}
 		}
 
 		return true;
+	}
+
+	inline void update_action_hashes(
+		const dag::graph& graph,
+		const dag::action& action,
+		detail::hashes& hashes
+	) {
+		for (const auto input : action.m_inputs) {
+			graph.artifact(input).update(hashes);
+		}
+
+		for (const auto output : action.m_outputs) {
+			graph.artifact(output).update(hashes);
+		}
 	}
 
 	inline void create_output_directories(
@@ -70,14 +79,15 @@ namespace mgmake::prep {
 
 	[[nodiscard]] inline std::expected<void, std::string> execute(
 		const cli::options& opts,
-		prep::result& result
+		prep::result& result,
+		detail::hashes& hashes
 	) {
 		const auto& graph = result.m_dag;
 
 		for (std::size_t i = 0; i < graph.m_actions.size(); ++i) {
 			const auto& action = graph.action(i);
 
-			if (action_is_up_to_date(graph, action)) {
+			if (action_is_up_to_date(graph, action, hashes)) {
 				continue;
 			}
 
@@ -106,6 +116,10 @@ namespace mgmake::prep {
 					"' failed with exit code " + std::to_string(exit_code)
 				};
 			}
+
+			if (!opts.m_dry_run) {
+				update_action_hashes(graph, action, hashes);
+			}
 		}
 
 #ifdef MGMK_ENABLE_EXT_CMAKE
@@ -118,6 +132,14 @@ namespace mgmake::prep {
 
 		return {};
 	}
+	[[nodiscard]] inline std::expected<void, std::string> execute(
+		const cli::options& opts,
+		prep::result& result
+	) {
+		detail::hashes hashes{};
+		return execute(opts, result, hashes);
+	}
+
 }
 
 #endif

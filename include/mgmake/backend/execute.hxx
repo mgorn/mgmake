@@ -10,6 +10,7 @@
 #include "../cli/backend.hxx"
 #include "../cli/options.hxx"
 #include "../dag/graph.hxx"
+#include "../detail/hashes.hxx"
 
 #include <expected>
 #include <string>
@@ -46,7 +47,8 @@ namespace mgmake::backend {
 	[[nodiscard]] inline std::expected<void, std::string> build(
 		const cli::options& opts,
 		const dag::graph& graph,
-		const build::request& req
+		const build::request& req,
+		mgmake::detail::hashes& hashes
 	) {
 		using backend_type = backend::for_kind_t<Kind>;
 
@@ -56,7 +58,10 @@ namespace mgmake::backend {
 				std::string{ cli::backend_name(Kind) } +
 				"' is not implemented yet"
 			};
+		} else if constexpr (backend::can_build_with_hashes<backend_type>) {
+			return backend_type{}.build(opts, graph, req, hashes);
 		} else if constexpr (backend::can_build<backend_type>) {
+			(void)hashes;
 			return backend_type{}.build(opts, graph, req);
 		} else {
 			return std::unexpected{
@@ -67,24 +72,35 @@ namespace mgmake::backend {
 		}
 	}
 
-	[[nodiscard]] inline std::expected<void, std::string> build_selected_backend(
+	template <cli::backend_kind Kind>
+	[[nodiscard]] inline std::expected<void, std::string> build(
 		const cli::options& opts,
 		const dag::graph& graph,
 		const build::request& req
 	) {
+		detail::hashes hashes{};
+		return backend::build<Kind>(opts, graph, req, hashes);
+	}
+
+	[[nodiscard]] inline std::expected<void, std::string> build_selected_backend(
+		const cli::options& opts,
+		const dag::graph& graph,
+		const build::request& req,
+		mgmake::detail::hashes& hashes
+	) {
 		switch (opts.m_backend) {
 			case cli::backend_kind::automatic:
-				return backend::build<cli::backend_kind::automatic>(opts, graph, req);
+				return backend::build<cli::backend_kind::automatic>(opts, graph, req, hashes);
 
 			case cli::backend_kind::ninja:
-				return backend::build<cli::backend_kind::ninja>(opts, graph, req);
+				return backend::build<cli::backend_kind::ninja>(opts, graph, req, hashes);
 
 
 			case cli::backend_kind::make:
-				return backend::build<cli::backend_kind::make>(opts, graph, req);
+				return backend::build<cli::backend_kind::make>(opts, graph, req, hashes);
 
 			case cli::backend_kind::direct:
-				return backend::build<cli::backend_kind::direct>(opts, graph, req);
+				return backend::build<cli::backend_kind::direct>(opts, graph, req, hashes);
 
 			case cli::backend_kind::count:
 				break;
@@ -97,14 +113,15 @@ namespace mgmake::backend {
 	[[nodiscard]] inline std::expected<void, std::string> execute_project_action_for_backend(
 		const cli::options& opts,
 		const build::request& req,
-		const dag::graph& graph
+		const dag::graph& graph,
+		mgmake::detail::hashes& hashes
 	) {
 		switch (opts.m_action) {
 			case cli::action_kind::generate:
 				return backend::generate<Kind>(opts, graph, req);
 
 			case cli::action_kind::build:
-				return backend::build<Kind>(opts, graph, req);
+				return backend::build<Kind>(opts, graph, req, hashes);
 
 			case cli::action_kind::run:
 			case cli::action_kind::graph:
@@ -125,32 +142,43 @@ namespace mgmake::backend {
 		return std::unexpected{ "mgmake: unknown action" };
 	}
 
-	[[nodiscard]] inline std::expected<void, std::string> execute_project_action(
+	template <cli::backend_kind Kind>
+	[[nodiscard]] inline std::expected<void, std::string> execute_project_action_for_backend(
 		const cli::options& opts,
 		const build::request& req,
 		const dag::graph& graph
+	) {
+		detail::hashes hashes{};
+		return execute_project_action_for_backend<Kind>(opts, req, graph, hashes);
+	}
+
+	[[nodiscard]] inline std::expected<void, std::string> execute_project_action(
+		const cli::options& opts,
+		const build::request& req,
+		const dag::graph& graph,
+		mgmake::detail::hashes& hashes
 	) {
 		switch (opts.m_backend) {
 			case cli::backend_kind::automatic:
 				return execute_project_action_for_backend<
 					cli::backend_kind::automatic
-				>(opts, req, graph);
+				>(opts, req, graph, hashes);
 
 			case cli::backend_kind::ninja:
 				return execute_project_action_for_backend<
 					cli::backend_kind::ninja
-				>(opts, req, graph);
+				>(opts, req, graph, hashes);
 
 
 			case cli::backend_kind::make:
 				return execute_project_action_for_backend<
 					cli::backend_kind::make
-				>(opts, req, graph);
+				>(opts, req, graph, hashes);
 
 			case cli::backend_kind::direct:
 				return execute_project_action_for_backend<
 					cli::backend_kind::direct
-				>(opts, req, graph);
+				>(opts, req, graph, hashes);
 
 			case cli::backend_kind::count:
 				break;

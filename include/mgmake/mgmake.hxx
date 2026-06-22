@@ -8,6 +8,7 @@
 #include "detail/convert.hxx"
 #include "detail/assert.hxx"
 #include "detail/graphviz.hxx"
+#include "detail/hashes.hxx"
 #include "sys/platform.hxx"
 #include "sys/util.hxx"
 #include "sys/command_line.hxx"

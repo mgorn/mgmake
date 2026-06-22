@@ -6,6 +6,7 @@
 #include "../build/request.hxx"
 #include "../cli/options.hxx"
 #include "../dag/graph.hxx"
+#include "../detail/hashes.hxx"
 
 #include <concepts>
 #include <expected>
@@ -32,6 +33,18 @@ namespace mgmake::backend {
 			const build::request& req
 		) {
 			{ backend.build(opts, graph, req) } -> std::same_as<std::expected<void, std::string>>;
+		};
+
+	template <typename Backend>
+	concept can_build_with_hashes =
+		requires(
+			Backend backend,
+			const cli::options& opts,
+			const dag::graph& graph,
+			const build::request& req,
+			mgmake::detail::hashes& hashes
+		) {
+			{ backend.build(opts, graph, req, hashes) } -> std::same_as<std::expected<void, std::string>>;
 		};
 }
 
