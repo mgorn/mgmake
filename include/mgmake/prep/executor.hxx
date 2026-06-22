@@ -29,19 +29,21 @@ namespace mgmake::prep {
 			return false;
 		}
 
+		bool dirty = false;
+
 		for (const auto input : action.m_inputs) {
 			if (graph.artifact(input).check(hashes)) {
-				return false;
+				dirty = true;
 			}
 		}
 
 		for (const auto output : action.m_outputs) {
 			if (graph.artifact(output).check(hashes)) {
-				return false;
+				dirty = true;
 			}
 		}
 
-		return true;
+		return !dirty;
 	}
 
 	inline void update_action_hashes(

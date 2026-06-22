@@ -63,6 +63,24 @@ namespace mgmake::dag {
 			return m_targets.at(id);
 		}
 
+		[[nodiscard]] inline bool check(detail::hashes& hashes) const {
+			bool dirty = false;
+
+			for (const auto& artifact : m_artifacts) {
+				if (artifact.check(hashes)) {
+					dirty = true;
+				}
+			}
+
+			return dirty;
+		}
+
+		inline void update(detail::hashes& hashes) const {
+			for (const auto& artifact : m_artifacts) {
+				artifact.update(hashes);
+			}
+		}
+
 		[[nodiscard]] inline constexpr std::optional<dag::target::id> find_target(
 			std::string_view name
 		) const {

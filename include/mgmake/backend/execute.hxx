@@ -59,10 +59,23 @@ namespace mgmake::backend {
 				"' is not implemented yet"
 			};
 		} else if constexpr (backend::can_build_with_hashes<backend_type>) {
-			return backend_type{}.build(opts, graph, req, hashes);
+			graph.check(hashes);
+			auto result = backend_type{}.build(opts, graph, req, hashes);
+
+			if (result && !opts.m_dry_run) {
+				graph.update(hashes);
+			}
+
+			return result;
 		} else if constexpr (backend::can_build<backend_type>) {
-			(void)hashes;
-			return backend_type{}.build(opts, graph, req);
+			graph.check(hashes);
+			auto result = backend_type{}.build(opts, graph, req);
+
+			if (result && !opts.m_dry_run) {
+				graph.update(hashes);
+			}
+
+			return result;
 		} else {
 			return std::unexpected{
 				"mgmake: backend '" +

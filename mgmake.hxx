@@ -2805,6 +2805,24 @@ namespace mgmake::dag {
 			return m_targets.at(id);
 		}
 
+		[[nodiscard]] inline bool check(detail::hashes& hashes) const {
+			bool dirty = false;
+
+			for (const auto& artifact : m_artifacts) {
+				if (artifact.check(hashes)) {
+					dirty = true;
+				}
+			}
+
+			return dirty;
+		}
+
+		inline void update(detail::hashes& hashes) const {
+			for (const auto& artifact : m_artifacts) {
+				artifact.update(hashes);
+			}
+		}
+
 		[[nodiscard]] inline constexpr std::optional<dag::target::id> find_target(
 			std::string_view name
 		) const {
@@ -9558,10 +9576,23 @@ namespace mgmake::backend {
 				"' is not implemented yet"
 			};
 		} else if constexpr (backend::can_build_with_hashes<backend_type>) {
-			return backend_type{}.build(opts, graph, req, hashes);
+			graph.check(hashes);
+			auto result = backend_type{}.build(opts, graph, req, hashes);
+
+			if (result && !opts.m_dry_run) {
+				graph.update(hashes);
+			}
+
+			return result;
 		} else if constexpr (backend::can_build<backend_type>) {
-			(void)hashes;
-			return backend_type{}.build(opts, graph, req);
+			graph.check(hashes);
+			auto result = backend_type{}.build(opts, graph, req);
+
+			if (result && !opts.m_dry_run) {
+				graph.update(hashes);
+			}
+
+			return result;
 		} else {
 			return std::unexpected{
 				"mgmake: backend '" +
@@ -10344,19 +10375,21 @@ namespace mgmake::prep {
 			return false;
 		}
 
+		bool dirty = false;
+
 		for (const auto input : action.m_inputs) {
 			if (graph.artifact(input).check(hashes)) {
-				return false;
+				dirty = true;
 			}
 		}
 
 		for (const auto output : action.m_outputs) {
 			if (graph.artifact(output).check(hashes)) {
-				return false;
+				dirty = true;
 			}
 		}
 
-		return true;
+		return !dirty;
 	}
 
 	inline void update_action_hashes(
