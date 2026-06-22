@@ -6678,35 +6678,6 @@ namespace mgmake::dag {
 // ===== end include/mgmake/dag/emitter.hxx =====
 
 
-// ===== begin include/mgmake/backend/traits.hxx =====
-#pragma once
-
-#ifndef MGMAKE_BACKEND_TRAITS_HXX
-#define MGMAKE_BACKEND_TRAITS_HXX
-
-// skipped duplicate include: include/mgmake/build/request.hxx
-// skipped duplicate include: include/mgmake/dag/graph.hxx
-
-#include <expected>
-#include <string>
-
-namespace mgmake::backend {
-	trait generate_backend {
-		void generate(const dag::graph& graph, const build::request& req) const;
-	};
-
-	trait build_backend {
-		std::expected<void, std::string> build(
-			const dag::graph& graph,
-			const build::request& req
-		) const;
-	};
-}
-
-#endif
-// ===== end include/mgmake/backend/traits.hxx =====
-
-
 // ===== begin include/mgmake/backend/ninja.hxx =====
 #pragma once
 

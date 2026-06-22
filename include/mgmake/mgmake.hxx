@@ -47,7 +47,6 @@
 #include "dag/graph.hxx"
 #include "dag/target.hxx"
 #include "dag/emitter.hxx"
-#include "backend/traits.hxx"
 #include "backend/ninja.hxx"
 #include "backend/registry.hxx"
 #include "backend/capabilities.hxx"
