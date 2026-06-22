@@ -212,10 +212,6 @@ namespace mgmake {
 					graph_dir / "build.dot"
 				);
 
-				if (!opts.m_dry_run) {
-					hashes.store(resolved_req);
-				}
-
 				return detail::entry_exit_success;
 			}
 
