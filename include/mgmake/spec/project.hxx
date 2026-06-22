@@ -6,13 +6,15 @@
 #include "../build/request.hxx"
 #include "../dag/graph.hxx"
 #include "../detail/assert.hxx"
-#include "../ext/fetch.hxx"
-#ifdef MGMK_ENABLE_EXT_CMAKE
-#include "../ext/cmake.hxx"
-#endif
 #include "../prep/result.hxx"
 #include "executable.hxx"
 #include "library.hxx"
+
+#include "../ext/fetch.hxx"
+#include "../ext/provider_ref.hxx"
+#ifdef MGMK_ENABLE_EXT_CMAKE
+#include "../ext/cmake.hxx"
+#endif
 
 #include <optional>
 #include <set>

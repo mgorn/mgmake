@@ -72,16 +72,6 @@ namespace mgmake::backend {
 		}
 	}
 
-	template <cli::backend_kind Kind>
-	[[nodiscard]] inline std::expected<void, std::string> build(
-		const cli::options& opts,
-		const dag::graph& graph,
-		const build::request& req
-	) {
-		detail::hashes hashes{};
-		return backend::build<Kind>(opts, graph, req, hashes);
-	}
-
 	[[nodiscard]] inline std::expected<void, std::string> build_selected_backend(
 		const cli::options& opts,
 		const dag::graph& graph,
@@ -140,16 +130,6 @@ namespace mgmake::backend {
 		}
 
 		return std::unexpected{ "mgmake: unknown action" };
-	}
-
-	template <cli::backend_kind Kind>
-	[[nodiscard]] inline std::expected<void, std::string> execute_project_action_for_backend(
-		const cli::options& opts,
-		const build::request& req,
-		const dag::graph& graph
-	) {
-		detail::hashes hashes{};
-		return execute_project_action_for_backend<Kind>(opts, req, graph, hashes);
 	}
 
 	[[nodiscard]] inline std::expected<void, std::string> execute_project_action(

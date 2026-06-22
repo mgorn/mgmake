@@ -5,6 +5,7 @@
 
 #include "fetched.hxx"
 #include "../dag/graph.hxx"
+#include "../ext/provider_ref.hxx"
 #ifdef MGMK_ENABLE_EXT_CMAKE
 #include "../ext/cmake/file_api.hxx"
 #endif

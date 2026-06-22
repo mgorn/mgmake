@@ -3878,156 +3878,36 @@ namespace mgmake::build {
 // skipped duplicate include: include/mgmake/dag/graph.hxx
 // skipped duplicate include: include/mgmake/detail/assert.hxx
 
-// ===== begin include/mgmake/ext/fetch.hxx =====
+// ===== begin include/mgmake/prep/result.hxx =====
 #pragma once
 
-#ifndef MGMAKE_EXT_FETCH_HXX
-#define MGMAKE_EXT_FETCH_HXX
+#ifndef MGMK_PREP_RESULT_HXX
+#define MGMK_PREP_RESULT_HXX
 
-// skipped duplicate include: include/mgmake/detail/assert.hxx
+
+// ===== begin include/mgmake/prep/fetched.hxx =====
+#pragma once
+
+#ifndef MGMAKE_PREP_FETCHED_HXX
+#define MGMAKE_PREP_FETCHED_HXX
+
+// skipped duplicate include: include/mgmake/dag/artifact.hxx
+// skipped duplicate include: include/mgmake/dag/target.hxx
 
 #include <filesystem>
-#include <string>
-#include <string_view>
-#include <variant>
-#include <vector>
 
-namespace mgmake::ext {
-	enum struct archive_format {
-		auto_detect,
-		zip,
-		tar,
-		tar_gz,
-		tar_xz
-	};
-
-	struct git_fetch {
-		std::string m_url;
-		std::string m_ref;
-		bool m_shallow = true;
-		bool m_submodules = false;
-	};
-
-	struct archive_fetch {
-		std::string m_url;
-		archive_format m_format = archive_format::auto_detect;
-		std::string m_sha256;
-		std::filesystem::path m_strip_prefix;
-	};
-
-	struct local_fetch {
-		std::filesystem::path m_path;
-	};
-
-	struct fetch {
-		using id = std::vector<fetch>::size_type;
-
-		std::string m_name;
-		std::variant<git_fetch, archive_fetch, local_fetch> m_data;
-
-		explicit fetch(std::string_view name)
-			: m_name{name}
-			, m_data{local_fetch{}} {
-			mgmkassert(!m_name.empty(), "mgmake ext: fetch has no name");
-		}
-
-		fetch& git(std::string_view url) {
-			mgmkassert(!url.empty(), "mgmake ext: git fetch has no URL");
-			m_data = git_fetch{.m_url = std::string{url}};
-			return *this;
-		}
-
-		fetch& archive(std::string_view url) {
-			mgmkassert(!url.empty(), "mgmake ext: archive fetch has no URL");
-			m_data = archive_fetch{.m_url = std::string{url}};
-			return *this;
-		}
-
-		fetch& zip(std::string_view url) {
-			archive(url);
-			std::get<archive_fetch>(m_data).m_format = archive_format::zip;
-			return *this;
-		}
-
-		fetch& tar(std::string_view url) {
-			archive(url);
-			std::get<archive_fetch>(m_data).m_format = archive_format::tar;
-			return *this;
-		}
-
-		fetch& tar_gz(std::string_view url) {
-			archive(url);
-			std::get<archive_fetch>(m_data).m_format = archive_format::tar_gz;
-			return *this;
-		}
-
-		fetch& tar_xz(std::string_view url) {
-			archive(url);
-			std::get<archive_fetch>(m_data).m_format = archive_format::tar_xz;
-			return *this;
-		}
-
-		fetch& local(const std::filesystem::path& path) {
-			mgmkassert(!path.empty(), "mgmake ext: local fetch has no path");
-			m_data = local_fetch{.m_path = path};
-			return *this;
-		}
-
-		fetch& ref(std::string_view value) {
-			mgmkassert(std::holds_alternative<git_fetch>(m_data), "mgmake ext: ref() requires a git fetch");
-			std::get<git_fetch>(m_data).m_ref = std::string{value};
-			return *this;
-		}
-
-		fetch& branch(std::string_view value) {
-			return ref(value);
-		}
-
-		fetch& tag(std::string_view value) {
-			return ref(value);
-		}
-
-		fetch& commit(std::string_view value) {
-			return ref(value);
-		}
-
-		fetch& sha256(std::string_view value) {
-			mgmkassert(std::holds_alternative<archive_fetch>(m_data), "mgmake ext: sha256() requires an archive fetch");
-			std::get<archive_fetch>(m_data).m_sha256 = std::string{value};
-			return *this;
-		}
-
-		fetch& strip_prefix(const std::filesystem::path& value) {
-			mgmkassert(std::holds_alternative<archive_fetch>(m_data), "mgmake ext: strip_prefix() requires an archive fetch");
-			std::get<archive_fetch>(m_data).m_strip_prefix = value;
-			return *this;
-		}
-
-		fetch& submodules(bool enabled = true) {
-			mgmkassert(std::holds_alternative<git_fetch>(m_data), "mgmake ext: submodules() requires a git fetch");
-			std::get<git_fetch>(m_data).m_submodules = enabled;
-			return *this;
-		}
-
-		fetch& shallow(bool enabled = true) {
-			mgmkassert(std::holds_alternative<git_fetch>(m_data), "mgmake ext: shallow() requires a git fetch");
-			std::get<git_fetch>(m_data).m_shallow = enabled;
-			return *this;
-		}
+namespace mgmake::prep {
+	struct fetched {
+		dag::target::id m_target{};
+		dag::artifact::id m_stamp{};
+		std::filesystem::path m_source_dir;
 	};
 }
 
 #endif
-// ===== end include/mgmake/ext/fetch.hxx =====
+// ===== end include/mgmake/prep/fetched.hxx =====
 
-#ifdef MGMK_ENABLE_EXT_CMAKE
-
-// ===== begin include/mgmake/ext/cmake.hxx =====
-#pragma once
-
-#ifndef MGMK_EXT_CMAKE_HXX
-#define MGMK_EXT_CMAKE_HXX
-
+// skipped duplicate include: include/mgmake/dag/graph.hxx
 
 // ===== begin include/mgmake/ext/provider_ref.hxx =====
 #pragma once
@@ -4065,390 +3945,6 @@ namespace mgmake::ext {
 #endif
 // ===== end include/mgmake/ext/provider_ref.hxx =====
 
-// skipped duplicate include: include/mgmake/ext/fetch.hxx
-
-// ===== begin include/mgmake/spec/executable.hxx =====
-#pragma once
-
-#ifndef MGMK_SPEC_EXECUTABLE_HXX
-#define MGMK_SPEC_EXECUTABLE_HXX
-
-
-// ===== begin include/mgmake/spec/target.hxx =====
-#pragma once
-
-#ifndef MGMK_SPEC_TARGET_HXX
-#define MGMK_SPEC_TARGET_HXX
-
-// skipped duplicate include: include/mgmake/detail/assert.hxx
-
-#include <filesystem>
-#include <set>
-#include <string>
-#include <string_view>
-
-namespace mgmake::spec {
-	template<typename target_t>
-	struct target {
-		std::string m_name;
-		std::set<std::filesystem::path> m_sources;
-		std::set<std::filesystem::path> m_include_dirs;
-		std::set<std::string> m_linked_libraries;
-
-		inline constexpr auto& name() const {
-			return m_name;
-		}
-
-		inline constexpr auto& add_source(const std::filesystem::path& file) {
-			mgmkassert(
-				not file.empty(),
-				"mgmake spec: target '" + m_name + "' cannot add an empty source path"
-			);
-
-			m_sources.emplace(file);
-			return self();
-		}
-		inline constexpr auto& sources() const {
-			return m_sources;
-		}
-
-		inline constexpr auto& add_include_dir(const std::filesystem::path& file) {
-			mgmkassert(
-				not file.empty(),
-				"mgmake spec: target '" + m_name + "' cannot add an empty include directory"
-			);
-
-			m_include_dirs.emplace(file);
-			return self();
-		}
-		inline constexpr auto& include_dir(const std::filesystem::path& file) {
-			return add_include_dir(file);
-		}
-
-		inline constexpr auto& include_dirs() const {
-			return m_include_dirs;
-		}
-
-		inline constexpr auto& link(std::string_view lib) {
-			mgmkassert(
-				not lib.empty(),
-				"mgmake spec: target '" + m_name + "' cannot link an empty library name"
-			);
-			mgmkassert(
-				lib != m_name,
-				"mgmake spec: target '" + m_name + "' cannot link itself"
-			);
-
-			m_linked_libraries.emplace(lib);
-			return self();
-		}
-		inline constexpr auto& link(const std::string& lib) {
-			return link(std::string_view{ lib });
-		}
-		inline constexpr auto& linked_libraries() const {
-			return m_linked_libraries;
-		}
-
-		// Implicit cast to std::string_view for when the target needs to be identified by name
-		operator std::string_view() const {
-			return m_name;
-		}
-	private:
-		inline constexpr target_t& self() {
-			return *static_cast<target_t*>(this);
-		}
-	};
-}
-
-#endif
-// ===== end include/mgmake/spec/target.hxx =====
-
-// skipped duplicate include: include/mgmake/ext/provider_ref.hxx
-
-#include <filesystem>
-#include <optional>
-#include <string>
-#include <string_view>
-#include <vector>
-
-namespace mgmake::spec {
-	struct executable : public target<executable> {
-		using id = std::vector<executable>::size_type;
-
-		std::optional<ext::provider_ref> m_provider;
-		std::optional<ext::rooted_path> m_artifact;
-
-		inline constexpr executable(std::string_view name)
-			: target<executable>{ std::string{ name } } {
-			mgmkassert(not m_name.empty(), "mgmake spec: executable target has no name");
-		}
-
-		inline executable& from(const ext::provider_ref& provider) {
-			mgmkassert(!provider.m_project.empty(), "mgmake spec: provider-backed executable has no provider project");
-			mgmkassert(!provider.m_target.empty(), "mgmake spec: provider-backed executable has no provider target");
-			m_provider = provider;
-			return *this;
-		}
-
-		[[nodiscard]] inline bool provider_backed() const noexcept {
-			return m_provider.has_value();
-		}
-
-		inline executable& artifact(const std::filesystem::path& path) {
-			return artifact(ext::output_root::install_dir, path);
-		}
-
-		inline executable& artifact(
-			ext::output_root root,
-			const std::filesystem::path& path
-		) {
-			mgmkassert(!path.empty(), "mgmake spec: executable '" + m_name + "' has an empty external artifact path");
-			m_artifact = ext::rooted_path{root, path};
-			return *this;
-		}
-	};
-}
-
-#endif
-// ===== end include/mgmake/spec/executable.hxx =====
-
-
-// ===== begin include/mgmake/spec/library.hxx =====
-#pragma once
-
-#ifndef MGMK_SPEC_LIBRARY_HXX
-#define MGMK_SPEC_LIBRARY_HXX
-
-// skipped duplicate include: include/mgmake/spec/target.hxx
-// skipped duplicate include: include/mgmake/ext/provider_ref.hxx
-
-#include <filesystem>
-#include <optional>
-#include <string>
-#include <string_view>
-#include <vector>
-
-namespace mgmake::spec {
-	struct project;
-
-	struct library : public target<library> {
-		using id = std::vector<library>::size_type;
-
-		enum struct kind {
-			static_lib,
-			shared_lib,
-			interface
-		} m_kind;
-
-		std::optional<ext::provider_ref> m_provider;
-		std::optional<ext::rooted_path> m_artifact;
-		std::vector<ext::rooted_path> m_external_include_dirs;
-
-		inline constexpr library(std::string_view name, kind k)
-			: target<library>{ std::string{ name } }, m_kind{k} {
-			mgmkassert(not m_name.empty(), "mgmake spec: library target has no name");
-			mgmkassert(
-				m_kind == kind::static_lib ||
-					m_kind == kind::shared_lib ||
-					m_kind == kind::interface,
-				"mgmake spec: invalid library kind"
-			);
-		}
-
-		inline constexpr auto& add_source(const std::filesystem::path& file) {
-			mgmkassert(
-				m_kind != kind::interface,
-				"mgmake spec: interface library '" + m_name + "' cannot have sources"
-			);
-
-			target<library>::add_source(file);
-			return *this;
-		}
-
-		inline library& from(const ext::provider_ref& provider) {
-			mgmkassert(!provider.m_project.empty(), "mgmake spec: provider-backed library has no provider project");
-			mgmkassert(!provider.m_target.empty(), "mgmake spec: provider-backed library has no provider target");
-			m_provider = provider;
-			return *this;
-		}
-
-		[[nodiscard]] inline bool provider_backed() const noexcept {
-			return m_provider.has_value();
-		}
-
-		inline library& artifact(const std::filesystem::path& path) {
-			return artifact(ext::output_root::install_dir, path);
-		}
-
-		inline library& artifact(
-			ext::output_root root,
-			const std::filesystem::path& path
-		) {
-			mgmkassert(!path.empty(), "mgmake spec: library '" + m_name + "' has an empty external artifact path");
-			m_artifact = ext::rooted_path{root, path};
-			return *this;
-		}
-
-		inline library& include_dir(const std::filesystem::path& path) {
-			if (provider_backed()) {
-				return include_dir(m_provider->m_usage_root, path);
-			}
-
-			add_include_dir(path);
-			return *this;
-		}
-
-		inline library& include_dir(
-			ext::output_root root,
-			const std::filesystem::path& path
-		) {
-			mgmkassert(!path.empty(), "mgmake spec: library '" + m_name + "' has an empty external include directory");
-			m_external_include_dirs.push_back(ext::rooted_path{root, path});
-			return *this;
-		}
-	};
-}
-
-#endif
-// ===== end include/mgmake/spec/library.hxx =====
-
-
-#include <optional>
-#include <string>
-#include <string_view>
-#include <utility>
-#include <vector>
-
-namespace mgmake::ext {
-	struct cmake {
-		using id = std::vector<cmake>::size_type;
-
-		std::string m_name;
-		std::optional<ext::fetch> m_source;
-		std::vector<std::string> m_args;
-		std::vector<std::pair<std::string, std::string>> m_defines;
-		std::vector<std::string> m_build_targets;
-		bool m_install = false;
-		std::string m_install_target = "install";
-		std::string m_generator;
-		std::string m_build_config;
-
-		explicit cmake(std::string_view name)
-			: m_name{name} {
-			mgmkassert(!m_name.empty(), "mgmake ext: CMake project has no name");
-		}
-
-		cmake& source(const ext::fetch& fetch) {
-			m_source = fetch;
-			return *this;
-		}
-
-		cmake& arg(std::string_view value) {
-			mgmkassert(!value.empty(), "mgmake ext: CMake argument is empty");
-			m_args.emplace_back(value);
-			return *this;
-		}
-
-		cmake& define(std::string_view key, std::string_view value) {
-			mgmkassert(!key.empty(), "mgmake ext: CMake define key is empty");
-			m_defines.emplace_back(std::string{key}, std::string{value});
-			return *this;
-		}
-
-		cmake& build_target(std::string_view target) {
-			mgmkassert(!target.empty(), "mgmake ext: CMake build target is empty");
-			m_build_targets.emplace_back(target);
-			return *this;
-		}
-
-		cmake& install(bool enabled = true) {
-			m_install = enabled;
-			return *this;
-		}
-
-		cmake& install_target(std::string_view target) {
-			mgmkassert(!target.empty(), "mgmake ext: CMake install target is empty");
-			m_install_target = std::string{target};
-			m_install = true;
-			return *this;
-		}
-
-		cmake& generator(std::string_view value) {
-			mgmkassert(!value.empty(), "mgmake ext: CMake generator is empty");
-			m_generator = std::string{value};
-			return *this;
-		}
-
-		cmake& build_config(std::string_view value) {
-			mgmkassert(!value.empty(), "mgmake ext: CMake build configuration is empty");
-			m_build_config = std::string{value};
-			return *this;
-		}
-
-		[[nodiscard]] spec::library library(
-			std::string_view target,
-			spec::library::kind kind
-		) const {
-			mgmkassert(!target.empty(), "mgmake ext: CMake library target is empty");
-			auto result = spec::library{target, kind};
-			result.from(ext::provider_ref{
-				.m_kind = ext::provider_kind::cmake,
-				.m_project = m_name,
-				.m_target = std::string{target},
-				.m_usage_root = ext::output_root::install_dir
-			});
-			return result;
-		}
-
-		[[nodiscard]] spec::executable executable(std::string_view target) const {
-			mgmkassert(!target.empty(), "mgmake ext: CMake executable target is empty");
-			auto result = spec::executable{target};
-			result.from(ext::provider_ref{
-				.m_kind = ext::provider_kind::cmake,
-				.m_project = m_name,
-				.m_target = std::string{target},
-				.m_usage_root = ext::output_root::install_dir
-			});
-			return result;
-		}
-	};
-}
-
-#endif
-// ===== end include/mgmake/ext/cmake.hxx =====
-
-#endif
-
-// ===== begin include/mgmake/prep/result.hxx =====
-#pragma once
-
-#ifndef MGMK_PREP_RESULT_HXX
-#define MGMK_PREP_RESULT_HXX
-
-
-// ===== begin include/mgmake/prep/fetched.hxx =====
-#pragma once
-
-#ifndef MGMAKE_PREP_FETCHED_HXX
-#define MGMAKE_PREP_FETCHED_HXX
-
-// skipped duplicate include: include/mgmake/dag/artifact.hxx
-// skipped duplicate include: include/mgmake/dag/target.hxx
-
-#include <filesystem>
-
-namespace mgmake::prep {
-	struct fetched {
-		dag::target::id m_target{};
-		dag::artifact::id m_stamp{};
-		std::filesystem::path m_source_dir;
-	};
-}
-
-#endif
-// ===== end include/mgmake/prep/fetched.hxx =====
-
-// skipped duplicate include: include/mgmake/dag/graph.hxx
 #ifdef MGMK_ENABLE_EXT_CMAKE
 
 // ===== begin include/mgmake/ext/cmake/file_api.hxx =====
@@ -4730,8 +4226,515 @@ namespace mgmake::prep {
 #endif
 // ===== end include/mgmake/prep/result.hxx =====
 
+
+// ===== begin include/mgmake/spec/executable.hxx =====
+#pragma once
+
+#ifndef MGMK_SPEC_EXECUTABLE_HXX
+#define MGMK_SPEC_EXECUTABLE_HXX
+
+
+// ===== begin include/mgmake/spec/target.hxx =====
+#pragma once
+
+#ifndef MGMK_SPEC_TARGET_HXX
+#define MGMK_SPEC_TARGET_HXX
+
+// skipped duplicate include: include/mgmake/detail/assert.hxx
+
+#include <filesystem>
+#include <set>
+#include <string>
+#include <string_view>
+
+namespace mgmake::spec {
+	template<typename target_t>
+	struct target {
+		std::string m_name;
+		std::set<std::filesystem::path> m_sources;
+		std::set<std::filesystem::path> m_include_dirs;
+		std::set<std::string> m_linked_libraries;
+
+		inline constexpr auto& name() const {
+			return m_name;
+		}
+
+		inline constexpr auto& add_source(const std::filesystem::path& file) {
+			mgmkassert(
+				not file.empty(),
+				"mgmake spec: target '" + m_name + "' cannot add an empty source path"
+			);
+
+			m_sources.emplace(file);
+			return self();
+		}
+		inline constexpr auto& sources() const {
+			return m_sources;
+		}
+
+		inline constexpr auto& add_include_dir(const std::filesystem::path& file) {
+			mgmkassert(
+				not file.empty(),
+				"mgmake spec: target '" + m_name + "' cannot add an empty include directory"
+			);
+
+			m_include_dirs.emplace(file);
+			return self();
+		}
+		inline constexpr auto& include_dir(const std::filesystem::path& file) {
+			return add_include_dir(file);
+		}
+
+		inline constexpr auto& include_dirs() const {
+			return m_include_dirs;
+		}
+
+		inline constexpr auto& link(std::string_view lib) {
+			mgmkassert(
+				not lib.empty(),
+				"mgmake spec: target '" + m_name + "' cannot link an empty library name"
+			);
+			mgmkassert(
+				lib != m_name,
+				"mgmake spec: target '" + m_name + "' cannot link itself"
+			);
+
+			m_linked_libraries.emplace(lib);
+			return self();
+		}
+		inline constexpr auto& link(const std::string& lib) {
+			return link(std::string_view{ lib });
+		}
+		inline constexpr auto& linked_libraries() const {
+			return m_linked_libraries;
+		}
+
+		// Implicit cast to std::string_view for when the target needs to be identified by name
+		operator std::string_view() const {
+			return m_name;
+		}
+	private:
+		inline constexpr target_t& self() {
+			return *static_cast<target_t*>(this);
+		}
+	};
+}
+
+#endif
+// ===== end include/mgmake/spec/target.hxx =====
+
+// skipped duplicate include: include/mgmake/ext/provider_ref.hxx
+
+#include <filesystem>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <vector>
+
+namespace mgmake::spec {
+	struct executable : public target<executable> {
+		using id = std::vector<executable>::size_type;
+
+		std::optional<ext::provider_ref> m_provider;
+		std::optional<ext::rooted_path> m_artifact;
+
+		inline constexpr executable(std::string_view name)
+			: target<executable>{ std::string{ name } } {
+			mgmkassert(not m_name.empty(), "mgmake spec: executable target has no name");
+		}
+
+		inline executable& from(const ext::provider_ref& provider) {
+			mgmkassert(!provider.m_project.empty(), "mgmake spec: provider-backed executable has no provider project");
+			mgmkassert(!provider.m_target.empty(), "mgmake spec: provider-backed executable has no provider target");
+			m_provider = provider;
+			return *this;
+		}
+
+		[[nodiscard]] inline bool provider_backed() const noexcept {
+			return m_provider.has_value();
+		}
+
+		inline executable& artifact(const std::filesystem::path& path) {
+			return artifact(ext::output_root::install_dir, path);
+		}
+
+		inline executable& artifact(
+			ext::output_root root,
+			const std::filesystem::path& path
+		) {
+			mgmkassert(!path.empty(), "mgmake spec: executable '" + m_name + "' has an empty external artifact path");
+			m_artifact = ext::rooted_path{root, path};
+			return *this;
+		}
+	};
+}
+
+#endif
+// ===== end include/mgmake/spec/executable.hxx =====
+
+
+// ===== begin include/mgmake/spec/library.hxx =====
+#pragma once
+
+#ifndef MGMK_SPEC_LIBRARY_HXX
+#define MGMK_SPEC_LIBRARY_HXX
+
+// skipped duplicate include: include/mgmake/spec/target.hxx
+// skipped duplicate include: include/mgmake/ext/provider_ref.hxx
+
+#include <filesystem>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <vector>
+
+namespace mgmake::spec {
+	struct project;
+
+	struct library : public target<library> {
+		using id = std::vector<library>::size_type;
+
+		enum struct kind {
+			static_lib,
+			shared_lib,
+			interface
+		} m_kind;
+
+		std::optional<ext::provider_ref> m_provider;
+		std::optional<ext::rooted_path> m_artifact;
+		std::vector<ext::rooted_path> m_external_include_dirs;
+
+		inline constexpr library(std::string_view name, kind k)
+			: target<library>{ std::string{ name } }, m_kind{k} {
+			mgmkassert(not m_name.empty(), "mgmake spec: library target has no name");
+			mgmkassert(
+				m_kind == kind::static_lib ||
+					m_kind == kind::shared_lib ||
+					m_kind == kind::interface,
+				"mgmake spec: invalid library kind"
+			);
+		}
+
+		inline constexpr auto& add_source(const std::filesystem::path& file) {
+			mgmkassert(
+				m_kind != kind::interface,
+				"mgmake spec: interface library '" + m_name + "' cannot have sources"
+			);
+
+			target<library>::add_source(file);
+			return *this;
+		}
+
+		inline library& from(const ext::provider_ref& provider) {
+			mgmkassert(!provider.m_project.empty(), "mgmake spec: provider-backed library has no provider project");
+			mgmkassert(!provider.m_target.empty(), "mgmake spec: provider-backed library has no provider target");
+			m_provider = provider;
+			return *this;
+		}
+
+		[[nodiscard]] inline bool provider_backed() const noexcept {
+			return m_provider.has_value();
+		}
+
+		inline library& artifact(const std::filesystem::path& path) {
+			return artifact(ext::output_root::install_dir, path);
+		}
+
+		inline library& artifact(
+			ext::output_root root,
+			const std::filesystem::path& path
+		) {
+			mgmkassert(!path.empty(), "mgmake spec: library '" + m_name + "' has an empty external artifact path");
+			m_artifact = ext::rooted_path{root, path};
+			return *this;
+		}
+
+		inline library& include_dir(const std::filesystem::path& path) {
+			if (provider_backed()) {
+				return include_dir(m_provider->m_usage_root, path);
+			}
+
+			add_include_dir(path);
+			return *this;
+		}
+
+		inline library& include_dir(
+			ext::output_root root,
+			const std::filesystem::path& path
+		) {
+			mgmkassert(!path.empty(), "mgmake spec: library '" + m_name + "' has an empty external include directory");
+			m_external_include_dirs.push_back(ext::rooted_path{root, path});
+			return *this;
+		}
+	};
+}
+
+#endif
+// ===== end include/mgmake/spec/library.hxx =====
+
+
+
+// ===== begin include/mgmake/ext/fetch.hxx =====
+#pragma once
+
+#ifndef MGMAKE_EXT_FETCH_HXX
+#define MGMAKE_EXT_FETCH_HXX
+
+// skipped duplicate include: include/mgmake/detail/assert.hxx
+
+#include <filesystem>
+#include <string>
+#include <string_view>
+#include <variant>
+#include <vector>
+
+namespace mgmake::ext {
+	enum struct archive_format {
+		auto_detect,
+		zip,
+		tar,
+		tar_gz,
+		tar_xz
+	};
+
+	struct git_fetch {
+		std::string m_url;
+		std::string m_ref;
+		bool m_shallow = true;
+		bool m_submodules = false;
+	};
+
+	struct archive_fetch {
+		std::string m_url;
+		archive_format m_format = archive_format::auto_detect;
+		std::string m_sha256;
+		std::filesystem::path m_strip_prefix;
+	};
+
+	struct local_fetch {
+		std::filesystem::path m_path;
+	};
+
+	struct fetch {
+		using id = std::vector<fetch>::size_type;
+
+		std::string m_name;
+		std::variant<git_fetch, archive_fetch, local_fetch> m_data;
+
+		explicit fetch(std::string_view name)
+			: m_name{name}
+			, m_data{local_fetch{}} {
+			mgmkassert(!m_name.empty(), "mgmake ext: fetch has no name");
+		}
+
+		fetch& git(std::string_view url) {
+			mgmkassert(!url.empty(), "mgmake ext: git fetch has no URL");
+			m_data = git_fetch{.m_url = std::string{url}};
+			return *this;
+		}
+
+		fetch& archive(std::string_view url) {
+			mgmkassert(!url.empty(), "mgmake ext: archive fetch has no URL");
+			m_data = archive_fetch{.m_url = std::string{url}};
+			return *this;
+		}
+
+		fetch& zip(std::string_view url) {
+			archive(url);
+			std::get<archive_fetch>(m_data).m_format = archive_format::zip;
+			return *this;
+		}
+
+		fetch& tar(std::string_view url) {
+			archive(url);
+			std::get<archive_fetch>(m_data).m_format = archive_format::tar;
+			return *this;
+		}
+
+		fetch& tar_gz(std::string_view url) {
+			archive(url);
+			std::get<archive_fetch>(m_data).m_format = archive_format::tar_gz;
+			return *this;
+		}
+
+		fetch& tar_xz(std::string_view url) {
+			archive(url);
+			std::get<archive_fetch>(m_data).m_format = archive_format::tar_xz;
+			return *this;
+		}
+
+		fetch& local(const std::filesystem::path& path) {
+			mgmkassert(!path.empty(), "mgmake ext: local fetch has no path");
+			m_data = local_fetch{.m_path = path};
+			return *this;
+		}
+
+		fetch& ref(std::string_view value) {
+			mgmkassert(std::holds_alternative<git_fetch>(m_data), "mgmake ext: ref() requires a git fetch");
+			std::get<git_fetch>(m_data).m_ref = std::string{value};
+			return *this;
+		}
+
+		fetch& branch(std::string_view value) {
+			return ref(value);
+		}
+
+		fetch& tag(std::string_view value) {
+			return ref(value);
+		}
+
+		fetch& commit(std::string_view value) {
+			return ref(value);
+		}
+
+		fetch& sha256(std::string_view value) {
+			mgmkassert(std::holds_alternative<archive_fetch>(m_data), "mgmake ext: sha256() requires an archive fetch");
+			std::get<archive_fetch>(m_data).m_sha256 = std::string{value};
+			return *this;
+		}
+
+		fetch& strip_prefix(const std::filesystem::path& value) {
+			mgmkassert(std::holds_alternative<archive_fetch>(m_data), "mgmake ext: strip_prefix() requires an archive fetch");
+			std::get<archive_fetch>(m_data).m_strip_prefix = value;
+			return *this;
+		}
+
+		fetch& submodules(bool enabled = true) {
+			mgmkassert(std::holds_alternative<git_fetch>(m_data), "mgmake ext: submodules() requires a git fetch");
+			std::get<git_fetch>(m_data).m_submodules = enabled;
+			return *this;
+		}
+
+		fetch& shallow(bool enabled = true) {
+			mgmkassert(std::holds_alternative<git_fetch>(m_data), "mgmake ext: shallow() requires a git fetch");
+			std::get<git_fetch>(m_data).m_shallow = enabled;
+			return *this;
+		}
+	};
+}
+
+#endif
+// ===== end include/mgmake/ext/fetch.hxx =====
+
+// skipped duplicate include: include/mgmake/ext/provider_ref.hxx
+#ifdef MGMK_ENABLE_EXT_CMAKE
+
+// ===== begin include/mgmake/ext/cmake.hxx =====
+#pragma once
+
+#ifndef MGMK_EXT_CMAKE_HXX
+#define MGMK_EXT_CMAKE_HXX
+
+// skipped duplicate include: include/mgmake/ext/provider_ref.hxx
+// skipped duplicate include: include/mgmake/ext/fetch.hxx
 // skipped duplicate include: include/mgmake/spec/executable.hxx
 // skipped duplicate include: include/mgmake/spec/library.hxx
+
+#include <optional>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+namespace mgmake::ext {
+	struct cmake {
+		using id = std::vector<cmake>::size_type;
+
+		std::string m_name;
+		std::optional<ext::fetch> m_source;
+		std::vector<std::string> m_args;
+		std::vector<std::pair<std::string, std::string>> m_defines;
+		std::vector<std::string> m_build_targets;
+		bool m_install = false;
+		std::string m_install_target = "install";
+		std::string m_generator;
+		std::string m_build_config;
+
+		explicit cmake(std::string_view name)
+			: m_name{name} {
+			mgmkassert(!m_name.empty(), "mgmake ext: CMake project has no name");
+		}
+
+		cmake& source(const ext::fetch& fetch) {
+			m_source = fetch;
+			return *this;
+		}
+
+		cmake& arg(std::string_view value) {
+			mgmkassert(!value.empty(), "mgmake ext: CMake argument is empty");
+			m_args.emplace_back(value);
+			return *this;
+		}
+
+		cmake& define(std::string_view key, std::string_view value) {
+			mgmkassert(!key.empty(), "mgmake ext: CMake define key is empty");
+			m_defines.emplace_back(std::string{key}, std::string{value});
+			return *this;
+		}
+
+		cmake& build_target(std::string_view target) {
+			mgmkassert(!target.empty(), "mgmake ext: CMake build target is empty");
+			m_build_targets.emplace_back(target);
+			return *this;
+		}
+
+		cmake& install(bool enabled = true) {
+			m_install = enabled;
+			return *this;
+		}
+
+		cmake& install_target(std::string_view target) {
+			mgmkassert(!target.empty(), "mgmake ext: CMake install target is empty");
+			m_install_target = std::string{target};
+			m_install = true;
+			return *this;
+		}
+
+		cmake& generator(std::string_view value) {
+			mgmkassert(!value.empty(), "mgmake ext: CMake generator is empty");
+			m_generator = std::string{value};
+			return *this;
+		}
+
+		cmake& build_config(std::string_view value) {
+			mgmkassert(!value.empty(), "mgmake ext: CMake build configuration is empty");
+			m_build_config = std::string{value};
+			return *this;
+		}
+
+		[[nodiscard]] spec::library library(
+			std::string_view target,
+			spec::library::kind kind
+		) const {
+			mgmkassert(!target.empty(), "mgmake ext: CMake library target is empty");
+			auto result = spec::library{target, kind};
+			result.from(ext::provider_ref{
+				.m_kind = ext::provider_kind::cmake,
+				.m_project = m_name,
+				.m_target = std::string{target},
+				.m_usage_root = ext::output_root::install_dir
+			});
+			return result;
+		}
+
+		[[nodiscard]] spec::executable executable(std::string_view target) const {
+			mgmkassert(!target.empty(), "mgmake ext: CMake executable target is empty");
+			auto result = spec::executable{target};
+			result.from(ext::provider_ref{
+				.m_kind = ext::provider_kind::cmake,
+				.m_project = m_name,
+				.m_target = std::string{target},
+				.m_usage_root = ext::output_root::install_dir
+			});
+			return result;
+		}
+	};
+}
+
+#endif
+// ===== end include/mgmake/ext/cmake.hxx =====
+
+#endif
 
 #include <optional>
 #include <set>
@@ -9568,16 +9571,6 @@ namespace mgmake::backend {
 		}
 	}
 
-	template <cli::backend_kind Kind>
-	[[nodiscard]] inline std::expected<void, std::string> build(
-		const cli::options& opts,
-		const dag::graph& graph,
-		const build::request& req
-	) {
-		detail::hashes hashes{};
-		return backend::build<Kind>(opts, graph, req, hashes);
-	}
-
 	[[nodiscard]] inline std::expected<void, std::string> build_selected_backend(
 		const cli::options& opts,
 		const dag::graph& graph,
@@ -9638,16 +9631,6 @@ namespace mgmake::backend {
 		return std::unexpected{ "mgmake: unknown action" };
 	}
 
-	template <cli::backend_kind Kind>
-	[[nodiscard]] inline std::expected<void, std::string> execute_project_action_for_backend(
-		const cli::options& opts,
-		const build::request& req,
-		const dag::graph& graph
-	) {
-		detail::hashes hashes{};
-		return execute_project_action_for_backend<Kind>(opts, req, graph, hashes);
-	}
-
 	[[nodiscard]] inline std::expected<void, std::string> execute_project_action(
 		const cli::options& opts,
 		const build::request& req,
@@ -9687,8 +9670,6 @@ namespace mgmake::backend {
 #endif
 // ===== end include/mgmake/backend/execute.hxx =====
 
-// skipped duplicate include: include/mgmake/ext/provider_ref.hxx
-// skipped duplicate include: include/mgmake/ext/fetch.hxx
 // skipped duplicate include: include/mgmake/spec/executable.hxx
 
 // ===== begin include/mgmake/spec/executable_impl.hxx =====
@@ -9715,9 +9696,6 @@ namespace mgmake::backend {
 #endif
 // ===== end include/mgmake/spec/library_impl.hxx =====
 
-#ifdef MGMK_ENABLE_EXT_CMAKE
-// skipped duplicate include: include/mgmake/ext/cmake.hxx
-#endif
 // skipped duplicate include: include/mgmake/spec/project.hxx
 
 // ===== begin include/mgmake/discovery/discovery.hxx =====
@@ -10469,14 +10447,6 @@ namespace mgmake::prep {
 
 		return {};
 	}
-	[[nodiscard]] inline std::expected<void, std::string> execute(
-		const cli::options& opts,
-		prep::result& result
-	) {
-		detail::hashes hashes{};
-		return execute(opts, result, hashes);
-	}
-
 }
 
 #endif
@@ -12567,6 +12537,12 @@ int main(int argc, char** argv) {                                               
 #endif
 // ===== end include/mgmake/entry/macro.hxx =====
 
+// Include extensions last
+// skipped duplicate include: include/mgmake/ext/provider_ref.hxx
+// skipped duplicate include: include/mgmake/ext/fetch.hxx
+#ifdef MGMK_ENABLE_EXT_CMAKE
+// skipped duplicate include: include/mgmake/ext/cmake.hxx
+#endif
 
 #endif
 // ===== end include/mgmake/mgmake.hxx =====

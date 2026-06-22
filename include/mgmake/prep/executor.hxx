@@ -132,14 +132,6 @@ namespace mgmake::prep {
 
 		return {};
 	}
-	[[nodiscard]] inline std::expected<void, std::string> execute(
-		const cli::options& opts,
-		prep::result& result
-	) {
-		detail::hashes hashes{};
-		return execute(opts, result, hashes);
-	}
-
 }
 
 #endif
