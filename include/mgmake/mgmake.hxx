@@ -4,6 +4,8 @@
 #define MGMAKE_MGMAKE_HXX
 
 #include "detail/static_string.hxx"
+#include "detail/enum.hxx"
+#include "detail/enum_flag.hxx"
 #include "detail/enum_string.hxx"
 #include "detail/convert.hxx"
 #include "detail/assert.hxx"
