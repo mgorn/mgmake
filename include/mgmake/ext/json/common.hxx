@@ -104,4 +104,4 @@ namespace mgmake::ext {
 	};
 }
 
-#endif
+#endif // MGMK_EXT_JSON_COMMON_HXX

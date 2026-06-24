@@ -188,7 +188,7 @@ namespace mgmake::backend {
                     command_text = "cd /d ";
 #else
                     command_text = "cd ";
-#endif
+#endif // defined(_WIN32)
                     command_text += sys::shell_escape(action.m_working_directory.string());
                     command_text += " && ";
                     command_text += action.m_command.full_command();
@@ -290,4 +290,4 @@ namespace mgmake::backend {
     };
 }
 
-#endif
+#endif // MGMAKE_BACKEND_NINJA_HXX

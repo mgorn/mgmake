@@ -52,7 +52,7 @@ namespace mgmake::detail {
 
 		return result;
 	}
-#endif
+#endif // MGMK_INCLUDED_WINDOWS
 }
 
-#endif
+#endif // MGMAKE_DETAIL_CONVERT_HXX

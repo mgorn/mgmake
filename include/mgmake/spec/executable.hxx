@@ -50,4 +50,4 @@ namespace mgmake::spec {
 	};
 }
 
-#endif
+#endif // MGMK_SPEC_EXECUTABLE_HXX

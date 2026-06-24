@@ -30,4 +30,4 @@ namespace mgmake::ext {
 	};
 }
 
-#endif
+#endif // MGMK_EXT_PROVIDER_REF_HXX

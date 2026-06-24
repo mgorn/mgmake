@@ -5,4 +5,4 @@
 
 #include "library.hxx"
 
-#endif
+#endif // MGMK_SPEC_LIBRARY_IMPL_HXX

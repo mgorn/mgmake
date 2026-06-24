@@ -60,4 +60,4 @@ namespace mgmake::detail {
 	}
 }
 
-#endif
+#endif // MGMAKE_DETAIL_STATIC_STRING_HXX

@@ -93,4 +93,4 @@ namespace mgmake::spec {
 	};
 }
 
-#endif
+#endif // MGMK_SPEC_LIBRARY_HXX

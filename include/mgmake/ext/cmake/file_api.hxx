@@ -163,4 +163,4 @@ namespace mgmake::ext::cmake_file_api {
 	}
 }
 
-#endif
+#endif // MGMK_EXT_CMAKE_FILE_API_HXX

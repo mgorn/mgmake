@@ -60,7 +60,7 @@ namespace mgmake::discovery::windows {
 				}
 			}
 		}
-#endif
+#endif // defined(_WIN32)
 
 		return result;
 	}
@@ -103,7 +103,7 @@ namespace mgmake::discovery::windows {
 				result.emplace_back(line);
 			}
 		}
-#endif
+#endif // defined(_WIN32)
 
 		return result;
 	}
@@ -219,7 +219,7 @@ namespace mgmake::discovery {
 		}
 #else
 		(void)ctx; (void)req; (void)out;
-#endif
+#endif // defined(_WIN32)
 	}
 
 	inline void add_visual_studio_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
@@ -229,7 +229,7 @@ namespace mgmake::discovery {
 		}
 #else
 		(void)ctx; (void)req; (void)out;
-#endif
+#endif // defined(_WIN32)
 	}
 
 	inline void add_standalone_llvm_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
@@ -241,8 +241,8 @@ namespace mgmake::discovery {
 		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::standalone_llvm, 170, "standalone LLVM installation", true, ctx.m_mode);
 #else
 		(void)ctx; (void)req; (void)out;
-#endif
+#endif // defined(_WIN32)
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_WINDOWS_VISUAL_STUDIO_HXX

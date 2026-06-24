@@ -10,7 +10,7 @@
 #include "../sys/command_line.hxx"
 #ifdef MGMK_ENABLE_EXT_CMAKE
 #include "../ext/cmake/file_api.hxx"
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 #include <expected>
 #include <filesystem>
@@ -130,10 +130,10 @@ namespace mgmake::prep {
 				ext::cmake_file_api::load_reply_targets(cmake_project);
 			}
 		}
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 		return {};
 	}
 }
 
-#endif
+#endif // MGMK_PREP_EXECUTOR_HXX

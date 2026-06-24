@@ -9,4 +9,4 @@ namespace mgmake::detail {
 	inline constexpr int entry_exit_usage_error = 2;
 }
 
-#endif
+#endif // MGMAKE_ENTRY_EXIT_CODE_HXX

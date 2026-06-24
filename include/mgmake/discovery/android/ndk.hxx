@@ -17,10 +17,10 @@ namespace mgmake::discovery {
 			return "darwin-arm64";
 		#else
 			return "darwin-x86_64";
-		#endif
+		#endif // defined(__aarch64__)
 #else
 		return "linux-x86_64";
-#endif
+#endif // defined(_WIN32)
 	}
 
 	namespace android {
@@ -122,4 +122,4 @@ namespace mgmake::discovery {
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_ANDROID_NDK_HXX

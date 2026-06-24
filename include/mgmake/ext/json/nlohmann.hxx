@@ -187,4 +187,4 @@ namespace mgmake::ext {
 	};
 }
 
-#endif
+#endif // MGMK_EXT_JSON_NLOHMANN_HXX

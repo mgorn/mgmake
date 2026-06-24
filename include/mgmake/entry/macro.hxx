@@ -47,7 +47,7 @@ int main(int argc, char** argv) {                                               
     return ::mgmk::entry(args, ProjectFactory, Toolchains);                      \
 }
 
-#endif
+#endif // defined(MGMK_PLATFORM_WINDOWS) && defined(MGMK_INCLUDED_WINDOWS)
 
 #define MGMK_DETAIL_ENTRY_SELECT(_0, _1, _2, NAME, ...) NAME
 
@@ -62,4 +62,4 @@ int main(int argc, char** argv) {                                               
 #define MGMAKE_BUILD_ENTRY(...) MGMK_ENTRY(__VA_ARGS__)
 #define MGMK_BUILD_ENTRY(...) MGMK_ENTRY(__VA_ARGS__)
 
-#endif
+#endif // MGMAKE_ENTRY_MACRO_HXX

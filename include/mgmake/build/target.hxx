@@ -44,4 +44,4 @@ namespace mgmake::build {
 	}
 }
 
-#endif
+#endif // MGMAKE_BUILD_TARGET_HXX

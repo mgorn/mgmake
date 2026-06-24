@@ -27,7 +27,7 @@ namespace mgmake::discovery {
 		result += "\"\"";
 		return result;
 	}
-#endif
+#endif // defined(_WIN32)
 
 	struct environment_variable {
 		std::string m_name{};
@@ -66,7 +66,7 @@ namespace mgmake::discovery {
 #else
 			result += ". ";
 			result += sys::shell_escape(env.m_setup_script->string());
-#endif
+#endif // defined(_WIN32)
 			for (const auto& arg : env.m_setup_args) {
 				result += ' ';
 				result += sys::shell_escape(arg);
@@ -79,7 +79,7 @@ namespace mgmake::discovery {
 #else
 			result += " && ";
 			result += command;
-#endif
+#endif // defined(_WIN32)
 			return result;
 		}
 
@@ -91,9 +91,9 @@ namespace mgmake::discovery {
 			prefix += sys::shell_escape(variable.m_value);
 			prefix += ' ';
 		}
-#endif
+#endif // !defined(_WIN32)
 		return prefix + command;
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_TOOL_ENVIRONMENT_HXX

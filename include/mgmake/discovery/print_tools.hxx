@@ -108,4 +108,4 @@ namespace mgmake::discovery {
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_PRINT_TOOLS_HXX

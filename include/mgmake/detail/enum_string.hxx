@@ -303,4 +303,4 @@ namespace mgmake::detail {
     };
 }
 
-#endif
+#endif // MGMAKE_DETAIL_ENUM_STRING_HXX

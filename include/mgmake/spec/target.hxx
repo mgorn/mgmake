@@ -83,4 +83,4 @@ namespace mgmake::spec {
 	};
 }
 
-#endif
+#endif // MGMK_SPEC_TARGET_HXX

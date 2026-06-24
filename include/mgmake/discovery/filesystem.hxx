@@ -15,7 +15,7 @@
 
 #ifdef MGMK_PLATFORM_POSIX
 	#include <unistd.h>
-#endif
+#endif // MGMK_PLATFORM_POSIX
 
 namespace mgmake::discovery {
 	[[nodiscard]] inline bool has_windows_drive_prefix(std::string_view text) noexcept {
@@ -49,7 +49,7 @@ namespace mgmake::discovery {
 		return true;
 #else
 		return ::access(path.c_str(), X_OK) == 0;
-#endif
+#endif // defined(_WIN32)
 	}
 
 	[[nodiscard]] inline std::vector<std::string> executable_suffixes() {
@@ -57,7 +57,7 @@ namespace mgmake::discovery {
 		return {".com", ".exe", ".bat", ".cmd", ""};
 #else
 		return {""};
-#endif
+#endif // defined(_WIN32)
 	}
 
 	[[nodiscard]] inline std::optional<std::filesystem::path> find_in_directory(
@@ -101,7 +101,7 @@ namespace mgmake::discovery {
 		constexpr char separator = ';';
 #else
 		constexpr char separator = ':';
-#endif
+#endif // defined(_WIN32)
 
 		std::string_view view{*path};
 		std::size_t start = 0;
@@ -150,4 +150,4 @@ namespace mgmake::discovery {
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_FILESYSTEM_HXX

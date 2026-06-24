@@ -109,4 +109,4 @@ namespace mgmake::ext {
 	};
 }
 
-#endif
+#endif // MGMK_EXT_CMAKE_HXX

@@ -55,9 +55,9 @@ namespace mgmake::discovery {
 			return m_path.generic_string();
 #else
 			return m_path.string();
-#endif
+#endif // defined(MGMK_PLATFORM_WINDOWS)
 		}
 	};
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_RESOLVED_TOOL_HXX

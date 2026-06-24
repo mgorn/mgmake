@@ -164,4 +164,4 @@ namespace mgmake::lower {
 	}
 }
 
-#endif
+#endif // MGMK_LOWER_OBJECTS_HXX

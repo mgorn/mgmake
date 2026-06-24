@@ -16,4 +16,4 @@ namespace mgmake::prep {
 	};
 }
 
-#endif
+#endif // MGMAKE_PREP_FETCHED_HXX

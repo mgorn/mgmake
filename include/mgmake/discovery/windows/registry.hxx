@@ -12,7 +12,7 @@
 #if defined(_WIN32)
 	#include "../../sys/platform.hxx"
 	#pragma comment(lib, "Advapi32.lib")
-#endif
+#endif // defined(_WIN32)
 
 namespace mgmake::discovery::windows {
 #if defined(_WIN32)
@@ -62,7 +62,7 @@ namespace mgmake::discovery::windows {
 
 		return result;
 	}
-#endif
+#endif // defined(_WIN32)
 }
 
 namespace mgmake::discovery {
@@ -81,8 +81,8 @@ namespace mgmake::discovery {
 		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::windows_registry, 130, "Windows registry and registered install roots", true, ctx.m_mode);
 #else
 		(void)ctx; (void)req; (void)out;
-#endif
+#endif // defined(_WIN32)
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_WINDOWS_REGISTRY_HXX

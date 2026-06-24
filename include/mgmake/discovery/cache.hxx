@@ -203,4 +203,4 @@ namespace mgmake::discovery {
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_CACHE_HXX

@@ -67,7 +67,7 @@ namespace mgmake::discovery {
 		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::windows_sdk, 160, "Windows SDK tool directory", true, ctx.m_mode);
 #else
 		(void)ctx; (void)req; (void)out;
-#endif
+#endif // defined(_WIN32)
 	}
 
 	inline void add_msys2_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
@@ -82,7 +82,7 @@ namespace mgmake::discovery {
 		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::msys2, 180, "MSYS2 toolchain root", true, ctx.m_mode);
 #else
 		(void)ctx; (void)req; (void)out;
-#endif
+#endif // defined(_WIN32)
 	}
 
 	inline void add_mingw_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
@@ -94,7 +94,7 @@ namespace mgmake::discovery {
 		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::mingw, 190, "MinGW root", true, ctx.m_mode);
 #else
 		(void)ctx; (void)req; (void)out;
-#endif
+#endif // defined(_WIN32)
 	}
 
 	inline void add_cygwin_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
@@ -103,8 +103,8 @@ namespace mgmake::discovery {
 		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::cygwin, 200, "Cygwin root", true, ctx.m_mode);
 #else
 		(void)ctx; (void)req; (void)out;
-#endif
+#endif // defined(_WIN32)
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_WINDOWS_WINDOWS_SDK_HXX

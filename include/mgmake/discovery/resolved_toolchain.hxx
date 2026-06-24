@@ -57,4 +57,4 @@ namespace mgmake::discovery {
 	};
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_RESOLVED_TOOLCHAIN_HXX

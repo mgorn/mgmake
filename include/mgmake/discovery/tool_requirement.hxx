@@ -60,7 +60,7 @@ namespace mgmake::discovery {
 		bool m_has_tar_fetch = false;
 #ifdef MGMK_ENABLE_EXT_CMAKE
 		bool m_has_cmake_projects = false;
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 	};
 
 	inline void record_source_role(
@@ -194,7 +194,7 @@ namespace mgmake::discovery {
 				record_fetch_tools(usage, cmake_project.m_source.value());
 			}
 		}
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 		return usage;
 	}
@@ -299,7 +299,7 @@ namespace mgmake::discovery {
 				.m_needed_because = "the project configures external CMake projects"
 			});
 		}
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 		if (req.target_platform() == sys::platform::p_windows && tc.dialect() == build::toolchain::dialect::msvc) {
 			if (!tc.tool(tool_role::manifest_tool).empty()) {
@@ -311,4 +311,4 @@ namespace mgmake::discovery {
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_TOOL_REQUIREMENT_HXX

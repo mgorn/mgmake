@@ -75,7 +75,7 @@ namespace mgmake::detail {
 	}
 }
 
-#endif
+#endif // MGMAKE_DETAIL_STATIC_STRING_HXX
 // ===== end include/mgmake/detail/static_string.hxx =====
 
 
@@ -385,7 +385,7 @@ namespace mgmake::detail {
     };
 }
 
-#endif
+#endif // MGMAKE_DETAIL_ENUM_STRING_HXX
 // ===== end include/mgmake/detail/enum_string.hxx =====
 
 
@@ -456,8 +456,8 @@ template<typename message_t>
         #define MGMK_ENABLE_ASSERTS 1
     #else
         #define MGMK_ENABLE_ASSERTS 0
-    #endif
-#endif
+    #endif // NDEBUG
+#endif // MGMK_ENABLE_ASSERTS
 
 #if MGMK_ENABLE_ASSERTS
     #define mgmkassert(condition, message)                                      \
@@ -483,9 +483,9 @@ template<typename message_t>
         do {                                                                    \
             (void)sizeof(condition);                                            \
         } while (false)
-#endif
+#endif // MGMK_ENABLE_ASSERTS
 
-#endif
+#endif // MGMAKE_DETAIL_ASSERT_HXX
 // ===== end include/mgmake/detail/assert.hxx =====
 
 
@@ -505,16 +505,16 @@ template<typename message_t>
 	#ifndef MGMK_NO_WINDOWS
 		#ifndef NOMINMAX
 			#define NOMINMAX
-		#endif
+		#endif // NOMINMAX
 
 		#ifndef WIN32_LEAN_AND_MEAN
 			#define WIN32_LEAN_AND_MEAN
-		#endif
+		#endif // WIN32_LEAN_AND_MEAN
 
 		#include <windows.h>
 		#pragma message("Windows is included here. This is probably the source of your pain.")
 		#define MGMK_INCLUDED_WINDOWS
-	#endif
+	#endif // MGMK_NO_WINDOWS
 
 	#define MGMK_PLATFORM_WINDOWS 1
 #elif defined(__EMSCRIPTEN__)
@@ -531,7 +531,7 @@ template<typename message_t>
 	#define MGMK_PLATFORM_POSIX 1
 #else
 	#define MGMK_PLATFORM_UNSUPPORTED 1
-#endif
+#endif // defined(_WIN32)
 
 namespace mgmake::sys {
 	enum struct arch {
@@ -604,7 +604,7 @@ namespace mgmake::sys {
 		return arch::riscv32;
 #else
 		return arch::unknown;
-#endif
+#endif // defined(_M_X64) || defined(__x86_64__)
 	}();
 
 	static constexpr platform g_host_platform = [] constexpr {
@@ -620,7 +620,7 @@ namespace mgmake::sys {
 		return platform::p_other_posix;
 #else
 		return platform::p_unknown;
-#endif
+#endif // defined(MGMK_PLATFORM_WINDOWS)
 	}();
 
 	static constexpr abi g_host_abi = [] constexpr {
@@ -638,7 +638,7 @@ namespace mgmake::sys {
 		return abi::gnu;
 #else
 		return abi::unknown;
-#endif
+#endif // defined(_MSC_VER)
 	}();
 
 	inline const target g_host_target{
@@ -849,7 +849,7 @@ namespace mgmake::sys {
 	}
 }
 
-#endif
+#endif // MGMAKE_SYS_PLATFORM_HXX
 // ===== end include/mgmake/sys/platform.hxx =====
 
 
@@ -899,10 +899,10 @@ namespace mgmake::detail {
 
 		return result;
 	}
-#endif
+#endif // MGMK_INCLUDED_WINDOWS
 }
 
-#endif
+#endif // MGMAKE_DETAIL_CONVERT_HXX
 // ===== end include/mgmake/detail/convert.hxx =====
 
 // skipped duplicate include: include/mgmake/detail/assert.hxx
@@ -993,7 +993,7 @@ namespace mgmake::discovery {
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_MODE_HXX
 // ===== end include/mgmake/discovery/mode.hxx =====
 
 
@@ -1110,7 +1110,7 @@ namespace mgmake::discovery {
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_TOOL_FAMILY_HXX
 // ===== end include/mgmake/discovery/tool_family.hxx =====
 
 
@@ -1210,7 +1210,7 @@ namespace mgmake::discovery {
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_TOOL_PROVIDER_HXX
 // ===== end include/mgmake/discovery/tool_provider.hxx =====
 
 
@@ -1316,7 +1316,7 @@ namespace mgmake::discovery {
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_TOOL_ROLE_HXX
 // ===== end include/mgmake/discovery/tool_role.hxx =====
 
 
@@ -1368,12 +1368,12 @@ namespace mgmake::discovery {
 			return m_path.generic_string();
 #else
 			return m_path.string();
-#endif
+#endif // defined(MGMK_PLATFORM_WINDOWS)
 		}
 	};
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_RESOLVED_TOOL_HXX
 // ===== end include/mgmake/discovery/resolved_tool.hxx =====
 
 
@@ -1494,10 +1494,10 @@ namespace mgmake::sys {
 		result += '\'';
 		return result;
 	}
-#endif
+#endif // MGMK_PLATFORM_WINDOWS
 }
 
-#endif
+#endif // MGMAKE_SYS_UTIL_HXX
 // ===== end include/mgmake/sys/util.hxx =====
 
 
@@ -1523,7 +1523,7 @@ namespace mgmake::discovery {
 		result += "\"\"";
 		return result;
 	}
-#endif
+#endif // defined(_WIN32)
 
 	struct environment_variable {
 		std::string m_name{};
@@ -1562,7 +1562,7 @@ namespace mgmake::discovery {
 #else
 			result += ". ";
 			result += sys::shell_escape(env.m_setup_script->string());
-#endif
+#endif // defined(_WIN32)
 			for (const auto& arg : env.m_setup_args) {
 				result += ' ';
 				result += sys::shell_escape(arg);
@@ -1575,7 +1575,7 @@ namespace mgmake::discovery {
 #else
 			result += " && ";
 			result += command;
-#endif
+#endif // defined(_WIN32)
 			return result;
 		}
 
@@ -1587,12 +1587,12 @@ namespace mgmake::discovery {
 			prefix += sys::shell_escape(variable.m_value);
 			prefix += ' ';
 		}
-#endif
+#endif // !defined(_WIN32)
 		return prefix + command;
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_TOOL_ENVIRONMENT_HXX
 // ===== end include/mgmake/discovery/tool_environment.hxx =====
 
 
@@ -1645,7 +1645,7 @@ namespace mgmake::discovery {
 	};
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_RESOLVED_TOOLCHAIN_HXX
 // ===== end include/mgmake/discovery/resolved_toolchain.hxx =====
 
 
@@ -1674,7 +1674,7 @@ namespace mgmake::discovery {
 	};
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_TOOL_BINDING_HXX
 // ===== end include/mgmake/discovery/tool_binding.hxx =====
 
 // skipped duplicate include: include/mgmake/discovery/tool_role.hxx
@@ -1706,7 +1706,7 @@ namespace mgmake::build {
             return dialect::msvc;
 #else
             return dialect::gcc;
-#endif
+#endif // MGMK_PLATFORM_WINDOWS
         }();
         target_mode m_target_mode = target_mode::implicit;
 
@@ -2145,7 +2145,7 @@ namespace mgmake::build {
         .discovery_mode(discovery::mode::family_fallback);
 }
 
-#endif
+#endif // MGMAKE_BUILD_TOOLCHAIN_HXX
 // ===== end include/mgmake/build/toolchain.hxx =====
 
 // skipped duplicate include: include/mgmake/sys/platform.hxx
@@ -2273,7 +2273,7 @@ namespace mgmake::build {
     };
 }
 
-#endif
+#endif // MGMAKE_BUILD_REQUEST_HXX
 // ===== end include/mgmake/build/request.hxx =====
 
 
@@ -2466,7 +2466,7 @@ namespace mgmake::detail {
 	};
 }
 
-#endif
+#endif // MGMK_DETAIL_HASHES_HXX
 // ===== end include/mgmake/detail/hashes.hxx =====
 
 
@@ -2553,7 +2553,7 @@ namespace mgmake::dag {
     };
 }
 
-#endif// ===== end include/mgmake/dag/artifact.hxx =====
+#endif // MGMAKE_DAG_ARTIFACT_HXX// ===== end include/mgmake/dag/artifact.hxx =====
 
 
 // ===== begin include/mgmake/dag/graph.hxx =====
@@ -2643,7 +2643,7 @@ namespace mgmake::sys {
 			return std::system(shell_command.c_str());
 #else
 			return std::system(command.c_str());
-#endif
+#endif // defined(MGMK_PLATFORM_WINDOWS)
 		}
 	};
 
@@ -2684,10 +2684,10 @@ namespace mgmake::sys {
 
 		return result;
 	}
-#endif
+#endif // MGMK_INCLUDED_WINDOWS
 }
 
-#endif
+#endif // MGMAKE_SYS_COMMAND_LINE_HXX
 // ===== end include/mgmake/sys/command_line.hxx =====
 
 
@@ -2712,7 +2712,7 @@ namespace mgmake::dag {
     };
 }
 
-#endif// ===== end include/mgmake/dag/action.hxx =====
+#endif // MGMAKE_DAG_ACTION_HXX// ===== end include/mgmake/dag/action.hxx =====
 
 // skipped duplicate include: include/mgmake/dag/artifact.hxx
 
@@ -2747,7 +2747,7 @@ namespace mgmake::dag {
     };
 }
 
-#endif// ===== end include/mgmake/dag/target.hxx =====
+#endif // MGMAKE_DAG_TARGET_HXX// ===== end include/mgmake/dag/target.hxx =====
 
 
 #include <optional>
@@ -2837,7 +2837,7 @@ namespace mgmake::dag {
     };
 }
 
-#endif
+#endif // MGMAKE_DAG_GRAPH_HXX
 // ===== end include/mgmake/dag/graph.hxx =====
 
 
@@ -3051,7 +3051,7 @@ namespace mgmake::detail {
 
 }
 
-#endif
+#endif // MGMAKE_DETAIL_GRAPHVIZ_HXX
 // ===== end include/mgmake/detail/graphviz.hxx =====
 
 // skipped duplicate include: include/mgmake/detail/hashes.hxx
@@ -3077,7 +3077,7 @@ namespace mgmake::sys {
 		return command_line{{"cmd", "/C", std::move(command)}};
 #else
 		return command_line{{"/bin/sh", "-c", std::move(command)}};
-#endif
+#endif // defined(MGMK_PLATFORM_WINDOWS)
 	}
 
 	[[nodiscard]] inline std::string shell_path(const std::filesystem::path& path) {
@@ -3089,7 +3089,7 @@ namespace mgmake::sys {
 		return shell_command("if exist " + shell_path(path) + " rmdir /S /Q " + shell_path(path) + " & if exist " + shell_path(path) + " del /F /Q " + shell_path(path));
 #else
 		return shell_command("rm -rf " + shell_path(path));
-#endif
+#endif // defined(MGMK_PLATFORM_WINDOWS)
 	}
 
 	[[nodiscard]] inline command_line make_directory_command(const std::filesystem::path& path) {
@@ -3097,7 +3097,7 @@ namespace mgmake::sys {
 		return shell_command("if not exist " + shell_path(path) + " mkdir " + shell_path(path));
 #else
 		return shell_command("mkdir -p " + shell_path(path));
-#endif
+#endif // defined(MGMK_PLATFORM_WINDOWS)
 	}
 
 	[[nodiscard]] inline command_line move_command(
@@ -3108,7 +3108,7 @@ namespace mgmake::sys {
 		return shell_command("move /Y " + shell_path(from) + " " + shell_path(to));
 #else
 		return shell_command("mv " + shell_path(from) + " " + shell_path(to));
-#endif
+#endif // defined(MGMK_PLATFORM_WINDOWS)
 	}
 
 	[[nodiscard]] inline command_line copy_directory_command(
@@ -3119,7 +3119,7 @@ namespace mgmake::sys {
 		return shell_command("xcopy /E /I /Y " + shell_path(from) + " " + shell_path(to));
 #else
 		return shell_command("cp -R " + shell_path(from) + " " + shell_path(to));
-#endif
+#endif // defined(MGMK_PLATFORM_WINDOWS)
 	}
 
 	[[nodiscard]] inline command_line touch_command(const std::filesystem::path& path) {
@@ -3127,7 +3127,7 @@ namespace mgmake::sys {
 		return shell_command("type nul > " + shell_path(path));
 #else
 		return shell_command("touch " + shell_path(path));
-#endif
+#endif // defined(MGMK_PLATFORM_WINDOWS)
 	}
 
 	[[nodiscard]] inline command_line validate_path_command(
@@ -3138,7 +3138,7 @@ namespace mgmake::sys {
 		return shell_command("if not exist " + shell_path(path) + " exit /B 1 & type nul > " + shell_path(stamp));
 #else
 		return shell_command("test -e " + shell_path(path) + " && touch " + shell_path(stamp));
-#endif
+#endif // defined(MGMK_PLATFORM_WINDOWS)
 	}
 
 	[[nodiscard]] inline command_line reset_directory_stamp_command(
@@ -3149,7 +3149,7 @@ namespace mgmake::sys {
 		return shell_command("if exist " + shell_path(directory) + " rmdir /S /Q " + shell_path(directory) + " & mkdir " + shell_path(directory) + " & type nul > " + shell_path(stamp));
 #else
 		return shell_command("rm -rf " + shell_path(directory) + " && mkdir -p " + shell_path(directory) + " && touch " + shell_path(stamp));
-#endif
+#endif // defined(MGMK_PLATFORM_WINDOWS)
 	}
 
 	[[nodiscard]] inline command_line normalize_directory_stamp_command(
@@ -3161,11 +3161,11 @@ namespace mgmake::sys {
 		return shell_command("if exist " + shell_path(to) + " rmdir /S /Q " + shell_path(to) + " & move /Y " + shell_path(from) + " " + shell_path(to) + " & type nul > " + shell_path(stamp));
 #else
 		return shell_command("rm -rf " + shell_path(to) + " && mv " + shell_path(from) + " " + shell_path(to) + " && touch " + shell_path(stamp));
-#endif
+#endif // defined(MGMK_PLATFORM_WINDOWS)
 	}
 }
 
-#endif
+#endif // MGMAKE_SYS_FILE_COMMAND_HXX
 // ===== end include/mgmake/sys/file_command.hxx =====
 
 // skipped duplicate include: include/mgmake/discovery/tool_role.hxx
@@ -3213,764 +3213,14 @@ namespace mgmake::discovery {
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_SOURCE_ROLE_HXX
 // ===== end include/mgmake/discovery/source_role.hxx =====
 
-// skipped duplicate include: include/mgmake/build/toolchain.hxx
-
-// ===== begin include/mgmake/build/toolchain_registry.hxx =====
-#pragma once
-
-#ifndef MGMAKE_BUILD_TOOLCHAIN_REGISTRY_HXX
-#define MGMAKE_BUILD_TOOLCHAIN_REGISTRY_HXX
-
-// skipped duplicate include: include/mgmake/build/toolchain.hxx
-
-#include <concepts>
-#include <initializer_list>
-#include <string>
-#include <string_view>
-#include <utility>
-#include <vector>
-
-namespace mgmake::build {
-	struct toolchain_registry {
-		std::vector<toolchain> m_toolchains{};
-
-		constexpr toolchain_registry() = default;
-
-		constexpr toolchain_registry(std::initializer_list<toolchain> toolchains)
-			: m_toolchains{ toolchains } {}
-
-		constexpr explicit toolchain_registry(std::vector<toolchain> toolchains)
-			: m_toolchains{ std::move(toolchains) } {}
-
-		[[nodiscard]] constexpr const toolchain* find(std::string_view name) const noexcept {
-			for (const auto& tc : m_toolchains) {
-				if (tc.m_name == name) {
-					return &tc;
-				}
-			}
-
-			return nullptr;
-		}
-
-		[[nodiscard]] constexpr toolchain_registry emplace(toolchain tc) const {
-			auto result = *this;
-			result.m_toolchains.emplace_back(std::move(tc));
-			return result;
-		}
-
-		[[nodiscard]] constexpr std::string choices_string() const {
-			std::string result;
-
-			for (std::size_t i = 0; i < m_toolchains.size(); ++i) {
-				if (i != 0) {
-					result += ", ";
-				}
-
-				result += m_toolchains[i].m_name;
-			}
-
-			return result;
-		}
-	};
-
-	template <typename Registry>
-	concept toolchain_registry_like =
-		requires(const Registry& registry, std::string_view name) {
-			{ registry.find(name) } -> std::same_as<const toolchain*>;
-			{ registry.choices_string() } -> std::convertible_to<std::string>;
-		};
-
-	inline const auto default_toolchains = toolchain_registry{
-		tc_clang_mg,
-		tc_clang,
-		tc_gcc,
-		tc_msvc
-	};
-}
-
-#endif
-// ===== end include/mgmake/build/toolchain_registry.hxx =====
-
-// skipped duplicate include: include/mgmake/build/request.hxx
-
-// ===== begin include/mgmake/build/request_from_options.hxx =====
-#pragma once
-
-#ifndef MGMAKE_BUILD_REQUEST_FROM_OPTIONS_HXX
-#define MGMAKE_BUILD_REQUEST_FROM_OPTIONS_HXX
-
-// skipped duplicate include: include/mgmake/build/request.hxx
-// skipped duplicate include: include/mgmake/build/toolchain_registry.hxx
-
-// ===== begin include/mgmake/cli/options.hxx =====
-#pragma once
-
-#ifndef MGMAKE_CLI_OPTIONS_HXX
-#define MGMAKE_CLI_OPTIONS_HXX
-
-
-// ===== begin include/mgmake/cli/action.hxx =====
-#pragma once
-
-#ifndef MGMAKE_CLI_ACTION_HXX
-#define MGMAKE_CLI_ACTION_HXX
-
-// skipped duplicate include: include/mgmake/detail/enum_string.hxx
-
-#include <optional>
-#include <string_view>
-#include <utility>
-
-namespace mgmake::cli {
-	enum struct action_kind {
-		build,
-		generate,
-		clean,
-		run,
-		tools,
-		graph,
-		help,
-		version,
-
-		count
-	};
-
-	using action_kind_names = detail::enum_table<
-		action_kind,
-		detail::enum_entry<action_kind::build, "build">,
-		detail::enum_entry<action_kind::generate, "generate">,
-		detail::enum_entry<action_kind::clean, "clean">,
-		detail::enum_entry<action_kind::run, "run">,
-		detail::enum_entry<action_kind::tools, "tools">,
-		detail::enum_entry<action_kind::graph, "graph">,
-		detail::enum_entry<action_kind::help, "help">,
-		detail::enum_entry<action_kind::version, "version">
-	>;
-
-	static_assert(
-		action_kind_names::is_zero_based_count_canonical(action_kind::count),
-		"action_kind_names must cover every action_kind value exactly once"
-	);
-
-	using action_kind_parse_names = detail::enum_table<
-		action_kind,
-		detail::enum_entry<action_kind::build, "build">,
-		detail::enum_entry<action_kind::generate, "generate">,
-		detail::enum_entry<action_kind::generate, "gen">,
-		detail::enum_entry<action_kind::clean, "clean">,
-		detail::enum_entry<action_kind::run, "run">,
-		detail::enum_entry<action_kind::tools, "tools">,
-		detail::enum_entry<action_kind::tools, "toolchains">,
-		detail::enum_entry<action_kind::tools, "toolchain-info">,
-		detail::enum_entry<action_kind::graph, "graph">,
-		detail::enum_entry<action_kind::help, "help">,
-		detail::enum_entry<action_kind::version, "version">
-	>;
-
-	static_assert(
-		action_kind_parse_names::is_display_aliases(),
-		"action_kind_parse_names must not contain duplicate or empty names"
-	);
-
-	using action_help_entries = detail::enum_table<
-		action_kind,
-		detail::enum_entry<
-			action_kind::build,
-			"Build the project. This is the default command."
-		>,
-		detail::enum_entry<
-			action_kind::generate,
-			"Generate backend build files."
-		>,
-		detail::enum_entry<
-			action_kind::clean,
-			"Remove generated build output."
-		>,
-		detail::enum_entry<
-			action_kind::run,
-			"Build and run a target."
-		>,
-		detail::enum_entry<
-			action_kind::tools,
-			"Show discovered build tools and discovery diagnostics."
-		>,
-		detail::enum_entry<
-			action_kind::graph,
-			"Write graph visualization files."
-		>,
-		detail::enum_entry<
-			action_kind::help,
-			"Show this help text."
-		>,
-		detail::enum_entry<
-			action_kind::version,
-			"Show version information."
-		>
-	>;
-
-	static_assert(
-		action_help_entries::has_no_empty_names()
-			&& action_help_entries::has_no_duplicate_values()
-			&& action_help_entries::covers_zero_based_count(action_kind::count),
-		"action_help_entries must describe every action_kind value exactly once"
-	);
-
-	[[nodiscard]] inline constexpr std::string_view action_name(action_kind action) noexcept {
-		return action_kind_names::to_string(action);
-	}
-
-	template <typename Fn>
-	inline constexpr void for_each_action_help(Fn&& fn) {
-		action_kind_names::for_each_entry([&](action_kind action, std::string_view name) {
-			fn(action, name, action_help_entries::to_string(action, ""));
-		});
-	}
-
-	[[nodiscard]] inline constexpr std::optional<action_kind> action_from_string(
-		std::string_view text
-	) noexcept {
-		return action_kind_parse_names::from_string(text);
-	}
-
-	[[nodiscard]] inline constexpr bool parse_action(
-		std::string_view text,
-		action_kind& out
-	) noexcept {
-		const auto parsed = action_from_string(text);
-
-		if (!parsed.has_value()) {
-			return false;
-		}
-
-		out = *parsed;
-		return true;
-	}
-}
-
-#endif
-// ===== end include/mgmake/cli/action.hxx =====
-
-
-// ===== begin include/mgmake/cli/backend.hxx =====
-#pragma once
-
-#ifndef MGMAKE_CLI_BACKEND_HXX
-#define MGMAKE_CLI_BACKEND_HXX
-
-// skipped duplicate include: include/mgmake/detail/enum_string.hxx
-
-#include <optional>
-#include <string_view>
-
-namespace mgmake::cli {
-	enum struct backend_kind {
-		automatic,
-		ninja,
-		make,
-		direct,
-
-		count
-	};
-
-	using backend_kind_names = detail::enum_table<
-		backend_kind,
-		detail::enum_entry<backend_kind::automatic, "auto">,
-		detail::enum_entry<backend_kind::ninja, "ninja">,
-		detail::enum_entry<backend_kind::make, "make">,
-		detail::enum_entry<backend_kind::direct, "direct">
-	>;
-
-	static_assert(
-		backend_kind_names::is_zero_based_count_canonical(backend_kind::count),
-		"backend_kind_names must cover every backend_kind value exactly once"
-	);
-
-	using backend_kind_parse_names = detail::enum_table<
-		backend_kind,
-		detail::enum_entry<backend_kind::automatic, "auto">,
-		detail::enum_entry<backend_kind::automatic, "automatic">,
-		detail::enum_entry<backend_kind::ninja, "ninja">,
-		detail::enum_entry<backend_kind::make, "make">,
-		detail::enum_entry<backend_kind::make, "makefile">,
-		detail::enum_entry<backend_kind::make, "makefiles">,
-		detail::enum_entry<backend_kind::direct, "direct">,
-		detail::enum_entry<backend_kind::direct, "compiler">
-	>;
-
-	static_assert(
-		backend_kind_parse_names::is_display_aliases(),
-		"backend_kind_parse_names must not contain duplicate or empty names"
-	);
-
-	[[nodiscard]] inline constexpr std::string_view backend_name(backend_kind backend) noexcept {
-		return backend_kind_names::to_string(backend);
-	}
-
-	[[nodiscard]] inline constexpr std::optional<backend_kind> backend_from_string(
-		std::string_view text
-	) noexcept {
-		return backend_kind_parse_names::from_string(text);
-	}
-
-	[[nodiscard]] inline constexpr bool parse_backend(
-		std::string_view text,
-		backend_kind& out
-	) noexcept {
-		const auto parsed = backend_from_string(text);
-
-		if (!parsed.has_value()) {
-			return false;
-		}
-
-		out = *parsed;
-		return true;
-	}
-}
-
-#endif
-// ===== end include/mgmake/cli/backend.hxx =====
-
-// skipped duplicate include: include/mgmake/discovery/mode.hxx
-// skipped duplicate include: include/mgmake/sys/platform.hxx
-
-#include <string>
-#include <vector>
-
-namespace mgmake::cli {
-	struct options {
-		action_kind m_action = action_kind::build;
-		backend_kind m_backend = backend_kind::automatic;
-
-		std::string m_toolchain = "clang-mg";
-		std::string m_build_dir = ".build";
-
-		std::vector<std::string> m_targets;
-		std::vector<std::string> m_passthrough_args;
-		std::vector<std::string> m_run_args;
-
-		int m_jobs = 0;
-
-		sys::arch m_target_arch = sys::g_host_arch;
-		sys::platform m_target_platform = sys::g_host_platform;
-		sys::abi m_target_abi = sys::g_host_abi;
-		std::string m_target_triple{};
-
-		bool m_verbose = false;
-		bool m_dry_run = false;
-		bool m_show_help = false;
-		bool m_show_version = false;
-		bool m_refresh_tools = false;
-		bool m_no_tool_cache = false;
-		bool m_show_tool_search = false;
-
-		discovery::mode m_tool_discovery = discovery::mode::automatic;
-
-		std::string m_toolchain_root{};
-		std::string m_sdk_root{};
-		std::string m_sysroot{};
-		std::string m_package_toolchain_root{};
-
-		std::string m_cc{};
-		std::string m_cxx{};
-		std::string m_ar{};
-		std::string m_ranlib{};
-		std::string m_librarian{};
-		std::string m_linker{};
-		std::string m_shared_linker{};
-		std::string m_rc{};
-		std::string m_mt{};
-		std::string m_dll_tool{};
-		std::string m_strip{};
-		std::string m_objcopy{};
-		std::string m_objdump{};
-		std::string m_nm{};
-		std::string m_readelf{};
-		std::string m_ninja{};
-		std::string m_cmake{};
-		std::string m_pkg_config{};
-		std::string m_exe_wrapper{};
-		std::string m_emulator{};
-
-		std::string m_toolchain_version{};
-
-		std::string m_android_ndk{};
-		std::string m_android_abi{};
-		int m_android_api = 0;
-
-		std::string m_apple_sdk{};
-
-		inline constexpr const std::vector<std::string>& targets() const {
-			return m_targets;
-		}
-		
-		[[nodiscard]] inline sys::target target_platform() const {
-			return sys::target{
-				m_target_arch,
-				m_target_platform,
-				m_target_abi,
-				m_target_triple
-			};
-		}
-	};
-}
-
-#endif
-// ===== end include/mgmake/cli/options.hxx =====
-
-
-#include <expected>
-#include <filesystem>
-#include <format>
-#include <string>
-
-namespace mgmake::build {
-	template <toolchain_registry_like Toolchains>
-	[[nodiscard]] inline std::expected<request, std::string> request_from_options(
-		const cli::options& opts,
-		const Toolchains& toolchains
-	) {
-		const auto* selected_toolchain = toolchains.find(opts.m_toolchain);
-
-		if (selected_toolchain == nullptr) {
-			return std::unexpected{
-				std::format(
-					"mgmake: unknown toolchain '{}'; expected one of: {}",
-					opts.m_toolchain,
-					toolchains.choices_string()
-				)
-			};
-		}
-
-		request result{};
-
-		result.m_tc = *selected_toolchain;
-
-		if (!opts.m_target_triple.empty()) {
-			result.m_tc.target_triple(opts.m_target_triple);
-		}
-
-		result.m_build_dir = std::filesystem::path{ opts.m_build_dir };
-		result.m_targets = opts.m_targets;
-		result.m_target = opts.target_platform();
-
-		return result;
-	}
-}
-
-#endif
-// ===== end include/mgmake/build/request_from_options.hxx =====
-
-
-// ===== begin include/mgmake/build/artifact_names.hxx =====
-#pragma once
-
-#ifndef MGMAKE_BUILD_ARTIFACT_NAMES_HXX
-#define MGMAKE_BUILD_ARTIFACT_NAMES_HXX
-
-// skipped duplicate include: include/mgmake/detail/enum_string.hxx
-// skipped duplicate include: include/mgmake/sys/platform.hxx
-
-#include <string_view>
-
-namespace mgmake::build {
-	using executable_extensions = detail::enum_table<
-		sys::platform,
-		detail::enum_entry<sys::platform::p_windows, ".exe">,
-		detail::enum_entry<sys::platform::p_wasm, ".wasm">
-	>;
-
-	static_assert(executable_extensions::has_no_empty_names());
-	static_assert(executable_extensions::has_no_duplicate_values());
-
-	[[nodiscard]] inline constexpr std::string_view executable_extension(
-		sys::platform platform
-	) noexcept {
-		return executable_extensions::to_string(platform, "");
-	}
-
-	using shared_library_extensions = detail::enum_table<
-		sys::platform,
-		detail::enum_entry<sys::platform::p_windows, ".dll">,
-		detail::enum_entry<sys::platform::p_linux, ".so">,
-		detail::enum_entry<sys::platform::p_macos, ".dylib">,
-		detail::enum_entry<sys::platform::p_other_posix, ".so">
-	>;
-
-	static_assert(shared_library_extensions::has_no_empty_names());
-	static_assert(shared_library_extensions::has_no_duplicate_values());
-
-	[[nodiscard]] inline constexpr std::string_view shared_library_extension(
-		sys::platform platform
-	) noexcept {
-		return shared_library_extensions::to_string(platform, "");
-	}
-
-	using static_library_prefixes = detail::enum_table<
-		sys::platform,
-		detail::enum_entry<sys::platform::p_linux, "lib">,
-		detail::enum_entry<sys::platform::p_macos, "lib">,
-		detail::enum_entry<sys::platform::p_other_posix, "lib">
-	>;
-
-	static_assert(static_library_prefixes::has_no_empty_names());
-	static_assert(static_library_prefixes::has_no_duplicate_values());
-
-	[[nodiscard]] inline constexpr std::string_view static_library_prefix(
-		sys::platform platform
-	) noexcept {
-		return static_library_prefixes::to_string(platform, "");
-	}
-
-	using static_library_extensions = detail::enum_table<
-		sys::platform,
-		detail::enum_entry<sys::platform::p_windows, ".lib">
-	>;
-
-	static_assert(static_library_extensions::has_no_empty_names());
-	static_assert(static_library_extensions::has_no_duplicate_values());
-
-	[[nodiscard]] inline constexpr std::string_view static_library_extension(
-		sys::platform platform
-	) noexcept {
-		return static_library_extensions::to_string(platform, ".a");
-	}
-
-	using shared_library_link_flags = detail::enum_table<
-		sys::platform,
-		detail::enum_entry<sys::platform::p_windows, "-shared">,
-		detail::enum_entry<sys::platform::p_linux, "-shared">,
-		detail::enum_entry<sys::platform::p_macos, "-dynamiclib">,
-		detail::enum_entry<sys::platform::p_other_posix, "-shared">
-	>;
-
-	static_assert(shared_library_link_flags::has_no_empty_names());
-	static_assert(shared_library_link_flags::has_no_duplicate_values());
-
-	[[nodiscard]] inline constexpr std::string_view shared_library_link_flag(
-		sys::platform platform
-	) noexcept {
-		return shared_library_link_flags::to_string(platform, "");
-	}
-
-	[[nodiscard]] inline constexpr std::string_view shared_library_prefix(
-		sys::platform platform
-	) noexcept {
-		return (
-			platform == sys::platform::p_linux
-			|| platform == sys::platform::p_macos
-			|| platform == sys::platform::p_other_posix
-		) ? "lib" : "";
-	}
-}
-
-#endif
-// ===== end include/mgmake/build/artifact_names.hxx =====
-
-
-// ===== begin include/mgmake/build/target.hxx =====
-#pragma once
-
-#ifndef MGMAKE_BUILD_TARGET_HXX
-#define MGMAKE_BUILD_TARGET_HXX
-
-// skipped duplicate include: include/mgmake/build/request.hxx
-// skipped duplicate include: include/mgmake/build/toolchain.hxx
-// skipped duplicate include: include/mgmake/detail/assert.hxx
-// skipped duplicate include: include/mgmake/sys/command_line.hxx
-// skipped duplicate include: include/mgmake/sys/platform.hxx
-
-#include <string>
-
-namespace mgmake::build {
-	inline void append_target_args(
-		sys::command_line& command,
-		const toolchain& tc,
-		const request&
-	) {
-		switch (tc.target_selection()) {
-			case toolchain::target_mode::implicit:
-			case toolchain::target_mode::custom:
-				return;
-
-			case toolchain::target_mode::clang_target: {
-				const auto& triple = tc.target_triple();
-
-				if (!triple.has_value()) {
-					return;
-				}
-
-				mgmkassert(
-					!triple->empty(),
-					"mgmake build: target triple must not be empty"
-				);
-
-				command.m_args.emplace_back("-target");
-				command.m_args.emplace_back(*triple);
-				return;
-			}
-		}
-
-		mgmkassert(false, "mgmake build: unknown toolchain target mode");
-	}
-}
-
-#endif
-// ===== end include/mgmake/build/target.hxx =====
-
-
-// ===== begin include/mgmake/build/clean.hxx =====
-#pragma once
-
-#ifndef MGMAKE_BUILD_CLEAN_HXX
-#define MGMAKE_BUILD_CLEAN_HXX
-
-// skipped duplicate include: include/mgmake/build/request.hxx
-// skipped duplicate include: include/mgmake/sys/command_line.hxx
-
-#include <expected>
-#include <print>
-#include <filesystem>
-#include <string>
-
-namespace mgmake::build {
-	inline void print_clean_command(const build::request& req) {
-#if defined(MGMK_PLATFORM_WINDOWS)
-		std::println("rmdir /s /q {}", sys::shell_escape(req.build_dir().string()));
-#else
-		std::println("rm -rf {}", sys::shell_escape(req.build_dir().string()));
-#endif
-	}
-
-	[[nodiscard]] inline std::expected<void, std::string> clean(
-		const build::request& req,
-		sys::command_run_options run_options = {}
-	) {
-		if (run_options.m_verbose || run_options.m_dry_run) {
-			print_clean_command(req);
-		}
-
-		if (run_options.m_dry_run) {
-			return {};
-		}
-
-		std::error_code ec;
-		std::filesystem::remove_all(req.build_dir(), ec);
-
-		if (ec) {
-			return std::unexpected{
-				"mgmake: failed to clean build directory '" +
-				req.build_dir().string() +
-				"': " +
-				ec.message()
-			};
-		}
-
-		return {};
-	}
-}
-
-#endif
-// ===== end include/mgmake/build/clean.hxx =====
-
-
-// ===== begin include/mgmake/build/run.hxx =====
-#pragma once
-
-#ifndef MGMAKE_BUILD_RUN_HXX
-#define MGMAKE_BUILD_RUN_HXX
-
-// skipped duplicate include: include/mgmake/build/request.hxx
-// skipped duplicate include: include/mgmake/cli/options.hxx
-// skipped duplicate include: include/mgmake/dag/graph.hxx
-
-// ===== begin include/mgmake/spec/project.hxx =====
-#pragma once
-
-#ifndef MGMK_SPEC_PROJECT_HXX
-#define MGMK_SPEC_PROJECT_HXX
-
-// skipped duplicate include: include/mgmake/build/request.hxx
-// skipped duplicate include: include/mgmake/dag/graph.hxx
-// skipped duplicate include: include/mgmake/detail/assert.hxx
-
-// ===== begin include/mgmake/prep/result.hxx =====
-#pragma once
-
-#ifndef MGMK_PREP_RESULT_HXX
-#define MGMK_PREP_RESULT_HXX
-
-
-// ===== begin include/mgmake/prep/fetched.hxx =====
-#pragma once
-
-#ifndef MGMAKE_PREP_FETCHED_HXX
-#define MGMAKE_PREP_FETCHED_HXX
-
-// skipped duplicate include: include/mgmake/dag/artifact.hxx
-// skipped duplicate include: include/mgmake/dag/target.hxx
-
-#include <filesystem>
-
-namespace mgmake::prep {
-	struct fetched {
-		dag::target::id m_target{};
-		dag::artifact::id m_stamp{};
-		std::filesystem::path m_source_dir;
-	};
-}
-
-#endif
-// ===== end include/mgmake/prep/fetched.hxx =====
-
-// skipped duplicate include: include/mgmake/dag/graph.hxx
-
-// ===== begin include/mgmake/ext/provider_ref.hxx =====
-#pragma once
-
-#ifndef MGMK_EXT_PROVIDER_REF_HXX
-#define MGMK_EXT_PROVIDER_REF_HXX
-
-#include <filesystem>
-#include <string>
-
-namespace mgmake::ext {
-	enum struct provider_kind {
-		cmake
-	};
-
-	enum struct output_root {
-		source_dir,
-		build_dir,
-		install_dir
-	};
-
-	struct provider_ref {
-		provider_kind m_kind = provider_kind::cmake;
-		std::string m_project;
-		std::string m_target;
-		output_root m_usage_root = output_root::install_dir;
-	};
-
-	struct rooted_path {
-		output_root m_root = output_root::install_dir;
-		std::filesystem::path m_path;
-	};
-}
-
-#endif
-// ===== end include/mgmake/ext/provider_ref.hxx =====
-
-#ifdef MGMK_ENABLE_EXT_CMAKE
-
-// ===== begin include/mgmake/ext/cmake/file_api.hxx =====
-#pragma once
-
-#ifndef MGMK_EXT_CMAKE_FILE_API_HXX
-#define MGMK_EXT_CMAKE_FILE_API_HXX
-
+// Include json extension here
+// Needs to be included earlier bc it's used in the cmake extension
+// but if it is included first by the cmake extension, the cmake ext.
+// will need to be enabled for json. But json is used for other features
+// as well, and as such should be available independently of the cmake ext.
 
 // ===== begin include/mgmake/ext/json.hxx =====
 #pragma once
@@ -4094,7 +3344,7 @@ namespace mgmake::ext {
 	};
 }
 
-#endif
+#endif // MGMK_EXT_JSON_COMMON_HXX
 // ===== end include/mgmake/ext/json/common.hxx =====
 
 
@@ -4102,7 +3352,7 @@ namespace mgmake::ext {
 	#include MGMK_JSON_BACKEND_HEADER
 #elif defined(__cxxmg_urlinclude)
 	#urlinclude <https://raw.githubusercontent.com/nlohmann/json/refs/tags/v3.12.0/single_include/nlohmann/json.hpp>
-#endif
+#endif // defined(MGMK_JSON_BACKEND_HEADER)
 
 #if defined(INCLUDE_NLOHMANN_JSON_HPP_) || defined(NLOHMANN_JSON_VERSION_MAJOR)
 
@@ -4296,7 +3546,7 @@ namespace mgmake::ext {
 	};
 }
 
-#endif
+#endif // MGMK_EXT_JSON_NLOHMANN_HXX
 // ===== end include/mgmake/ext/json/nlohmann.hxx =====
 
 
@@ -4313,11 +3563,767 @@ namespace mgmake::ext {
 
 	inline constexpr bool has_json_backend = false;
 }
-#endif
+#endif // defined(INCLUDE_NLOHMANN_JSON_HPP_) || defined(NLOHMANN_JSON_VERSION_MAJOR)
 
-#endif
+#endif // MGMK_EXT_JSON_HXX
 // ===== end include/mgmake/ext/json.hxx =====
 
+// skipped duplicate include: include/mgmake/build/toolchain.hxx
+
+// ===== begin include/mgmake/build/toolchain_registry.hxx =====
+#pragma once
+
+#ifndef MGMAKE_BUILD_TOOLCHAIN_REGISTRY_HXX
+#define MGMAKE_BUILD_TOOLCHAIN_REGISTRY_HXX
+
+// skipped duplicate include: include/mgmake/build/toolchain.hxx
+
+#include <concepts>
+#include <initializer_list>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+namespace mgmake::build {
+	struct toolchain_registry {
+		std::vector<toolchain> m_toolchains{};
+
+		constexpr toolchain_registry() = default;
+
+		constexpr toolchain_registry(std::initializer_list<toolchain> toolchains)
+			: m_toolchains{ toolchains } {}
+
+		constexpr explicit toolchain_registry(std::vector<toolchain> toolchains)
+			: m_toolchains{ std::move(toolchains) } {}
+
+		[[nodiscard]] constexpr const toolchain* find(std::string_view name) const noexcept {
+			for (const auto& tc : m_toolchains) {
+				if (tc.m_name == name) {
+					return &tc;
+				}
+			}
+
+			return nullptr;
+		}
+
+		[[nodiscard]] constexpr toolchain_registry emplace(toolchain tc) const {
+			auto result = *this;
+			result.m_toolchains.emplace_back(std::move(tc));
+			return result;
+		}
+
+		[[nodiscard]] constexpr std::string choices_string() const {
+			std::string result;
+
+			for (std::size_t i = 0; i < m_toolchains.size(); ++i) {
+				if (i != 0) {
+					result += ", ";
+				}
+
+				result += m_toolchains[i].m_name;
+			}
+
+			return result;
+		}
+	};
+
+	template <typename Registry>
+	concept toolchain_registry_like =
+		requires(const Registry& registry, std::string_view name) {
+			{ registry.find(name) } -> std::same_as<const toolchain*>;
+			{ registry.choices_string() } -> std::convertible_to<std::string>;
+		};
+
+	inline const auto default_toolchains = toolchain_registry{
+		tc_clang_mg,
+		tc_clang,
+		tc_gcc,
+		tc_msvc
+	};
+}
+
+#endif // MGMAKE_BUILD_TOOLCHAIN_REGISTRY_HXX
+// ===== end include/mgmake/build/toolchain_registry.hxx =====
+
+// skipped duplicate include: include/mgmake/build/request.hxx
+
+// ===== begin include/mgmake/build/request_from_options.hxx =====
+#pragma once
+
+#ifndef MGMAKE_BUILD_REQUEST_FROM_OPTIONS_HXX
+#define MGMAKE_BUILD_REQUEST_FROM_OPTIONS_HXX
+
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/build/toolchain_registry.hxx
+
+// ===== begin include/mgmake/cli/options.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CLI_OPTIONS_HXX
+#define MGMAKE_CLI_OPTIONS_HXX
+
+
+// ===== begin include/mgmake/cli/action.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CLI_ACTION_HXX
+#define MGMAKE_CLI_ACTION_HXX
+
+// skipped duplicate include: include/mgmake/detail/enum_string.hxx
+
+#include <optional>
+#include <string_view>
+#include <utility>
+
+namespace mgmake::cli {
+	enum struct action_kind {
+		build,
+		generate,
+		clean,
+		run,
+		tools,
+		graph,
+		help,
+		version,
+
+		count
+	};
+
+	using action_kind_names = detail::enum_table<
+		action_kind,
+		detail::enum_entry<action_kind::build, "build">,
+		detail::enum_entry<action_kind::generate, "generate">,
+		detail::enum_entry<action_kind::clean, "clean">,
+		detail::enum_entry<action_kind::run, "run">,
+		detail::enum_entry<action_kind::tools, "tools">,
+		detail::enum_entry<action_kind::graph, "graph">,
+		detail::enum_entry<action_kind::help, "help">,
+		detail::enum_entry<action_kind::version, "version">
+	>;
+
+	static_assert(
+		action_kind_names::is_zero_based_count_canonical(action_kind::count),
+		"action_kind_names must cover every action_kind value exactly once"
+	);
+
+	using action_kind_parse_names = detail::enum_table<
+		action_kind,
+		detail::enum_entry<action_kind::build, "build">,
+		detail::enum_entry<action_kind::generate, "generate">,
+		detail::enum_entry<action_kind::generate, "gen">,
+		detail::enum_entry<action_kind::clean, "clean">,
+		detail::enum_entry<action_kind::run, "run">,
+		detail::enum_entry<action_kind::tools, "tools">,
+		detail::enum_entry<action_kind::tools, "toolchains">,
+		detail::enum_entry<action_kind::tools, "toolchain-info">,
+		detail::enum_entry<action_kind::graph, "graph">,
+		detail::enum_entry<action_kind::help, "help">,
+		detail::enum_entry<action_kind::version, "version">
+	>;
+
+	static_assert(
+		action_kind_parse_names::is_display_aliases(),
+		"action_kind_parse_names must not contain duplicate or empty names"
+	);
+
+	using action_help_entries = detail::enum_table<
+		action_kind,
+		detail::enum_entry<
+			action_kind::build,
+			"Build the project. This is the default command."
+		>,
+		detail::enum_entry<
+			action_kind::generate,
+			"Generate backend build files."
+		>,
+		detail::enum_entry<
+			action_kind::clean,
+			"Remove generated build output."
+		>,
+		detail::enum_entry<
+			action_kind::run,
+			"Build and run a target."
+		>,
+		detail::enum_entry<
+			action_kind::tools,
+			"Show discovered build tools and discovery diagnostics."
+		>,
+		detail::enum_entry<
+			action_kind::graph,
+			"Write graph visualization files."
+		>,
+		detail::enum_entry<
+			action_kind::help,
+			"Show this help text."
+		>,
+		detail::enum_entry<
+			action_kind::version,
+			"Show version information."
+		>
+	>;
+
+	static_assert(
+		action_help_entries::has_no_empty_names()
+			&& action_help_entries::has_no_duplicate_values()
+			&& action_help_entries::covers_zero_based_count(action_kind::count),
+		"action_help_entries must describe every action_kind value exactly once"
+	);
+
+	[[nodiscard]] inline constexpr std::string_view action_name(action_kind action) noexcept {
+		return action_kind_names::to_string(action);
+	}
+
+	template <typename Fn>
+	inline constexpr void for_each_action_help(Fn&& fn) {
+		action_kind_names::for_each_entry([&](action_kind action, std::string_view name) {
+			fn(action, name, action_help_entries::to_string(action, ""));
+		});
+	}
+
+	[[nodiscard]] inline constexpr std::optional<action_kind> action_from_string(
+		std::string_view text
+	) noexcept {
+		return action_kind_parse_names::from_string(text);
+	}
+
+	[[nodiscard]] inline constexpr bool parse_action(
+		std::string_view text,
+		action_kind& out
+	) noexcept {
+		const auto parsed = action_from_string(text);
+
+		if (!parsed.has_value()) {
+			return false;
+		}
+
+		out = *parsed;
+		return true;
+	}
+}
+
+#endif // MGMAKE_CLI_ACTION_HXX
+// ===== end include/mgmake/cli/action.hxx =====
+
+
+// ===== begin include/mgmake/cli/backend.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CLI_BACKEND_HXX
+#define MGMAKE_CLI_BACKEND_HXX
+
+// skipped duplicate include: include/mgmake/detail/enum_string.hxx
+
+#include <optional>
+#include <string_view>
+
+namespace mgmake::cli {
+	enum struct backend_kind {
+		automatic,
+		ninja,
+		make,
+		direct,
+
+		count
+	};
+
+	using backend_kind_names = detail::enum_table<
+		backend_kind,
+		detail::enum_entry<backend_kind::automatic, "auto">,
+		detail::enum_entry<backend_kind::ninja, "ninja">,
+		detail::enum_entry<backend_kind::make, "make">,
+		detail::enum_entry<backend_kind::direct, "direct">
+	>;
+
+	static_assert(
+		backend_kind_names::is_zero_based_count_canonical(backend_kind::count),
+		"backend_kind_names must cover every backend_kind value exactly once"
+	);
+
+	using backend_kind_parse_names = detail::enum_table<
+		backend_kind,
+		detail::enum_entry<backend_kind::automatic, "auto">,
+		detail::enum_entry<backend_kind::automatic, "automatic">,
+		detail::enum_entry<backend_kind::ninja, "ninja">,
+		detail::enum_entry<backend_kind::make, "make">,
+		detail::enum_entry<backend_kind::make, "makefile">,
+		detail::enum_entry<backend_kind::make, "makefiles">,
+		detail::enum_entry<backend_kind::direct, "direct">,
+		detail::enum_entry<backend_kind::direct, "compiler">
+	>;
+
+	static_assert(
+		backend_kind_parse_names::is_display_aliases(),
+		"backend_kind_parse_names must not contain duplicate or empty names"
+	);
+
+	[[nodiscard]] inline constexpr std::string_view backend_name(backend_kind backend) noexcept {
+		return backend_kind_names::to_string(backend);
+	}
+
+	[[nodiscard]] inline constexpr std::optional<backend_kind> backend_from_string(
+		std::string_view text
+	) noexcept {
+		return backend_kind_parse_names::from_string(text);
+	}
+
+	[[nodiscard]] inline constexpr bool parse_backend(
+		std::string_view text,
+		backend_kind& out
+	) noexcept {
+		const auto parsed = backend_from_string(text);
+
+		if (!parsed.has_value()) {
+			return false;
+		}
+
+		out = *parsed;
+		return true;
+	}
+}
+
+#endif // MGMAKE_CLI_BACKEND_HXX
+// ===== end include/mgmake/cli/backend.hxx =====
+
+// skipped duplicate include: include/mgmake/discovery/mode.hxx
+// skipped duplicate include: include/mgmake/sys/platform.hxx
+
+#include <string>
+#include <vector>
+
+namespace mgmake::cli {
+	struct options {
+		action_kind m_action = action_kind::build;
+		backend_kind m_backend = backend_kind::automatic;
+
+		std::string m_toolchain = "clang-mg";
+		std::string m_build_dir = ".build";
+
+		std::vector<std::string> m_targets;
+		std::vector<std::string> m_passthrough_args;
+		std::vector<std::string> m_run_args;
+
+		int m_jobs = 0;
+
+		sys::arch m_target_arch = sys::g_host_arch;
+		sys::platform m_target_platform = sys::g_host_platform;
+		sys::abi m_target_abi = sys::g_host_abi;
+		std::string m_target_triple{};
+
+		bool m_verbose = false;
+		bool m_dry_run = false;
+		bool m_show_help = false;
+		bool m_show_version = false;
+		bool m_refresh_tools = false;
+		bool m_no_tool_cache = false;
+		bool m_show_tool_search = false;
+
+		discovery::mode m_tool_discovery = discovery::mode::automatic;
+
+		std::string m_toolchain_root{};
+		std::string m_sdk_root{};
+		std::string m_sysroot{};
+		std::string m_package_toolchain_root{};
+
+		std::string m_cc{};
+		std::string m_cxx{};
+		std::string m_ar{};
+		std::string m_ranlib{};
+		std::string m_librarian{};
+		std::string m_linker{};
+		std::string m_shared_linker{};
+		std::string m_rc{};
+		std::string m_mt{};
+		std::string m_dll_tool{};
+		std::string m_strip{};
+		std::string m_objcopy{};
+		std::string m_objdump{};
+		std::string m_nm{};
+		std::string m_readelf{};
+		std::string m_ninja{};
+		std::string m_cmake{};
+		std::string m_pkg_config{};
+		std::string m_exe_wrapper{};
+		std::string m_emulator{};
+
+		std::string m_toolchain_version{};
+
+		std::string m_android_ndk{};
+		std::string m_android_abi{};
+		int m_android_api = 0;
+
+		std::string m_apple_sdk{};
+
+		inline constexpr const std::vector<std::string>& targets() const {
+			return m_targets;
+		}
+		
+		[[nodiscard]] inline sys::target target_platform() const {
+			return sys::target{
+				m_target_arch,
+				m_target_platform,
+				m_target_abi,
+				m_target_triple
+			};
+		}
+	};
+}
+
+#endif // MGMAKE_CLI_OPTIONS_HXX
+// ===== end include/mgmake/cli/options.hxx =====
+
+
+#include <expected>
+#include <filesystem>
+#include <format>
+#include <string>
+
+namespace mgmake::build {
+	template <toolchain_registry_like Toolchains>
+	[[nodiscard]] inline std::expected<request, std::string> request_from_options(
+		const cli::options& opts,
+		const Toolchains& toolchains
+	) {
+		const auto* selected_toolchain = toolchains.find(opts.m_toolchain);
+
+		if (selected_toolchain == nullptr) {
+			return std::unexpected{
+				std::format(
+					"mgmake: unknown toolchain '{}'; expected one of: {}",
+					opts.m_toolchain,
+					toolchains.choices_string()
+				)
+			};
+		}
+
+		request result{};
+
+		result.m_tc = *selected_toolchain;
+
+		if (!opts.m_target_triple.empty()) {
+			result.m_tc.target_triple(opts.m_target_triple);
+		}
+
+		result.m_build_dir = std::filesystem::path{ opts.m_build_dir };
+		result.m_targets = opts.m_targets;
+		result.m_target = opts.target_platform();
+
+		return result;
+	}
+}
+
+#endif // MGMAKE_BUILD_REQUEST_FROM_OPTIONS_HXX
+// ===== end include/mgmake/build/request_from_options.hxx =====
+
+
+// ===== begin include/mgmake/build/artifact_names.hxx =====
+#pragma once
+
+#ifndef MGMAKE_BUILD_ARTIFACT_NAMES_HXX
+#define MGMAKE_BUILD_ARTIFACT_NAMES_HXX
+
+// skipped duplicate include: include/mgmake/detail/enum_string.hxx
+// skipped duplicate include: include/mgmake/sys/platform.hxx
+
+#include <string_view>
+
+namespace mgmake::build {
+	using executable_extensions = detail::enum_table<
+		sys::platform,
+		detail::enum_entry<sys::platform::p_windows, ".exe">,
+		detail::enum_entry<sys::platform::p_wasm, ".wasm">
+	>;
+
+	static_assert(executable_extensions::has_no_empty_names());
+	static_assert(executable_extensions::has_no_duplicate_values());
+
+	[[nodiscard]] inline constexpr std::string_view executable_extension(
+		sys::platform platform
+	) noexcept {
+		return executable_extensions::to_string(platform, "");
+	}
+
+	using shared_library_extensions = detail::enum_table<
+		sys::platform,
+		detail::enum_entry<sys::platform::p_windows, ".dll">,
+		detail::enum_entry<sys::platform::p_linux, ".so">,
+		detail::enum_entry<sys::platform::p_macos, ".dylib">,
+		detail::enum_entry<sys::platform::p_other_posix, ".so">
+	>;
+
+	static_assert(shared_library_extensions::has_no_empty_names());
+	static_assert(shared_library_extensions::has_no_duplicate_values());
+
+	[[nodiscard]] inline constexpr std::string_view shared_library_extension(
+		sys::platform platform
+	) noexcept {
+		return shared_library_extensions::to_string(platform, "");
+	}
+
+	using static_library_prefixes = detail::enum_table<
+		sys::platform,
+		detail::enum_entry<sys::platform::p_linux, "lib">,
+		detail::enum_entry<sys::platform::p_macos, "lib">,
+		detail::enum_entry<sys::platform::p_other_posix, "lib">
+	>;
+
+	static_assert(static_library_prefixes::has_no_empty_names());
+	static_assert(static_library_prefixes::has_no_duplicate_values());
+
+	[[nodiscard]] inline constexpr std::string_view static_library_prefix(
+		sys::platform platform
+	) noexcept {
+		return static_library_prefixes::to_string(platform, "");
+	}
+
+	using static_library_extensions = detail::enum_table<
+		sys::platform,
+		detail::enum_entry<sys::platform::p_windows, ".lib">
+	>;
+
+	static_assert(static_library_extensions::has_no_empty_names());
+	static_assert(static_library_extensions::has_no_duplicate_values());
+
+	[[nodiscard]] inline constexpr std::string_view static_library_extension(
+		sys::platform platform
+	) noexcept {
+		return static_library_extensions::to_string(platform, ".a");
+	}
+
+	using shared_library_link_flags = detail::enum_table<
+		sys::platform,
+		detail::enum_entry<sys::platform::p_windows, "-shared">,
+		detail::enum_entry<sys::platform::p_linux, "-shared">,
+		detail::enum_entry<sys::platform::p_macos, "-dynamiclib">,
+		detail::enum_entry<sys::platform::p_other_posix, "-shared">
+	>;
+
+	static_assert(shared_library_link_flags::has_no_empty_names());
+	static_assert(shared_library_link_flags::has_no_duplicate_values());
+
+	[[nodiscard]] inline constexpr std::string_view shared_library_link_flag(
+		sys::platform platform
+	) noexcept {
+		return shared_library_link_flags::to_string(platform, "");
+	}
+
+	[[nodiscard]] inline constexpr std::string_view shared_library_prefix(
+		sys::platform platform
+	) noexcept {
+		return (
+			platform == sys::platform::p_linux
+			|| platform == sys::platform::p_macos
+			|| platform == sys::platform::p_other_posix
+		) ? "lib" : "";
+	}
+}
+
+#endif // MGMAKE_BUILD_ARTIFACT_NAMES_HXX
+// ===== end include/mgmake/build/artifact_names.hxx =====
+
+
+// ===== begin include/mgmake/build/target.hxx =====
+#pragma once
+
+#ifndef MGMAKE_BUILD_TARGET_HXX
+#define MGMAKE_BUILD_TARGET_HXX
+
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/build/toolchain.hxx
+// skipped duplicate include: include/mgmake/detail/assert.hxx
+// skipped duplicate include: include/mgmake/sys/command_line.hxx
+// skipped duplicate include: include/mgmake/sys/platform.hxx
+
+#include <string>
+
+namespace mgmake::build {
+	inline void append_target_args(
+		sys::command_line& command,
+		const toolchain& tc,
+		const request&
+	) {
+		switch (tc.target_selection()) {
+			case toolchain::target_mode::implicit:
+			case toolchain::target_mode::custom:
+				return;
+
+			case toolchain::target_mode::clang_target: {
+				const auto& triple = tc.target_triple();
+
+				if (!triple.has_value()) {
+					return;
+				}
+
+				mgmkassert(
+					!triple->empty(),
+					"mgmake build: target triple must not be empty"
+				);
+
+				command.m_args.emplace_back("-target");
+				command.m_args.emplace_back(*triple);
+				return;
+			}
+		}
+
+		mgmkassert(false, "mgmake build: unknown toolchain target mode");
+	}
+}
+
+#endif // MGMAKE_BUILD_TARGET_HXX
+// ===== end include/mgmake/build/target.hxx =====
+
+
+// ===== begin include/mgmake/build/clean.hxx =====
+#pragma once
+
+#ifndef MGMAKE_BUILD_CLEAN_HXX
+#define MGMAKE_BUILD_CLEAN_HXX
+
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/sys/command_line.hxx
+
+#include <expected>
+#include <print>
+#include <filesystem>
+#include <string>
+
+namespace mgmake::build {
+	inline void print_clean_command(const build::request& req) {
+#if defined(MGMK_PLATFORM_WINDOWS)
+		std::println("rmdir /s /q {}", sys::shell_escape(req.build_dir().string()));
+#else
+		std::println("rm -rf {}", sys::shell_escape(req.build_dir().string()));
+#endif // defined(MGMK_PLATFORM_WINDOWS)
+	}
+
+	[[nodiscard]] inline std::expected<void, std::string> clean(
+		const build::request& req,
+		sys::command_run_options run_options = {}
+	) {
+		if (run_options.m_verbose || run_options.m_dry_run) {
+			print_clean_command(req);
+		}
+
+		if (run_options.m_dry_run) {
+			return {};
+		}
+
+		std::error_code ec;
+		std::filesystem::remove_all(req.build_dir(), ec);
+
+		if (ec) {
+			return std::unexpected{
+				"mgmake: failed to clean build directory '" +
+				req.build_dir().string() +
+				"': " +
+				ec.message()
+			};
+		}
+
+		return {};
+	}
+}
+
+#endif // MGMAKE_BUILD_CLEAN_HXX
+// ===== end include/mgmake/build/clean.hxx =====
+
+
+// ===== begin include/mgmake/build/run.hxx =====
+#pragma once
+
+#ifndef MGMAKE_BUILD_RUN_HXX
+#define MGMAKE_BUILD_RUN_HXX
+
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/cli/options.hxx
+// skipped duplicate include: include/mgmake/dag/graph.hxx
+
+// ===== begin include/mgmake/spec/project.hxx =====
+#pragma once
+
+#ifndef MGMK_SPEC_PROJECT_HXX
+#define MGMK_SPEC_PROJECT_HXX
+
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/dag/graph.hxx
+// skipped duplicate include: include/mgmake/detail/assert.hxx
+
+// ===== begin include/mgmake/prep/result.hxx =====
+#pragma once
+
+#ifndef MGMK_PREP_RESULT_HXX
+#define MGMK_PREP_RESULT_HXX
+
+
+// ===== begin include/mgmake/prep/fetched.hxx =====
+#pragma once
+
+#ifndef MGMAKE_PREP_FETCHED_HXX
+#define MGMAKE_PREP_FETCHED_HXX
+
+// skipped duplicate include: include/mgmake/dag/artifact.hxx
+// skipped duplicate include: include/mgmake/dag/target.hxx
+
+#include <filesystem>
+
+namespace mgmake::prep {
+	struct fetched {
+		dag::target::id m_target{};
+		dag::artifact::id m_stamp{};
+		std::filesystem::path m_source_dir;
+	};
+}
+
+#endif // MGMAKE_PREP_FETCHED_HXX
+// ===== end include/mgmake/prep/fetched.hxx =====
+
+// skipped duplicate include: include/mgmake/dag/graph.hxx
+
+// ===== begin include/mgmake/ext/provider_ref.hxx =====
+#pragma once
+
+#ifndef MGMK_EXT_PROVIDER_REF_HXX
+#define MGMK_EXT_PROVIDER_REF_HXX
+
+#include <filesystem>
+#include <string>
+
+namespace mgmake::ext {
+	enum struct provider_kind {
+		cmake
+	};
+
+	enum struct output_root {
+		source_dir,
+		build_dir,
+		install_dir
+	};
+
+	struct provider_ref {
+		provider_kind m_kind = provider_kind::cmake;
+		std::string m_project;
+		std::string m_target;
+		output_root m_usage_root = output_root::install_dir;
+	};
+
+	struct rooted_path {
+		output_root m_root = output_root::install_dir;
+		std::filesystem::path m_path;
+	};
+}
+
+#endif // MGMK_EXT_PROVIDER_REF_HXX
+// ===== end include/mgmake/ext/provider_ref.hxx =====
+
+#ifdef MGMK_ENABLE_EXT_CMAKE
+
+// ===== begin include/mgmake/ext/cmake/file_api.hxx =====
+#pragma once
+
+#ifndef MGMK_EXT_CMAKE_FILE_API_HXX
+#define MGMK_EXT_CMAKE_FILE_API_HXX
+
+// skipped duplicate include: include/mgmake/ext/json.hxx
 // skipped duplicate include: include/mgmake/ext/provider_ref.hxx
 
 #include <filesystem>
@@ -4477,10 +4483,10 @@ namespace mgmake::ext::cmake_file_api {
 	}
 }
 
-#endif
+#endif // MGMK_EXT_CMAKE_FILE_API_HXX
 // ===== end include/mgmake/ext/cmake/file_api.hxx =====
 
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 #include <map>
 #include <optional>
@@ -4491,14 +4497,14 @@ namespace mgmake::prep {
 #ifdef MGMK_ENABLE_EXT_CMAKE
 	using cmake_target = ext::cmake_file_api::target;
 	using cmake_project = ext::cmake_file_api::project;
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 	struct result {
 		dag::graph m_dag;
 		std::map<std::string, prep::fetched> m_fetches;
 #ifdef MGMK_ENABLE_EXT_CMAKE
 		std::map<std::string, prep::cmake_project> m_cmake_projects;
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 		[[nodiscard]] const prep::fetched* find_fetch(std::string_view name) const {
 			const auto found = m_fetches.find(std::string{name});
@@ -4515,11 +4521,11 @@ namespace mgmake::prep {
 			const auto found = m_cmake_projects.find(std::string{name});
 			return found == m_cmake_projects.end() ? nullptr : &found->second;
 		}
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 	};
 }
 
-#endif
+#endif // MGMK_PREP_RESULT_HXX
 // ===== end include/mgmake/prep/result.hxx =====
 
 
@@ -4616,7 +4622,7 @@ namespace mgmake::spec {
 	};
 }
 
-#endif
+#endif // MGMK_SPEC_TARGET_HXX
 // ===== end include/mgmake/spec/target.hxx =====
 
 // skipped duplicate include: include/mgmake/ext/provider_ref.hxx
@@ -4665,7 +4671,7 @@ namespace mgmake::spec {
 	};
 }
 
-#endif
+#endif // MGMK_SPEC_EXECUTABLE_HXX
 // ===== end include/mgmake/spec/executable.hxx =====
 
 
@@ -4765,7 +4771,7 @@ namespace mgmake::spec {
 	};
 }
 
-#endif
+#endif // MGMK_SPEC_LIBRARY_HXX
 // ===== end include/mgmake/spec/library.hxx =====
 
 
@@ -4909,7 +4915,7 @@ namespace mgmake::ext {
 	};
 }
 
-#endif
+#endif // MGMAKE_EXT_FETCH_HXX
 // ===== end include/mgmake/ext/fetch.hxx =====
 
 // skipped duplicate include: include/mgmake/ext/provider_ref.hxx
@@ -5027,10 +5033,10 @@ namespace mgmake::ext {
 	};
 }
 
-#endif
+#endif // MGMK_EXT_CMAKE_HXX
 // ===== end include/mgmake/ext/cmake.hxx =====
 
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 #include <optional>
 #include <set>
@@ -5046,7 +5052,7 @@ namespace mgmake::spec {
 		std::vector<ext::fetch> m_fetches;
 #ifdef MGMK_ENABLE_EXT_CMAKE
 		std::vector<ext::cmake> m_cmake_projects;
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 		inline constexpr project(std::string_view name)
 			: m_name{name} {
@@ -5062,7 +5068,7 @@ namespace mgmake::spec {
 			}
 #ifdef MGMK_ENABLE_EXT_CMAKE
 			assert_known_provider_for(exe.m_provider, exe.m_name);
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 			assert_known_libraries_for(exe.m_linked_libraries, exe.m_name);
 
@@ -5107,7 +5113,7 @@ namespace mgmake::spec {
 
 #ifdef MGMK_ENABLE_EXT_CMAKE
 			assert_known_provider_for(lib.m_provider, lib.m_name);
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 			assert_known_libraries_for(lib.m_linked_libraries, lib.m_name);
 			assert_library_link_closure_is_acyclic(lib);
 
@@ -5130,7 +5136,7 @@ namespace mgmake::spec {
 			m_cmake_projects.emplace_back(cmake_project);
 			return *this;
 		}
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 		const std::optional<spec::library::id> find_library(std::string_view name) const {
             for (spec::library::id idx = 0; idx < m_libraries.size(); idx++) {
@@ -5200,7 +5206,7 @@ namespace mgmake::spec {
 
 			return &m_cmake_projects.at(idx);
 		}
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 		prep::result prepare(const build::request& req) const;
 
@@ -5229,7 +5235,7 @@ namespace mgmake::spec {
 					break;
 			}
 		}
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 		inline constexpr void assert_known_libraries_for(
 			const std::set<std::string>& libraries,
@@ -5306,7 +5312,7 @@ namespace mgmake::spec {
 	};
 }
 
-#endif
+#endif // MGMK_SPEC_PROJECT_HXX
 // ===== end include/mgmake/spec/project.hxx =====
 
 // skipped duplicate include: include/mgmake/sys/command_line.hxx
@@ -5414,7 +5420,7 @@ namespace mgmake::build {
 	}
 }
 
-#endif
+#endif // MGMAKE_BUILD_RUN_HXX
 // ===== end include/mgmake/build/run.hxx =====
 
 // skipped duplicate include: include/mgmake/cli/action.hxx
@@ -5485,7 +5491,7 @@ namespace mgmake::cli {
 	};
 }
 
-#endif
+#endif // MGMAKE_CLI_OPTION_PARSE_RESULT_HXX
 // ===== end include/mgmake/cli/option_parse_result.hxx =====
 
 // skipped duplicate include: include/mgmake/cli/options.hxx
@@ -5534,7 +5540,7 @@ namespace mgmake::cli {
 
 }
 
-#endif
+#endif // MGMAKE_CLI_UTIL_HXX
 // ===== end include/mgmake/cli/util.hxx =====
 
 
@@ -5570,7 +5576,7 @@ namespace mgmake::cli {
 	};
 }
 
-#endif
+#endif // MGMAKE_CLI_VALUE_PARSER_HXX
 // ===== end include/mgmake/cli/value_parser.hxx =====
 
 
@@ -5707,7 +5713,7 @@ namespace mgmake::cli {
 	};
 }
 
-#endif
+#endif // MGMAKE_CLI_ENUM_VALUE_PARSER_HXX
 // ===== end include/mgmake/cli/enum_value_parser.hxx =====
 
 // skipped duplicate include: include/mgmake/cli/util.hxx
@@ -6165,7 +6171,7 @@ namespace mgmake::cli {
 	};
 }
 
-#endif
+#endif // MGMAKE_CLI_OPTION_BUILDER_HXX
 // ===== end include/mgmake/cli/option_builder.hxx =====
 
 
@@ -6210,7 +6216,7 @@ namespace mgmake::cli {
 	};
 }
 
-#endif
+#endif // MGMAKE_CLI_PARSE_RESULT_HXX
 // ===== end include/mgmake/cli/parse_result.hxx =====
 
 // skipped duplicate include: include/mgmake/cli/util.hxx
@@ -6449,7 +6455,7 @@ namespace mgmake::cli {
 	};
 }
 
-#endif
+#endif // MGMAKE_CLI_OPTION_PARSER_HXX
 // ===== end include/mgmake/cli/option_parser.hxx =====
 
 // skipped duplicate include: include/mgmake/sys/command_line.hxx
@@ -6750,7 +6756,7 @@ namespace mgmake::cli {
 	}
 }
 
-#endif
+#endif // MGMAKE_CLI_PARSE_HXX
 // ===== end include/mgmake/cli/parse.hxx =====
 
 // skipped duplicate include: include/mgmake/build/toolchain_registry.hxx
@@ -6772,7 +6778,7 @@ namespace mgmake::cli {
 	}
 }
 
-#endif
+#endif // MGMAKE_CLI_HELP_HXX
 // ===== end include/mgmake/cli/help.hxx =====
 
 // skipped duplicate include: include/mgmake/cli/parse_result.hxx
@@ -6973,7 +6979,7 @@ namespace mgmake::dag {
 	};
 }
 
-#endif
+#endif // MGMK_DAG_EMITTER_HXX
 // ===== end include/mgmake/dag/emitter.hxx =====
 
 
@@ -7012,7 +7018,7 @@ namespace mgmake::discovery {
 	};
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_BACKEND_REQUIREMENT_HXX
 // ===== end include/mgmake/discovery/backend_requirement.hxx =====
 
 
@@ -7096,7 +7102,7 @@ namespace mgmake::discovery {
 		}
 
 		return std::string{value};
-#endif
+#endif // defined(_WIN32) && defined(_MSC_VER)
 	}
 
 	[[nodiscard]] inline std::optional<std::filesystem::path> getenv_path(
@@ -7110,7 +7116,7 @@ namespace mgmake::discovery {
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_ENVIRONMENT_HXX
 // ===== end include/mgmake/discovery/environment.hxx =====
 
 
@@ -7124,7 +7130,7 @@ namespace mgmake::discovery {
 
 #ifdef MGMK_PLATFORM_POSIX
 	#include <unistd.h>
-#endif
+#endif // MGMK_PLATFORM_POSIX
 
 namespace mgmake::discovery {
 	[[nodiscard]] inline bool has_windows_drive_prefix(std::string_view text) noexcept {
@@ -7158,7 +7164,7 @@ namespace mgmake::discovery {
 		return true;
 #else
 		return ::access(path.c_str(), X_OK) == 0;
-#endif
+#endif // defined(_WIN32)
 	}
 
 	[[nodiscard]] inline std::vector<std::string> executable_suffixes() {
@@ -7166,7 +7172,7 @@ namespace mgmake::discovery {
 		return {".com", ".exe", ".bat", ".cmd", ""};
 #else
 		return {""};
-#endif
+#endif // defined(_WIN32)
 	}
 
 	[[nodiscard]] inline std::optional<std::filesystem::path> find_in_directory(
@@ -7210,7 +7216,7 @@ namespace mgmake::discovery {
 		constexpr char separator = ';';
 #else
 		constexpr char separator = ':';
-#endif
+#endif // defined(_WIN32)
 
 		std::string_view view{*path};
 		std::size_t start = 0;
@@ -7259,7 +7265,7 @@ namespace mgmake::discovery {
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_FILESYSTEM_HXX
 // ===== end include/mgmake/discovery/filesystem.hxx =====
 
 // skipped duplicate include: include/mgmake/discovery/resolved_tool.hxx
@@ -7459,7 +7465,7 @@ namespace mgmake::discovery {
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_CACHE_HXX
 // ===== end include/mgmake/discovery/cache.hxx =====
 
 // skipped duplicate include: include/mgmake/discovery/mode.hxx
@@ -7501,7 +7507,7 @@ namespace mgmake::discovery {
 	};
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_CONTEXT_HXX
 // ===== end include/mgmake/discovery/context.hxx =====
 
 // skipped duplicate include: include/mgmake/discovery/filesystem.hxx
@@ -7716,7 +7722,7 @@ namespace mgmake::discovery {
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_TOOL_NAMES_HXX
 // ===== end include/mgmake/discovery/tool_names.hxx =====
 
 
@@ -7783,7 +7789,7 @@ namespace mgmake::discovery {
 		bool m_has_tar_fetch = false;
 #ifdef MGMK_ENABLE_EXT_CMAKE
 		bool m_has_cmake_projects = false;
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 	};
 
 	inline void record_source_role(
@@ -7917,7 +7923,7 @@ namespace mgmake::discovery {
 				record_fetch_tools(usage, cmake_project.m_source.value());
 			}
 		}
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 		return usage;
 	}
@@ -8022,7 +8028,7 @@ namespace mgmake::discovery {
 				.m_needed_because = "the project configures external CMake projects"
 			});
 		}
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 		if (req.target_platform() == sys::platform::p_windows && tc.dialect() == build::toolchain::dialect::msvc) {
 			if (!tc.tool(tool_role::manifest_tool).empty()) {
@@ -8034,7 +8040,7 @@ namespace mgmake::discovery {
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_TOOL_REQUIREMENT_HXX
 // ===== end include/mgmake/discovery/tool_requirement.hxx =====
 
 
@@ -8276,7 +8282,7 @@ namespace mgmake::discovery {
 		dirs.emplace_back("/usr/bin");
 		dirs.emplace_back("/bin");
 		dirs.emplace_back("/opt/bin");
-#endif
+#endif // defined(_WIN32)
 
 		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::known_install_root, 120, "known install root", true, ctx.m_mode);
 	}
@@ -8334,7 +8340,7 @@ namespace mgmake::discovery {
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_PROVIDERS_HXX
 // ===== end include/mgmake/discovery/providers.hxx =====
 
 
@@ -8350,10 +8356,10 @@ namespace mgmake::discovery {
 			return "darwin-arm64";
 		#else
 			return "darwin-x86_64";
-		#endif
+		#endif // defined(__aarch64__)
 #else
 		return "linux-x86_64";
-#endif
+#endif // defined(_WIN32)
 	}
 
 	namespace android {
@@ -8455,7 +8461,7 @@ namespace mgmake::discovery {
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_ANDROID_NDK_HXX
 // ===== end include/mgmake/discovery/android/ndk.hxx =====
 
 
@@ -8563,7 +8569,7 @@ namespace mgmake::discovery {
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_DIAGNOSTIC_HXX
 // ===== end include/mgmake/discovery/diagnostic.hxx =====
 
 
@@ -8630,7 +8636,7 @@ namespace mgmake::discovery {
 		const int exit_code = std::system(shell_command.c_str());
 #else
 		const int exit_code = std::system(shell.c_str());
-#endif
+#endif // defined(MGMK_PLATFORM_WINDOWS)
 
 		std::ifstream in(output_path);
 		std::string text;
@@ -8782,7 +8788,7 @@ namespace mgmake::discovery {
 		if (auto probe = probe_version(candidate)) {
 			version = *probe;
 		}
-#endif
+#endif // !defined(_WIN32)
 
 		resolved_tool result{};
 		result.m_role = candidate.m_role;
@@ -8804,7 +8810,7 @@ namespace mgmake::discovery {
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_VALIDATE_HXX
 // ===== end include/mgmake/discovery/validate.hxx =====
 
 
@@ -8862,7 +8868,7 @@ namespace mgmake::discovery::windows {
 				}
 			}
 		}
-#endif
+#endif // defined(_WIN32)
 
 		return result;
 	}
@@ -8905,7 +8911,7 @@ namespace mgmake::discovery::windows {
 				result.emplace_back(line);
 			}
 		}
-#endif
+#endif // defined(_WIN32)
 
 		return result;
 	}
@@ -9021,7 +9027,7 @@ namespace mgmake::discovery {
 		}
 #else
 		(void)ctx; (void)req; (void)out;
-#endif
+#endif // defined(_WIN32)
 	}
 
 	inline void add_visual_studio_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
@@ -9031,7 +9037,7 @@ namespace mgmake::discovery {
 		}
 #else
 		(void)ctx; (void)req; (void)out;
-#endif
+#endif // defined(_WIN32)
 	}
 
 	inline void add_standalone_llvm_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
@@ -9043,11 +9049,11 @@ namespace mgmake::discovery {
 		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::standalone_llvm, 170, "standalone LLVM installation", true, ctx.m_mode);
 #else
 		(void)ctx; (void)req; (void)out;
-#endif
+#endif // defined(_WIN32)
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_WINDOWS_VISUAL_STUDIO_HXX
 // ===== end include/mgmake/discovery/windows/visual_studio.hxx =====
 
 
@@ -9082,13 +9088,13 @@ namespace mgmake::discovery {
 				}
 			}
 		}
-#endif
+#endif // defined(_WIN32)
 
 		return env;
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_ENVIRONMENT_PROVIDER_HXX
 // ===== end include/mgmake/discovery/environment_provider.hxx =====
 
 // skipped duplicate include: include/mgmake/discovery/providers.hxx
@@ -9407,7 +9413,7 @@ namespace mgmake::discovery {
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_RESOLVE_HXX
 // ===== end include/mgmake/discovery/resolve.hxx =====
 
 // skipped duplicate include: include/mgmake/sys/util.hxx
@@ -9591,7 +9597,7 @@ namespace mgmake::backend {
                     command_text = "cd /d ";
 #else
                     command_text = "cd ";
-#endif
+#endif // defined(_WIN32)
                     command_text += sys::shell_escape(action.m_working_directory.string());
                     command_text += " && ";
                     command_text += action.m_command.full_command();
@@ -9693,7 +9699,7 @@ namespace mgmake::backend {
     };
 }
 
-#endif
+#endif // MGMAKE_BACKEND_NINJA_HXX
 // ===== end include/mgmake/backend/ninja.hxx =====
 
 
@@ -9733,7 +9739,7 @@ namespace mgmake::backend {
 		!std::is_void_v<for_kind_t<Kind>>;
 }
 
-#endif
+#endif // MGMAKE_BACKEND_REGISTRY_HXX
 // ===== end include/mgmake/backend/registry.hxx =====
 
 
@@ -9788,7 +9794,7 @@ namespace mgmake::backend {
 		};
 }
 
-#endif
+#endif // MGMAKE_BACKEND_CAPABILITIES_HXX
 // ===== end include/mgmake/backend/capabilities.hxx =====
 
 
@@ -9976,7 +9982,7 @@ namespace mgmake::backend {
 	}
 }
 
-#endif
+#endif // MGMAKE_BACKEND_EXECUTE_HXX
 // ===== end include/mgmake/backend/execute.hxx =====
 
 // skipped duplicate include: include/mgmake/spec/executable.hxx
@@ -9989,7 +9995,7 @@ namespace mgmake::backend {
 
 // skipped duplicate include: include/mgmake/spec/executable.hxx
 
-#endif
+#endif // MGMK_SPEC_EXECUTABLE_IMPL_HXX
 // ===== end include/mgmake/spec/executable_impl.hxx =====
 
 // skipped duplicate include: include/mgmake/spec/library.hxx
@@ -10002,7 +10008,7 @@ namespace mgmake::backend {
 
 // skipped duplicate include: include/mgmake/spec/library.hxx
 
-#endif
+#endif // MGMK_SPEC_LIBRARY_IMPL_HXX
 // ===== end include/mgmake/spec/library_impl.hxx =====
 
 // skipped duplicate include: include/mgmake/spec/project.hxx
@@ -10048,7 +10054,7 @@ namespace mgmake::backend {
 #if defined(_WIN32)
 // skipped duplicate include: include/mgmake/sys/platform.hxx
 	#pragma comment(lib, "Advapi32.lib")
-#endif
+#endif // defined(_WIN32)
 
 namespace mgmake::discovery::windows {
 #if defined(_WIN32)
@@ -10098,7 +10104,7 @@ namespace mgmake::discovery::windows {
 
 		return result;
 	}
-#endif
+#endif // defined(_WIN32)
 }
 
 namespace mgmake::discovery {
@@ -10117,11 +10123,11 @@ namespace mgmake::discovery {
 		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::windows_registry, 130, "Windows registry and registered install roots", true, ctx.m_mode);
 #else
 		(void)ctx; (void)req; (void)out;
-#endif
+#endif // defined(_WIN32)
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_WINDOWS_REGISTRY_HXX
 // ===== end include/mgmake/discovery/windows/registry.hxx =====
 
 // skipped duplicate include: include/mgmake/discovery/windows/visual_studio.hxx
@@ -10196,7 +10202,7 @@ namespace mgmake::discovery {
 		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::windows_sdk, 160, "Windows SDK tool directory", true, ctx.m_mode);
 #else
 		(void)ctx; (void)req; (void)out;
-#endif
+#endif // defined(_WIN32)
 	}
 
 	inline void add_msys2_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
@@ -10211,7 +10217,7 @@ namespace mgmake::discovery {
 		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::msys2, 180, "MSYS2 toolchain root", true, ctx.m_mode);
 #else
 		(void)ctx; (void)req; (void)out;
-#endif
+#endif // defined(_WIN32)
 	}
 
 	inline void add_mingw_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
@@ -10223,7 +10229,7 @@ namespace mgmake::discovery {
 		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::mingw, 190, "MinGW root", true, ctx.m_mode);
 #else
 		(void)ctx; (void)req; (void)out;
-#endif
+#endif // defined(_WIN32)
 	}
 
 	inline void add_cygwin_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
@@ -10232,11 +10238,11 @@ namespace mgmake::discovery {
 		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::cygwin, 200, "Cygwin root", true, ctx.m_mode);
 #else
 		(void)ctx; (void)req; (void)out;
-#endif
+#endif // defined(_WIN32)
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_WINDOWS_WINDOWS_SDK_HXX
 // ===== end include/mgmake/discovery/windows/windows_sdk.hxx =====
 
 
@@ -10273,7 +10279,7 @@ namespace mgmake::discovery {
 		}
 #else
 		(void)ctx; (void)req; (void)out;
-#endif
+#endif // defined(__APPLE__)
 	}
 
 	inline void add_homebrew_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
@@ -10287,7 +10293,7 @@ namespace mgmake::discovery {
 		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::homebrew, 220, "Homebrew tool root", true, ctx.m_mode);
 #else
 		(void)ctx; (void)req; (void)out;
-#endif
+#endif // defined(__APPLE__)
 	}
 
 	inline void add_macports_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
@@ -10295,11 +10301,11 @@ namespace mgmake::discovery {
 		add_candidates_from_dirs(out, ctx.request(), req, {"/opt/local/bin"}, tool_provider::macports, 230, "MacPorts tool root", true, ctx.m_mode);
 #else
 		(void)ctx; (void)req; (void)out;
-#endif
+#endif // defined(__APPLE__)
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_MACOS_XCRUN_HXX
 // ===== end include/mgmake/discovery/macos/xcrun.hxx =====
 
 
@@ -10318,7 +10324,7 @@ namespace mgmake::discovery {
 		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::unix_system, 240, "Unix system tool root", true, ctx.m_mode);
 #else
 		(void)ctx; (void)req; (void)out;
-#endif
+#endif // defined(MGMK_PLATFORM_POSIX)
 	}
 
 	inline void add_distro_llvm_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
@@ -10332,7 +10338,7 @@ namespace mgmake::discovery {
 		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::distro_llvm, 250, "distro LLVM root", true, ctx.m_mode);
 #else
 		(void)ctx; (void)req; (void)out;
-#endif
+#endif // defined(MGMK_PLATFORM_POSIX)
 	}
 
 	inline void add_distro_gcc_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
@@ -10341,11 +10347,11 @@ namespace mgmake::discovery {
 		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::distro_gcc, 260, "distro GCC root", true, ctx.m_mode);
 #else
 		(void)ctx; (void)req; (void)out;
-#endif
+#endif // defined(MGMK_PLATFORM_POSIX)
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_UNIX_UNIX_TOOLS_HXX
 // ===== end include/mgmake/discovery/unix/unix_tools.hxx =====
 
 // skipped duplicate include: include/mgmake/discovery/android/ndk.hxx
@@ -10463,11 +10469,11 @@ namespace mgmake::discovery {
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_PRINT_TOOLS_HXX
 // ===== end include/mgmake/discovery/print_tools.hxx =====
 
 
-#endif
+#endif // MGMAKE_DISCOVERY_DISCOVERY_HXX
 // ===== end include/mgmake/discovery/discovery.hxx =====
 
 
@@ -10496,7 +10502,7 @@ namespace mgmake::lower {
 	};
 }
 
-#endif
+#endif // MGMK_LOWER_TARGET_HXX
 // ===== end include/mgmake/lower/target.hxx =====
 
 
@@ -10522,7 +10528,7 @@ namespace mgmake::lower {
 	};
 }
 
-#endif
+#endif // MGMK_LOWER_USAGE_HXX
 // ===== end include/mgmake/lower/usage.hxx =====
 
 // skipped duplicate include: include/mgmake/prep/fetched.hxx
@@ -10541,7 +10547,7 @@ namespace mgmake::lower {
 // skipped duplicate include: include/mgmake/ext/fetch.hxx
 #ifdef MGMK_ENABLE_EXT_CMAKE
 // skipped duplicate include: include/mgmake/ext/cmake.hxx
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 #include <map>
 #include <optional>
@@ -10586,7 +10592,7 @@ namespace mgmake::prep {
 		prep::fetched fetch_value(const ext::fetch& fetch);
 #ifdef MGMK_ENABLE_EXT_CMAKE
 		const prep::cmake_project& cmake(ext::cmake::id id);
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 	private:
 		prep::fetched git_fetch(
@@ -10606,18 +10612,18 @@ namespace mgmake::prep {
 
 #ifdef MGMK_ENABLE_EXT_CMAKE
 		prep::cmake_project cmake_value(const ext::cmake& cmake_project);
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 		std::vector<std::optional<prep::fetched>> m_fetches;
 #ifdef MGMK_ENABLE_EXT_CMAKE
 		std::vector<std::optional<prep::cmake_project>> m_cmake_projects;
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 		std::set<std::string> m_active_fetches;
 		std::map<std::string, prep::fetched> m_named_fetches;
 	};
 }
 
-#endif
+#endif // MGMK_PREP_CONTEXT_HXX
 // ===== end include/mgmake/prep/context.hxx =====
 
 
@@ -10634,7 +10640,7 @@ namespace mgmake::prep {
 // skipped duplicate include: include/mgmake/sys/command_line.hxx
 #ifdef MGMK_ENABLE_EXT_CMAKE
 // skipped duplicate include: include/mgmake/ext/cmake/file_api.hxx
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 #include <expected>
 #include <filesystem>
@@ -10754,13 +10760,13 @@ namespace mgmake::prep {
 				ext::cmake_file_api::load_reply_targets(cmake_project);
 			}
 		}
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 		return {};
 	}
 }
 
-#endif
+#endif // MGMK_PREP_EXECUTOR_HXX
 // ===== end include/mgmake/prep/executor.hxx =====
 
 
@@ -10777,7 +10783,7 @@ namespace mgmake::prep {
 #ifdef MGMK_ENABLE_EXT_CMAKE
 // skipped duplicate include: include/mgmake/ext/cmake/file_api.hxx
 // skipped duplicate include: include/mgmake/ext/cmake.hxx
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 // skipped duplicate include: include/mgmake/spec/project.hxx
 // skipped duplicate include: include/mgmake/sys/command_line.hxx
 // skipped duplicate include: include/mgmake/sys/file_command.hxx
@@ -10857,7 +10863,7 @@ namespace mgmake::prep {
 			" && printf %s " + sys::shell_escape(query_text) +
 			" > " + sys::shell_path(query_path)
 		);
-#endif
+#endif // defined(MGMK_PLATFORM_WINDOWS)
 	}
 
 	[[nodiscard]] inline std::filesystem::path cmake_configure_output(
@@ -10900,7 +10906,7 @@ namespace mgmake::prep {
 
 		return command;
 	}
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 	[[nodiscard]] inline std::filesystem::path archive_extension(ext::archive_format format) {
 		switch (format) {
@@ -11087,7 +11093,7 @@ namespace mgmake::prep {
 		, m_fetches(project.m_fetches.size())
 #ifdef MGMK_ENABLE_EXT_CMAKE
 		, m_cmake_projects(project.m_cmake_projects.size())
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 	{}
 
 	inline const prep::fetched& context::fetch(ext::fetch::id id) {
@@ -11203,7 +11209,7 @@ namespace mgmake::prep {
 		m_result.m_cmake_projects.insert_or_assign(cmake_project.m_name, result);
 		return result;
 	}
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 	inline prep::fetched context::git_fetch(
 		const ext::fetch& fetch,
@@ -11333,7 +11339,7 @@ namespace mgmake::prep {
 
 }
 
-#endif
+#endif // MGMK_PREP_CONTEXT_IMPL_HXX
 // ===== end include/mgmake/prep/context_impl.hxx =====
 
 
@@ -11368,7 +11374,7 @@ namespace mgmake::lower {
 		dag::target::id m_dag_target{};
 		dag::artifact::id m_ready_stamp{};
 	};
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 	struct context {
 		const build::request& m_req;
@@ -11406,7 +11412,7 @@ namespace mgmake::lower {
 			const ext::provider_ref& provider,
 			std::span<const dag::artifact::id> outputs
 		);
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 		lower::usage use_libraries(
 			const std::set<std::string>& libraries,
@@ -11446,14 +11452,14 @@ namespace mgmake::lower {
 			const spec::executable& exe,
 			lower::usage usage
 		);
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 		std::vector<std::optional<lower::target>> m_libraries;
 		std::set<spec::library::id> m_active_libraries;
 	};
 }
 
-#endif
+#endif // MGMK_LOWER_CONTEXT_HXX
 // ===== end include/mgmake/lower/context.hxx =====
 
 
@@ -11624,7 +11630,7 @@ namespace mgmake::lower {
 	}
 }
 
-#endif
+#endif // MGMK_LOWER_OBJECTS_HXX
 // ===== end include/mgmake/lower/objects.hxx =====
 
 
@@ -11779,7 +11785,7 @@ namespace mgmake::lower {
 		command.m_args.emplace_back(path.string());
 		return command;
 	}
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 	inline lower::usage context::use_libraries(
 		const std::set<std::string>& libraries,
@@ -11851,7 +11857,7 @@ namespace mgmake::lower {
 			m_active_libraries.erase(id);
 			return m_libraries.at(id).value();
 		}
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 		switch (lib.m_kind) {
 			case spec::library::kind::interface:
@@ -12115,7 +12121,7 @@ namespace mgmake::lower {
 			lower_provider_executable(exe, std::move(usage));
 			return;
 		}
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 		mgmkassert(
 			not exe.m_sources.empty(),
@@ -12335,10 +12341,10 @@ namespace mgmake::lower {
 
 		m_emit.target(dag_target);
 	}
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 }
 
-#endif
+#endif // MGMK_LOWER_CONTEXT_IMPL_HXX
 // ===== end include/mgmake/lower/context_impl.hxx =====
 
 
@@ -12367,7 +12373,7 @@ namespace mgmake::spec {
 		for (ext::cmake::id id = 0; id < m_cmake_projects.size(); ++id) {
 			ctx.cmake(id);
 		}
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 		return result;
 	}
@@ -12391,7 +12397,7 @@ namespace mgmake::spec {
 	}
 }
 
-#endif
+#endif // MGMK_SPEC_PROJECT_IMPL_HXX
 // ===== end include/mgmake/spec/project_impl.hxx =====
 
 
@@ -12440,7 +12446,7 @@ namespace mgmake::detail {
 	}
 }
 
-#endif
+#endif // MGMAKE_DETAIL_PROJECT_FACTORY_HXX
 // ===== end include/mgmake/detail/project_factory.hxx =====
 
 
@@ -12456,7 +12462,7 @@ namespace mgmake::detail {
 	inline constexpr int entry_exit_usage_error = 2;
 }
 
-#endif
+#endif // MGMAKE_ENTRY_EXIT_CODE_HXX
 // ===== end include/mgmake/entry/exit_code.hxx =====
 
 
@@ -12772,7 +12778,7 @@ namespace mgmake {
 	}
 }
 
-#endif
+#endif // MGMAKE_ENTRY_ENTRY_HXX
 // ===== end include/mgmake/entry/entry.hxx =====
 
 
@@ -12826,7 +12832,7 @@ int main(int argc, char** argv) {                                               
     return ::mgmk::entry(args, ProjectFactory, Toolchains);                      \
 }
 
-#endif
+#endif // defined(MGMK_PLATFORM_WINDOWS) && defined(MGMK_INCLUDED_WINDOWS)
 
 #define MGMK_DETAIL_ENTRY_SELECT(_0, _1, _2, NAME, ...) NAME
 
@@ -12841,7 +12847,7 @@ int main(int argc, char** argv) {                                               
 #define MGMAKE_BUILD_ENTRY(...) MGMK_ENTRY(__VA_ARGS__)
 #define MGMK_BUILD_ENTRY(...) MGMK_ENTRY(__VA_ARGS__)
 
-#endif
+#endif // MGMAKE_ENTRY_MACRO_HXX
 // ===== end include/mgmake/entry/macro.hxx =====
 
 // Include extensions last
@@ -12849,9 +12855,9 @@ int main(int argc, char** argv) {                                               
 // skipped duplicate include: include/mgmake/ext/fetch.hxx
 #ifdef MGMK_ENABLE_EXT_CMAKE
 // skipped duplicate include: include/mgmake/ext/cmake.hxx
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
-#endif
+#endif // MGMAKE_MGMAKE_HXX
 // ===== end include/mgmake/mgmake.hxx =====
 
 

@@ -103,4 +103,4 @@ namespace mgmake::discovery {
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_TOOL_FAMILY_HXX

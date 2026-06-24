@@ -95,4 +95,4 @@ namespace mgmake::dag {
     };
 }
 
-#endif
+#endif // MGMAKE_DAG_GRAPH_HXX

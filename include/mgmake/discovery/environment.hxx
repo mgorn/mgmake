@@ -38,7 +38,7 @@ namespace mgmake::discovery {
 		}
 
 		return std::string{value};
-#endif
+#endif // defined(_WIN32) && defined(_MSC_VER)
 	}
 
 	[[nodiscard]] inline std::optional<std::filesystem::path> getenv_path(
@@ -52,4 +52,4 @@ namespace mgmake::discovery {
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_ENVIRONMENT_HXX

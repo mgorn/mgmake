@@ -22,7 +22,7 @@ namespace mgmake::spec {
 		for (ext::cmake::id id = 0; id < m_cmake_projects.size(); ++id) {
 			ctx.cmake(id);
 		}
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 		return result;
 	}
@@ -46,4 +46,4 @@ namespace mgmake::spec {
 	}
 }
 
-#endif
+#endif // MGMK_SPEC_PROJECT_IMPL_HXX

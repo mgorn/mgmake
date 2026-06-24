@@ -32,4 +32,4 @@
 #include "resolve.hxx"
 #include "print_tools.hxx"
 
-#endif
+#endif // MGMAKE_DISCOVERY_DISCOVERY_HXX

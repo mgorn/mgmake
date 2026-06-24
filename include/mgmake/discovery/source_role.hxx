@@ -33,4 +33,4 @@ namespace mgmake::discovery {
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_SOURCE_ROLE_HXX

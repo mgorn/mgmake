@@ -309,4 +309,4 @@ namespace mgmake {
 	}
 }
 
-#endif
+#endif // MGMAKE_ENTRY_ENTRY_HXX

@@ -136,4 +136,4 @@ namespace mgmake::ext {
 	};
 }
 
-#endif
+#endif // MGMAKE_EXT_FETCH_HXX

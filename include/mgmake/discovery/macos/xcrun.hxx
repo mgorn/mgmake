@@ -30,7 +30,7 @@ namespace mgmake::discovery {
 		}
 #else
 		(void)ctx; (void)req; (void)out;
-#endif
+#endif // defined(__APPLE__)
 	}
 
 	inline void add_homebrew_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
@@ -44,7 +44,7 @@ namespace mgmake::discovery {
 		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::homebrew, 220, "Homebrew tool root", true, ctx.m_mode);
 #else
 		(void)ctx; (void)req; (void)out;
-#endif
+#endif // defined(__APPLE__)
 	}
 
 	inline void add_macports_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
@@ -52,8 +52,8 @@ namespace mgmake::discovery {
 		add_candidates_from_dirs(out, ctx.request(), req, {"/opt/local/bin"}, tool_provider::macports, 230, "MacPorts tool root", true, ctx.m_mode);
 #else
 		(void)ctx; (void)req; (void)out;
-#endif
+#endif // defined(__APPLE__)
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_MACOS_XCRUN_HXX

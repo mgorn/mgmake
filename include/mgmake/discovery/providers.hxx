@@ -246,7 +246,7 @@ namespace mgmake::discovery {
 		dirs.emplace_back("/usr/bin");
 		dirs.emplace_back("/bin");
 		dirs.emplace_back("/opt/bin");
-#endif
+#endif // defined(_WIN32)
 
 		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::known_install_root, 120, "known install root", true, ctx.m_mode);
 	}
@@ -304,4 +304,4 @@ namespace mgmake::discovery {
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_PROVIDERS_HXX

@@ -34,7 +34,7 @@ namespace mgmake::build {
             return dialect::msvc;
 #else
             return dialect::gcc;
-#endif
+#endif // MGMK_PLATFORM_WINDOWS
         }();
         target_mode m_target_mode = target_mode::implicit;
 
@@ -473,4 +473,4 @@ namespace mgmake::build {
         .discovery_mode(discovery::mode::family_fallback);
 }
 
-#endif
+#endif // MGMAKE_BUILD_TOOLCHAIN_HXX

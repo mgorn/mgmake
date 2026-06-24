@@ -99,4 +99,4 @@ namespace mgmake::discovery {
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_TOOL_ROLE_HXX

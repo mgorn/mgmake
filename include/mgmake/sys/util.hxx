@@ -107,7 +107,7 @@ namespace mgmake::sys {
 		result += '\'';
 		return result;
 	}
-#endif
+#endif // MGMK_PLATFORM_WINDOWS
 }
 
-#endif
+#endif // MGMAKE_SYS_UTIL_HXX

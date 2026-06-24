@@ -17,7 +17,7 @@ namespace mgmake::build {
 		std::println("rmdir /s /q {}", sys::shell_escape(req.build_dir().string()));
 #else
 		std::println("rm -rf {}", sys::shell_escape(req.build_dir().string()));
-#endif
+#endif // defined(MGMK_PLATFORM_WINDOWS)
 	}
 
 	[[nodiscard]] inline std::expected<void, std::string> clean(
@@ -48,4 +48,4 @@ namespace mgmake::build {
 	}
 }
 
-#endif
+#endif // MGMAKE_BUILD_CLEAN_HXX

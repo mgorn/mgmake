@@ -12,7 +12,7 @@ namespace mgmake::discovery {
 		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::unix_system, 240, "Unix system tool root", true, ctx.m_mode);
 #else
 		(void)ctx; (void)req; (void)out;
-#endif
+#endif // defined(MGMK_PLATFORM_POSIX)
 	}
 
 	inline void add_distro_llvm_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
@@ -26,7 +26,7 @@ namespace mgmake::discovery {
 		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::distro_llvm, 250, "distro LLVM root", true, ctx.m_mode);
 #else
 		(void)ctx; (void)req; (void)out;
-#endif
+#endif // defined(MGMK_PLATFORM_POSIX)
 	}
 
 	inline void add_distro_gcc_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
@@ -35,8 +35,8 @@ namespace mgmake::discovery {
 		add_candidates_from_dirs(out, ctx.request(), req, dirs, tool_provider::distro_gcc, 260, "distro GCC root", true, ctx.m_mode);
 #else
 		(void)ctx; (void)req; (void)out;
-#endif
+#endif // defined(MGMK_PLATFORM_POSIX)
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_UNIX_UNIX_TOOLS_HXX

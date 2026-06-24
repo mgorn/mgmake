@@ -101,4 +101,4 @@ namespace mgmake::discovery {
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_DIAGNOSTIC_HXX

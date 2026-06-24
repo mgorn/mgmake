@@ -194,4 +194,4 @@ namespace mgmake::detail {
 	};
 }
 
-#endif
+#endif // MGMK_DETAIL_HASHES_HXX

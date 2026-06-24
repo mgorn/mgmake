@@ -28,4 +28,4 @@ namespace mgmake::dag {
     };
 }
 
-#endif
+#endif // MGMAKE_DAG_ACTION_HXX

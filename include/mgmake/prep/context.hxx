@@ -10,7 +10,7 @@
 #include "../ext/fetch.hxx"
 #ifdef MGMK_ENABLE_EXT_CMAKE
 #include "../ext/cmake.hxx"
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 #include <map>
 #include <optional>
@@ -55,7 +55,7 @@ namespace mgmake::prep {
 		prep::fetched fetch_value(const ext::fetch& fetch);
 #ifdef MGMK_ENABLE_EXT_CMAKE
 		const prep::cmake_project& cmake(ext::cmake::id id);
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 	private:
 		prep::fetched git_fetch(
@@ -75,15 +75,15 @@ namespace mgmake::prep {
 
 #ifdef MGMK_ENABLE_EXT_CMAKE
 		prep::cmake_project cmake_value(const ext::cmake& cmake_project);
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 		std::vector<std::optional<prep::fetched>> m_fetches;
 #ifdef MGMK_ENABLE_EXT_CMAKE
 		std::vector<std::optional<prep::cmake_project>> m_cmake_projects;
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 		std::set<std::string> m_active_fetches;
 		std::map<std::string, prep::fetched> m_named_fetches;
 	};
 }
 
-#endif
+#endif // MGMK_PREP_CONTEXT_HXX

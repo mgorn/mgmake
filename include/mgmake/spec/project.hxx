@@ -14,7 +14,7 @@
 #include "../ext/provider_ref.hxx"
 #ifdef MGMK_ENABLE_EXT_CMAKE
 #include "../ext/cmake.hxx"
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 #include <optional>
 #include <set>
@@ -30,7 +30,7 @@ namespace mgmake::spec {
 		std::vector<ext::fetch> m_fetches;
 #ifdef MGMK_ENABLE_EXT_CMAKE
 		std::vector<ext::cmake> m_cmake_projects;
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 		inline constexpr project(std::string_view name)
 			: m_name{name} {
@@ -46,7 +46,7 @@ namespace mgmake::spec {
 			}
 #ifdef MGMK_ENABLE_EXT_CMAKE
 			assert_known_provider_for(exe.m_provider, exe.m_name);
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 			assert_known_libraries_for(exe.m_linked_libraries, exe.m_name);
 
@@ -91,7 +91,7 @@ namespace mgmake::spec {
 
 #ifdef MGMK_ENABLE_EXT_CMAKE
 			assert_known_provider_for(lib.m_provider, lib.m_name);
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 			assert_known_libraries_for(lib.m_linked_libraries, lib.m_name);
 			assert_library_link_closure_is_acyclic(lib);
 
@@ -114,7 +114,7 @@ namespace mgmake::spec {
 			m_cmake_projects.emplace_back(cmake_project);
 			return *this;
 		}
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 		const std::optional<spec::library::id> find_library(std::string_view name) const {
             for (spec::library::id idx = 0; idx < m_libraries.size(); idx++) {
@@ -184,7 +184,7 @@ namespace mgmake::spec {
 
 			return &m_cmake_projects.at(idx);
 		}
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 		prep::result prepare(const build::request& req) const;
 
@@ -213,7 +213,7 @@ namespace mgmake::spec {
 					break;
 			}
 		}
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 		inline constexpr void assert_known_libraries_for(
 			const std::set<std::string>& libraries,
@@ -290,4 +290,4 @@ namespace mgmake::spec {
 	};
 }
 
-#endif
+#endif // MGMK_SPEC_PROJECT_HXX

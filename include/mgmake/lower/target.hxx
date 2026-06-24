@@ -22,4 +22,4 @@ namespace mgmake::lower {
 	};
 }
 
-#endif
+#endif // MGMK_LOWER_TARGET_HXX

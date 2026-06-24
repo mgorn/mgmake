@@ -13,16 +13,16 @@
 	#ifndef MGMK_NO_WINDOWS
 		#ifndef NOMINMAX
 			#define NOMINMAX
-		#endif
+		#endif // NOMINMAX
 
 		#ifndef WIN32_LEAN_AND_MEAN
 			#define WIN32_LEAN_AND_MEAN
-		#endif
+		#endif // WIN32_LEAN_AND_MEAN
 
 		#include <windows.h>
 		#pragma message("Windows is included here. This is probably the source of your pain.")
 		#define MGMK_INCLUDED_WINDOWS
-	#endif
+	#endif // MGMK_NO_WINDOWS
 
 	#define MGMK_PLATFORM_WINDOWS 1
 #elif defined(__EMSCRIPTEN__)
@@ -39,7 +39,7 @@
 	#define MGMK_PLATFORM_POSIX 1
 #else
 	#define MGMK_PLATFORM_UNSUPPORTED 1
-#endif
+#endif // defined(_WIN32)
 
 namespace mgmake::sys {
 	enum struct arch {
@@ -112,7 +112,7 @@ namespace mgmake::sys {
 		return arch::riscv32;
 #else
 		return arch::unknown;
-#endif
+#endif // defined(_M_X64) || defined(__x86_64__)
 	}();
 
 	static constexpr platform g_host_platform = [] constexpr {
@@ -128,7 +128,7 @@ namespace mgmake::sys {
 		return platform::p_other_posix;
 #else
 		return platform::p_unknown;
-#endif
+#endif // defined(MGMK_PLATFORM_WINDOWS)
 	}();
 
 	static constexpr abi g_host_abi = [] constexpr {
@@ -146,7 +146,7 @@ namespace mgmake::sys {
 		return abi::gnu;
 #else
 		return abi::unknown;
-#endif
+#endif // defined(_MSC_VER)
 	}();
 
 	inline const target g_host_target{
@@ -357,4 +357,4 @@ namespace mgmake::sys {
 	}
 }
 
-#endif
+#endif // MGMAKE_SYS_PLATFORM_HXX

@@ -88,4 +88,4 @@ namespace mgmake::dag {
     };
 }
 
-#endif
+#endif // MGMAKE_DAG_ARTIFACT_HXX

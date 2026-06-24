@@ -216,4 +216,4 @@ namespace mgmake::detail {
 
 }
 
-#endif
+#endif // MGMAKE_DETAIL_GRAPHVIZ_HXX

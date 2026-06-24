@@ -33,4 +33,4 @@ namespace mgmake::backend {
 		!std::is_void_v<for_kind_t<Kind>>;
 }
 
-#endif
+#endif // MGMAKE_BACKEND_REGISTRY_HXX

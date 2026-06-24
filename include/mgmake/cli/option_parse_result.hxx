@@ -33,4 +33,4 @@ namespace mgmake::cli {
 	};
 }
 
-#endif
+#endif // MGMAKE_CLI_OPTION_PARSE_RESULT_HXX

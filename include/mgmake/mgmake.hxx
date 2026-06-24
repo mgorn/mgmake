@@ -22,6 +22,12 @@
 #include "discovery/tool_environment.hxx"
 #include "discovery/resolved_toolchain.hxx"
 #include "discovery/source_role.hxx"
+// Include json extension here
+// Needs to be included earlier bc it's used in the cmake extension
+// but if it is included first by the cmake extension, the cmake ext.
+// will need to be enabled for json. But json is used for other features
+// as well, and as such should be available independently of the cmake ext.
+#include "ext/json.hxx"
 #include "build/toolchain.hxx"
 #include "build/toolchain_registry.hxx"
 #include "build/request.hxx"
@@ -77,6 +83,6 @@
 #include "ext/fetch.hxx"
 #ifdef MGMK_ENABLE_EXT_CMAKE
 #include "ext/cmake.hxx"
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
-#endif
+#endif // MGMAKE_MGMAKE_HXX

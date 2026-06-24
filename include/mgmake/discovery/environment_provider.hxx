@@ -41,10 +41,10 @@ namespace mgmake::discovery {
 				}
 			}
 		}
-#endif
+#endif // defined(_WIN32)
 
 		return env;
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_ENVIRONMENT_PROVIDER_HXX

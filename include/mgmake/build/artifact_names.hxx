@@ -99,4 +99,4 @@ namespace mgmake::build {
 	}
 }
 
-#endif
+#endif // MGMAKE_BUILD_ARTIFACT_NAMES_HXX

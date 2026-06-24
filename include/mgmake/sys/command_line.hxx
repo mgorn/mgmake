@@ -67,7 +67,7 @@ namespace mgmake::sys {
 			return std::system(shell_command.c_str());
 #else
 			return std::system(command.c_str());
-#endif
+#endif // defined(MGMK_PLATFORM_WINDOWS)
 		}
 	};
 
@@ -108,7 +108,7 @@ namespace mgmake::sys {
 
 		return result;
 	}
-#endif
+#endif // MGMK_INCLUDED_WINDOWS
 }
 
-#endif
+#endif // MGMAKE_SYS_COMMAND_LINE_HXX

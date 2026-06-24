@@ -148,7 +148,7 @@ namespace mgmake::lower {
 		command.m_args.emplace_back(path.string());
 		return command;
 	}
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 	inline lower::usage context::use_libraries(
 		const std::set<std::string>& libraries,
@@ -220,7 +220,7 @@ namespace mgmake::lower {
 			m_active_libraries.erase(id);
 			return m_libraries.at(id).value();
 		}
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 		switch (lib.m_kind) {
 			case spec::library::kind::interface:
@@ -484,7 +484,7 @@ namespace mgmake::lower {
 			lower_provider_executable(exe, std::move(usage));
 			return;
 		}
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 		mgmkassert(
 			not exe.m_sources.empty(),
@@ -704,7 +704,7 @@ namespace mgmake::lower {
 
 		m_emit.target(dag_target);
 	}
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 }
 
-#endif
+#endif // MGMK_LOWER_CONTEXT_IMPL_HXX

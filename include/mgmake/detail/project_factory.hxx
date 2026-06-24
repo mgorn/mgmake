@@ -42,4 +42,4 @@ namespace mgmake::detail {
 	}
 }
 
-#endif
+#endif // MGMAKE_DETAIL_PROJECT_FACTORY_HXX

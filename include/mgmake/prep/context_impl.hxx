@@ -10,7 +10,7 @@
 #ifdef MGMK_ENABLE_EXT_CMAKE
 #include "../ext/cmake/file_api.hxx"
 #include "../ext/cmake.hxx"
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 #include "../spec/project.hxx"
 #include "../sys/command_line.hxx"
 #include "../sys/file_command.hxx"
@@ -90,7 +90,7 @@ namespace mgmake::prep {
 			" && printf %s " + sys::shell_escape(query_text) +
 			" > " + sys::shell_path(query_path)
 		);
-#endif
+#endif // defined(MGMK_PLATFORM_WINDOWS)
 	}
 
 	[[nodiscard]] inline std::filesystem::path cmake_configure_output(
@@ -133,7 +133,7 @@ namespace mgmake::prep {
 
 		return command;
 	}
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 	[[nodiscard]] inline std::filesystem::path archive_extension(ext::archive_format format) {
 		switch (format) {
@@ -320,7 +320,7 @@ namespace mgmake::prep {
 		, m_fetches(project.m_fetches.size())
 #ifdef MGMK_ENABLE_EXT_CMAKE
 		, m_cmake_projects(project.m_cmake_projects.size())
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 	{}
 
 	inline const prep::fetched& context::fetch(ext::fetch::id id) {
@@ -436,7 +436,7 @@ namespace mgmake::prep {
 		m_result.m_cmake_projects.insert_or_assign(cmake_project.m_name, result);
 		return result;
 	}
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 	inline prep::fetched context::git_fetch(
 		const ext::fetch& fetch,
@@ -566,4 +566,4 @@ namespace mgmake::prep {
 
 }
 
-#endif
+#endif // MGMK_PREP_CONTEXT_IMPL_HXX

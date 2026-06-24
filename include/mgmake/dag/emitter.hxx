@@ -182,4 +182,4 @@ namespace mgmake::dag {
 	};
 }
 
-#endif
+#endif // MGMK_DAG_EMITTER_HXX

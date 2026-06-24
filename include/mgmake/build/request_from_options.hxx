@@ -46,4 +46,4 @@ namespace mgmake::build {
 	}
 }
 
-#endif
+#endif // MGMAKE_BUILD_REQUEST_FROM_OPTIONS_HXX

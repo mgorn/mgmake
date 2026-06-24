@@ -70,4 +70,4 @@ namespace mgmake::build {
 	};
 }
 
-#endif
+#endif // MGMAKE_BUILD_TOOLCHAIN_REGISTRY_HXX

@@ -14,4 +14,4 @@ namespace mgmake::discovery {
 	};
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_TOOL_BINDING_HXX

@@ -28,7 +28,7 @@ namespace mgmake::lower {
 		dag::target::id m_dag_target{};
 		dag::artifact::id m_ready_stamp{};
 	};
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 	struct context {
 		const build::request& m_req;
@@ -66,7 +66,7 @@ namespace mgmake::lower {
 			const ext::provider_ref& provider,
 			std::span<const dag::artifact::id> outputs
 		);
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 		lower::usage use_libraries(
 			const std::set<std::string>& libraries,
@@ -106,11 +106,11 @@ namespace mgmake::lower {
 			const spec::executable& exe,
 			lower::usage usage
 		);
-#endif
+#endif // MGMK_ENABLE_EXT_CMAKE
 
 		std::vector<std::optional<lower::target>> m_libraries;
 		std::set<spec::library::id> m_active_libraries;
 	};
 }
 
-#endif
+#endif // MGMK_LOWER_CONTEXT_HXX

@@ -5,4 +5,4 @@
 
 #include "executable.hxx"
 
-#endif
+#endif // MGMK_SPEC_EXECUTABLE_IMPL_HXX

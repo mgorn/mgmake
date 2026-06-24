@@ -48,4 +48,4 @@ namespace mgmake::backend {
 		};
 }
 
-#endif
+#endif // MGMAKE_BACKEND_CAPABILITIES_HXX

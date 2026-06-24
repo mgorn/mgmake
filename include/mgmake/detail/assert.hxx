@@ -57,8 +57,8 @@ template<typename message_t>
         #define MGMK_ENABLE_ASSERTS 1
     #else
         #define MGMK_ENABLE_ASSERTS 0
-    #endif
-#endif
+    #endif // NDEBUG
+#endif // MGMK_ENABLE_ASSERTS
 
 #if MGMK_ENABLE_ASSERTS
     #define mgmkassert(condition, message)                                      \
@@ -84,6 +84,6 @@ template<typename message_t>
         do {                                                                    \
             (void)sizeof(condition);                                            \
         } while (false)
-#endif
+#endif // MGMK_ENABLE_ASSERTS
 
-#endif
+#endif // MGMAKE_DETAIL_ASSERT_HXX

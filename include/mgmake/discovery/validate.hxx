@@ -40,7 +40,7 @@ namespace mgmake::discovery {
 		const int exit_code = std::system(shell_command.c_str());
 #else
 		const int exit_code = std::system(shell.c_str());
-#endif
+#endif // defined(MGMK_PLATFORM_WINDOWS)
 
 		std::ifstream in(output_path);
 		std::string text;
@@ -192,7 +192,7 @@ namespace mgmake::discovery {
 		if (auto probe = probe_version(candidate)) {
 			version = *probe;
 		}
-#endif
+#endif // !defined(_WIN32)
 
 		resolved_tool result{};
 		result.m_role = candidate.m_role;
@@ -214,4 +214,4 @@ namespace mgmake::discovery {
 	}
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_VALIDATE_HXX

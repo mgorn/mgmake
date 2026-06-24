@@ -19,4 +19,4 @@ namespace mgmake::lower {
 	};
 }
 
-#endif
+#endif // MGMK_LOWER_USAGE_HXX

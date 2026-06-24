@@ -73,4 +73,4 @@ namespace mgmake::cli {
 	}
 }
 
-#endif
+#endif // MGMAKE_CLI_BACKEND_HXX

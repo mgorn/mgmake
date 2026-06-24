@@ -15,4 +15,4 @@ namespace mgmake::discovery {
 	};
 }
 
-#endif
+#endif // MGMAKE_DISCOVERY_BACKEND_REQUIREMENT_HXX
