@@ -3971,7 +3971,132 @@ namespace mgmake::ext {
 #ifndef MGMK_EXT_CMAKE_FILE_API_HXX
 #define MGMK_EXT_CMAKE_FILE_API_HXX
 
-// skipped duplicate include: include/mgmake/ext/provider_ref.hxx
+
+// ===== begin include/mgmake/ext/json.hxx =====
+#pragma once
+
+#ifndef MGMK_EXT_JSON_HXX
+#define MGMK_EXT_JSON_HXX
+
+namespace mgmake::ext {
+	struct no_json_backend_t;
+	struct nlohmann_json_backend_t;
+
+	template <typename backend_t>
+	struct json_value;
+}
+
+
+// ===== begin include/mgmake/ext/json/common.hxx =====
+#pragma once
+
+#ifndef MGMK_EXT_JSON_COMMON_HXX
+#define MGMK_EXT_JSON_COMMON_HXX
+
+#include <cstdint>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <vector>
+
+namespace mgmake::ext {
+	struct no_json_backend_t {
+		struct native_type {};
+	};
+
+	template <typename backend_t>
+	struct json_value {
+		using backend_type = backend_t;
+		using native_type = typename backend_t::native_type;
+
+		native_type m_value{};
+
+		[[nodiscard]] static constexpr std::optional<json_value> parse(std::string_view) {
+			return std::nullopt;
+		}
+
+		[[nodiscard]] constexpr bool is_null() const noexcept {
+			return false;
+		}
+
+		[[nodiscard]] constexpr bool is_object() const noexcept {
+			return false;
+		}
+
+		[[nodiscard]] constexpr bool is_array() const noexcept {
+			return false;
+		}
+
+		[[nodiscard]] constexpr bool is_string() const noexcept {
+			return false;
+		}
+
+		[[nodiscard]] constexpr bool is_boolean() const noexcept {
+			return false;
+		}
+
+		[[nodiscard]] constexpr bool is_number() const noexcept {
+			return false;
+		}
+
+		[[nodiscard]] constexpr bool is_integer() const noexcept {
+			return false;
+		}
+
+		[[nodiscard]] constexpr bool has(std::string_view) const {
+			return false;
+		}
+
+		[[nodiscard]] constexpr std::optional<json_value> get(std::string_view) const {
+			return std::nullopt;
+		}
+
+		[[nodiscard]] constexpr std::optional<json_value> operator[](std::string_view key) const {
+			return get(key);
+		}
+
+		[[nodiscard]] constexpr std::vector<json_value> array(std::string_view) const {
+			return {};
+		}
+
+		[[nodiscard]] constexpr std::vector<json_value> items() const {
+			return {};
+		}
+
+		template <typename value_t>
+		[[nodiscard]] constexpr std::optional<value_t> as() const {
+			return std::nullopt;
+		}
+
+		[[nodiscard]] constexpr std::optional<std::string> as_string() const {
+			return as<std::string>();
+		}
+
+		[[nodiscard]] constexpr std::optional<bool> as_bool() const {
+			return as<bool>();
+		}
+
+		[[nodiscard]] constexpr std::optional<int> as_int() const {
+			return as<int>();
+		}
+
+		[[nodiscard]] constexpr std::optional<std::int64_t> as_i64() const {
+			return as<std::int64_t>();
+		}
+
+		[[nodiscard]] constexpr std::optional<std::uint64_t> as_u64() const {
+			return as<std::uint64_t>();
+		}
+
+		[[nodiscard]] constexpr std::optional<double> as_double() const {
+			return as<double>();
+		}
+	};
+}
+
+#endif
+// ===== end include/mgmake/ext/json/common.hxx =====
+
 
 #if defined(MGMK_JSON_BACKEND_HEADER)
 	#include MGMK_JSON_BACKEND_HEADER
@@ -3980,87 +4105,220 @@ namespace mgmake::ext {
 #endif
 
 #if defined(INCLUDE_NLOHMANN_JSON_HPP_) || defined(NLOHMANN_JSON_VERSION_MAJOR)
-	#define MGMK_EXT_CMAKE_HAS_JSON_BACKEND 1
 
-// ===== begin include/mgmake/ext/cmake/json_nlohmann.hxx =====
+// ===== begin include/mgmake/ext/json/nlohmann.hxx =====
 #pragma once
 
-#ifndef MGMK_EXT_CMAKE_JSON_NLOHMANN_HXX
-#define MGMK_EXT_CMAKE_JSON_NLOHMANN_HXX
+#ifndef MGMK_EXT_JSON_NLOHMANN_HXX
+#define MGMK_EXT_JSON_NLOHMANN_HXX
 
-#include <filesystem>
+// skipped duplicate include: include/mgmake/ext/json/common.hxx
+
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
-namespace mgmake::ext::cmake_json_nlohmann {
-	using json = nlohmann::json;
+namespace mgmake::ext {
+	struct nlohmann_json_backend_t {
+		using native_type = nlohmann::json;
+	};
 
-	[[nodiscard]] inline std::optional<json> parse(std::string_view text) {
-		try {
-			return json::parse(text.begin(), text.end());
-		} catch (...) {
-			return std::nullopt;
+	template <>
+	struct json_value<nlohmann_json_backend_t> {
+		using backend_type = nlohmann_json_backend_t;
+		using native_type = nlohmann_json_backend_t::native_type;
+
+		native_type m_value{};
+
+		json_value() = default;
+
+		explicit json_value(native_type value)
+			: m_value{std::move(value)} {}
+
+		[[nodiscard]] static std::optional<json_value> parse(std::string_view text) {
+			auto parsed = native_type::parse(
+				text.begin(),
+				text.end(),
+				nullptr,
+				false
+			);
+
+			if (parsed.is_discarded()) {
+				return std::nullopt;
+			}
+
+			return json_value{std::move(parsed)};
 		}
-	}
 
-	[[nodiscard]] inline std::optional<std::string> object_string(
-		const json& object,
-		std::string_view key
-	) {
-		if (!object.is_object()) {
-			return std::nullopt;
+		[[nodiscard]] bool is_null() const noexcept {
+			return m_value.is_null();
 		}
 
-		const auto found = object.find(std::string{key});
-
-		if (found == object.end() || !found->is_string()) {
-			return std::nullopt;
+		[[nodiscard]] bool is_object() const noexcept {
+			return m_value.is_object();
 		}
 
-		return found->get<std::string>();
-	}
+		[[nodiscard]] bool is_array() const noexcept {
+			return m_value.is_array();
+		}
 
-	[[nodiscard]] inline std::vector<std::filesystem::path> artifact_paths(
-		const json& object
-	) {
-		std::vector<std::filesystem::path> result;
+		[[nodiscard]] bool is_string() const noexcept {
+			return m_value.is_string();
+		}
 
-		if (!object.is_object()) {
+		[[nodiscard]] bool is_boolean() const noexcept {
+			return m_value.is_boolean();
+		}
+
+		[[nodiscard]] bool is_number() const noexcept {
+			return m_value.is_number();
+		}
+
+		[[nodiscard]] bool is_integer() const noexcept {
+			return m_value.is_number_integer();
+		}
+
+		[[nodiscard]] bool has(std::string_view key) const {
+			if (!m_value.is_object()) {
+				return false;
+			}
+
+			return m_value.contains(std::string{key});
+		}
+
+		[[nodiscard]] std::optional<json_value> get(std::string_view key) const {
+			if (!m_value.is_object()) {
+				return std::nullopt;
+			}
+
+			const auto found = m_value.find(std::string{key});
+
+			if (found == m_value.end()) {
+				return std::nullopt;
+			}
+
+			return json_value{*found};
+		}
+
+		[[nodiscard]] std::optional<json_value> operator[](std::string_view key) const {
+			return get(key);
+		}
+
+		[[nodiscard]] std::vector<json_value> array(std::string_view key) const {
+			std::vector<json_value> result;
+
+			const auto value = get(key);
+
+			if (!value.has_value()) {
+				return result;
+			}
+
+			if (!value->is_array()) {
+				return result;
+			}
+
+			return value->items();
+		}
+
+		[[nodiscard]] std::vector<json_value> items() const {
+			std::vector<json_value> result;
+
+			if (!m_value.is_array()) {
+				return result;
+			}
+
+			for (const auto& item : m_value) {
+				result.emplace_back(json_value{item});
+			}
+
 			return result;
 		}
 
-		const auto artifacts = object.find("artifacts");
-
-		if (artifacts == object.end() || !artifacts->is_array()) {
-			return result;
-		}
-
-		for (const auto& artifact : *artifacts) {
-			const auto path = object_string(artifact, "path");
-
-			if (path.has_value()) {
-				result.emplace_back(*path);
+		template <typename value_t>
+		[[nodiscard]] std::optional<value_t> as() const {
+			try {
+				return m_value.template get<value_t>();
+			} catch (...) {
+				return std::nullopt;
 			}
 		}
 
-		return result;
-	}
+		[[nodiscard]] std::optional<std::string> as_string() const {
+			if (!is_string()) {
+				return std::nullopt;
+			}
+
+			return as<std::string>();
+		}
+
+		[[nodiscard]] std::optional<bool> as_bool() const {
+			if (!is_boolean()) {
+				return std::nullopt;
+			}
+
+			return as<bool>();
+		}
+
+		[[nodiscard]] std::optional<int> as_int() const {
+			if (!is_integer()) {
+				return std::nullopt;
+			}
+
+			return as<int>();
+		}
+
+		[[nodiscard]] std::optional<std::int64_t> as_i64() const {
+			if (!is_integer()) {
+				return std::nullopt;
+			}
+
+			return as<std::int64_t>();
+		}
+
+		[[nodiscard]] std::optional<std::uint64_t> as_u64() const {
+			if (!m_value.is_number_unsigned()) {
+				return std::nullopt;
+			}
+
+			return as<std::uint64_t>();
+		}
+
+		[[nodiscard]] std::optional<double> as_double() const {
+			if (!is_number()) {
+				return std::nullopt;
+			}
+
+			return as<double>();
+		}
+	};
 }
 
 #endif
-// ===== end include/mgmake/ext/cmake/json_nlohmann.hxx =====
+// ===== end include/mgmake/ext/json/nlohmann.hxx =====
 
+
+namespace mgmake::ext {
+	using json_backend_t = nlohmann_json_backend_t;
+	using json = json_value<json_backend_t>;
+
+	inline constexpr bool has_json_backend = true;
+}
+#else
+namespace mgmake::ext {
+	using json_backend_t = no_json_backend_t;
+	using json = json_value<json_backend_t>;
+
+	inline constexpr bool has_json_backend = false;
+}
 #endif
 
-#ifndef MGMK_EXT_CMAKE_HAS_JSON_BACKEND
-	#if !defined(MGMK_JSON_BACKEND_HEADER) && !defined(__cxxmg_urlinclude)
-		#pragma message("mgmake: A JSON backend is needed for CMake File API support. Define MGMK_JSON_BACKEND_HEADER with your preferred JSON library header.")
-	#else
-		#pragma message("mgmake: The selected JSON backend is not recognized by mgmake CMake File API support.")
-	#endif
 #endif
+// ===== end include/mgmake/ext/json.hxx =====
+
+// skipped duplicate include: include/mgmake/ext/provider_ref.hxx
 
 #include <filesystem>
 #include <fstream>
@@ -4069,6 +4327,7 @@ namespace mgmake::ext::cmake_json_nlohmann {
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace mgmake::ext::cmake_file_api {
@@ -4127,34 +4386,54 @@ namespace mgmake::ext::cmake_file_api {
 		const std::filesystem::path& file,
 		const std::filesystem::path& build_dir
 	) {
-#ifndef MGMK_EXT_CMAKE_HAS_JSON_BACKEND
-		(void)file;
-		(void)build_dir;
-		return std::nullopt;
-#else
 		const auto content = read_file(file);
 
 		if (!content.has_value()) {
 			return std::nullopt;
 		}
 
-		const auto json = ext::cmake_json_nlohmann::parse(*content);
+		const auto parsed = ext::json::parse(*content);
 
-		if (!json.has_value()) {
+		if (!parsed.has_value()) {
 			return std::nullopt;
 		}
 
-		const auto name = ext::cmake_json_nlohmann::object_string(*json, "name");
-		const auto type = ext::cmake_json_nlohmann::object_string(*json, "type");
+		const auto name = parsed->get("name");
 
 		if (!name.has_value()) {
 			return std::nullopt;
 		}
 
+		const auto name_text = name->as_string();
+
+		if (!name_text.has_value()) {
+			return std::nullopt;
+		}
+
 		target result{};
-		result.m_name = *name;
-		result.m_type = type.value_or(std::string{});
-		result.m_artifacts = ext::cmake_json_nlohmann::artifact_paths(*json);
+		result.m_name = *name_text;
+
+		if (const auto type = parsed->get("type")) {
+			if (const auto type_text = type->as_string()) {
+				result.m_type = *type_text;
+			}
+		}
+
+		for (const auto& artifact : parsed->array("artifacts")) {
+			const auto path = artifact.get("path");
+
+			if (!path.has_value()) {
+				continue;
+			}
+
+			const auto path_text = path->as_string();
+
+			if (!path_text.has_value()) {
+				continue;
+			}
+
+			result.m_artifacts.emplace_back(*path_text);
+		}
 
 		for (auto& artifact : result.m_artifacts) {
 			if (artifact.is_relative()) {
@@ -4167,7 +4446,6 @@ namespace mgmake::ext::cmake_file_api {
 		}
 
 		return result;
-#endif
 	}
 
 	inline void load_reply_targets(project& project) {

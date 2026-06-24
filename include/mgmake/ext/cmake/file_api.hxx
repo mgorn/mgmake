@@ -3,26 +3,8 @@
 #ifndef MGMK_EXT_CMAKE_FILE_API_HXX
 #define MGMK_EXT_CMAKE_FILE_API_HXX
 
+#include "../json.hxx"
 #include "../provider_ref.hxx"
-
-#if defined(MGMK_JSON_BACKEND_HEADER)
-	#include MGMK_JSON_BACKEND_HEADER
-#elif defined(__cxxmg_urlinclude)
-	#urlinclude <https://raw.githubusercontent.com/nlohmann/json/refs/tags/v3.12.0/single_include/nlohmann/json.hpp>
-#endif
-
-#if defined(INCLUDE_NLOHMANN_JSON_HPP_) || defined(NLOHMANN_JSON_VERSION_MAJOR)
-	#define MGMK_EXT_CMAKE_HAS_JSON_BACKEND 1
-	#include "json_nlohmann.hxx"
-#endif
-
-#ifndef MGMK_EXT_CMAKE_HAS_JSON_BACKEND
-	#if !defined(MGMK_JSON_BACKEND_HEADER) && !defined(__cxxmg_urlinclude)
-		#pragma message("mgmake: A JSON backend is needed for CMake File API support. Define MGMK_JSON_BACKEND_HEADER with your preferred JSON library header.")
-	#else
-		#pragma message("mgmake: The selected JSON backend is not recognized by mgmake CMake File API support.")
-	#endif
-#endif
 
 #include <filesystem>
 #include <fstream>
@@ -31,6 +13,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace mgmake::ext::cmake_file_api {
@@ -89,34 +72,54 @@ namespace mgmake::ext::cmake_file_api {
 		const std::filesystem::path& file,
 		const std::filesystem::path& build_dir
 	) {
-#ifndef MGMK_EXT_CMAKE_HAS_JSON_BACKEND
-		(void)file;
-		(void)build_dir;
-		return std::nullopt;
-#else
 		const auto content = read_file(file);
 
 		if (!content.has_value()) {
 			return std::nullopt;
 		}
 
-		const auto json = ext::cmake_json_nlohmann::parse(*content);
+		const auto parsed = ext::json::parse(*content);
 
-		if (!json.has_value()) {
+		if (!parsed.has_value()) {
 			return std::nullopt;
 		}
 
-		const auto name = ext::cmake_json_nlohmann::object_string(*json, "name");
-		const auto type = ext::cmake_json_nlohmann::object_string(*json, "type");
+		const auto name = parsed->get("name");
 
 		if (!name.has_value()) {
 			return std::nullopt;
 		}
 
+		const auto name_text = name->as_string();
+
+		if (!name_text.has_value()) {
+			return std::nullopt;
+		}
+
 		target result{};
-		result.m_name = *name;
-		result.m_type = type.value_or(std::string{});
-		result.m_artifacts = ext::cmake_json_nlohmann::artifact_paths(*json);
+		result.m_name = *name_text;
+
+		if (const auto type = parsed->get("type")) {
+			if (const auto type_text = type->as_string()) {
+				result.m_type = *type_text;
+			}
+		}
+
+		for (const auto& artifact : parsed->array("artifacts")) {
+			const auto path = artifact.get("path");
+
+			if (!path.has_value()) {
+				continue;
+			}
+
+			const auto path_text = path->as_string();
+
+			if (!path_text.has_value()) {
+				continue;
+			}
+
+			result.m_artifacts.emplace_back(*path_text);
+		}
 
 		for (auto& artifact : result.m_artifacts) {
 			if (artifact.is_relative()) {
@@ -129,7 +132,6 @@ namespace mgmake::ext::cmake_file_api {
 		}
 
 		return result;
-#endif
 	}
 
 	inline void load_reply_targets(project& project) {
