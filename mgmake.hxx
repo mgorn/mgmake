@@ -22,6 +22,8 @@
 #include <cstddef>
 #include <string_view>
 
+// static_string carries compile-time strings through templates without relying on runtime storage.
+
 namespace mgmake::detail {
 	template <std::size_t N>
 	struct static_string {
@@ -87,6 +89,8 @@ namespace mgmake::detail {
 
 #include <type_traits>
 
+// Shared enum constraints and helpers keep enum-string and enum-flag utilities consistent.
+
 namespace mgmake::detail {
     template <typename enum_t>
     concept enum_type = std::is_enum_v<enum_t>;
@@ -130,6 +134,8 @@ namespace mgmake::detail {
 #include <bitset>
 #include <concepts>
 #include <cstddef>
+
+// enum_flag wraps bitmask-style enums while preserving type safety around underlying integer operations.
 
 namespace mgmake::detail {
     template <typename enum_t>
@@ -366,6 +372,8 @@ namespace mgmake::detail {
 #include <string>
 #include <string_view>
 #include <type_traits>
+
+// Enum string tables are constexpr lookup tables used by CLI parsing, diagnostics, and help text.
 
 namespace mgmake::detail {
     template <enum_type E>
@@ -660,6 +668,8 @@ namespace mgmake::detail {
 #include <source_location>
 #include <string_view>
 
+// mgmkassert is the lightweight invariant check used throughout spec construction and lowering.
+
 namespace mgmake::detail {
 
 [[noreturn]] inline void assertion_failed(
@@ -785,6 +795,8 @@ template<typename message_t>
 #else
 	#define MGMK_PLATFORM_UNSUPPORTED 1
 #endif // defined(_WIN32)
+
+// Platform enums model host and requested build targets and provide CLI names plus target-triple fragments.
 
 namespace mgmake::sys {
 	enum struct arch {
@@ -1110,6 +1122,8 @@ namespace mgmake::sys {
 #include <string>
 #include <string_view>
 
+// String conversion helpers isolate platform-specific UTF-8 and wide-string handling.
+
 namespace mgmake::detail {
 #ifdef MGMK_INCLUDED_WINDOWS
 	inline constexpr std::string wide_to_utf8(std::wstring_view text) {
@@ -1206,6 +1220,8 @@ namespace mgmake::detail {
 
 #include <string_view>
 
+// Discovery mode controls how aggressively mgmake falls back from exact tool names to family and PATH guesses.
+
 namespace mgmake::discovery {
 	enum struct mode {
 		automatic,
@@ -1266,6 +1282,8 @@ namespace mgmake::discovery {
 // skipped duplicate include: include/mgmake/detail/enum_string.hxx
 
 #include <string_view>
+
+// Tool family is a coarse grouping used when discovery falls back across compatible compiler ecosystems.
 
 namespace mgmake::discovery {
 	enum struct tool_family {
@@ -1377,6 +1395,8 @@ namespace mgmake::discovery {
 
 #include <string_view>
 
+// Tool provider identifies where a candidate came from and gives diagnostics human-readable provenance.
+
 namespace mgmake::discovery {
 	enum struct tool_provider {
 		explicit_path,
@@ -1476,6 +1496,8 @@ namespace mgmake::discovery {
 // skipped duplicate include: include/mgmake/detail/enum_string.hxx
 
 #include <string_view>
+
+// Tool roles describe what a tool does; concrete names are selected later by discovery providers.
 
 namespace mgmake::discovery {
 	enum struct tool_role {
@@ -1577,6 +1599,8 @@ namespace mgmake::discovery {
 #include <optional>
 #include <string>
 
+// A resolved tool is a validated executable plus the provider and reason that selected it.
+
 namespace mgmake::discovery {
 	struct tool_candidate {
 		tool_role m_role{};
@@ -1647,6 +1671,8 @@ namespace mgmake::discovery {
 
 #include <string>
 #include <string_view>
+
+// Shell escaping is platform-specific and is used whenever mgmake must embed paths inside shell commands.
 
 namespace mgmake::sys {
 #ifdef MGMK_PLATFORM_WINDOWS
@@ -1759,6 +1785,8 @@ namespace mgmake::sys {
 #include <string>
 #include <vector>
 
+// Tool environment stores command-prefix setup needed by toolchains such as Visual Studio developer shells.
+
 namespace mgmake::discovery {
 #if defined(_WIN32)
 	[[nodiscard]] inline std::string cmd_call_quote(std::string_view text) {
@@ -1853,6 +1881,8 @@ namespace mgmake::discovery {
 #include <vector>
 #include <initializer_list>
 
+// A resolved toolchain is the selected toolchain plus all resolved tools, prefix args, environment, and search diagnostics.
+
 namespace mgmake::discovery {
 	struct resolved_toolchain {
 		std::string m_name{};
@@ -1920,6 +1950,8 @@ namespace mgmake::discovery {
 
 #include <string>
 
+// Tool bindings connect a logical tool role to a concrete executable name candidate.
+
 namespace mgmake::discovery {
 	struct tool_binding {
 		tool_role m_role{};
@@ -1938,6 +1970,9 @@ namespace mgmake::discovery {
 #include <string>
 #include <string_view>
 #include <vector>
+
+// Toolchain is the user-facing description of compiler dialect, tool names, flags, roots, and target behavior.
+// Tool discovery may rewrite tool names to absolute resolved paths in build::request.
 
 namespace mgmake::build {
     struct toolchain {
@@ -2410,6 +2445,9 @@ namespace mgmake::build {
 #include <utility>
 #include <vector>
 
+// A build request is the normalized execution context created from CLI options and tool discovery.
+// Later phases read this instead of re-parsing user options.
+
 namespace mgmake::build {
     struct request {
         toolchain m_tc;
@@ -2543,6 +2581,8 @@ namespace mgmake::build {
 #include <system_error>
 #include <unordered_map>
 
+// Artifact hashes are stored in the build directory and used to detect changed inputs across invocations.
+
 namespace mgmake::detail {
 	struct hashes {
 		using hash_type = std::uint64_t;
@@ -2564,6 +2604,7 @@ namespace mgmake::detail {
 			return result;
 		}
 
+		// A missing cached hash means mgmake has not seen this artifact before.
 		[[nodiscard]] inline bool is_dirty(const file_type& file) const {
 			if (!exists(file)) {
 				return true;
@@ -2727,6 +2768,8 @@ namespace mgmake::detail {
 #include <system_error>
 #include <vector>
 
+// A DAG artifact is a node: source, discovered header, generated file, or phony target placeholder.
+
 namespace mgmake::dag {
     struct artifact {
         using id = std::vector<artifact>::size_type;
@@ -2844,6 +2887,8 @@ namespace mgmake::dag {
 
 #include <cstdint>
 
+// Dependency formats are flags because a compiler action may expose more than one dependency mechanism.
+
 namespace mgmake::dep {
 	enum struct format_bits : std::uint8_t {
 		gcc,
@@ -2879,6 +2924,8 @@ namespace mgmake::dep {
 
 #include <filesystem>
 
+// Describes one compiler-emitted dependency side file and the output target it belongs to.
+
 namespace mgmake::dep {
 	struct file {
 		format_flags m_format{};
@@ -2906,6 +2953,8 @@ namespace mgmake::dep {
 #include <string_view>
 #include <vector>
 
+// command_line stores argv-like tokens and is responsible for producing a shell-safe display/invocation string.
+
 namespace mgmake::sys {
 	struct command_run_options {
 		bool m_verbose = false;
@@ -2927,6 +2976,7 @@ namespace mgmake::sys {
 			return std::span<const std::string>(m_args).subspan(1);
 		}
 
+		// full_command() is used both for actual process invocation and for generated backend command text.
 		inline constexpr std::string full_command() const {
 			std::string result;
 
@@ -3014,6 +3064,8 @@ namespace mgmake::sys {
 #include <string>
 #include <vector>
 
+// A DAG action is an edge: it consumes input artifacts, produces output artifacts, and carries the command to run.
+
 namespace mgmake::dag {
     struct action {
         using id = std::vector<action>::size_type;
@@ -3054,6 +3106,8 @@ namespace mgmake::dag {
 #include <string>
 #include <vector>
 
+// A DAG target names a user-visible build goal and points at the artifacts/actions that satisfy it.
+
 namespace mgmake::dag {
     struct target {
         using id = std::vector<target>::size_type;
@@ -3080,6 +3134,8 @@ namespace mgmake::dag {
 #include <string_view>
 #include <utility>
 #include <vector>
+
+// The DAG stores artifacts, actions, and user-visible targets by stable vector indices.
 
 namespace mgmake::dag {
     struct graph {
@@ -3131,6 +3187,7 @@ namespace mgmake::dag {
 			return m_targets.at(id);
 		}
 
+		// check() records current hashes for existing files and reports whether any artifact changed.
 		[[nodiscard]] inline bool check(detail::hashes& hashes) const {
 			bool dirty = false;
 
@@ -3188,6 +3245,8 @@ namespace mgmake::dag {
 #include <ostream>
 #include <string>
 #include <string_view>
+
+// Graphviz output is a diagnostic view of the DAG, not an execution backend.
 
 namespace mgmake::detail {
     namespace graphviz_detail {
@@ -3425,6 +3484,8 @@ namespace mgmake::detail {
 #include <filesystem>
 #include <string>
 
+// File commands are represented as command_line objects so prep/clean actions can share dry-run and verbose behavior.
+
 namespace mgmake::sys {
 	[[nodiscard]] inline command_line shell_command(std::string command) {
 #if defined(MGMK_PLATFORM_WINDOWS)
@@ -3541,6 +3602,8 @@ namespace mgmake::sys {
 
 #include <filesystem>
 
+// Source role detection maps file extensions to the tool role that should compile them.
+
 namespace mgmake::discovery {
 	[[nodiscard]] inline tool_role source_tool_role(
 		const std::filesystem::path& source
@@ -3582,6 +3645,8 @@ namespace mgmake::discovery {
 #ifndef MGMK_EXT_JSON_HXX
 #define MGMK_EXT_JSON_HXX
 
+// JSON support is optional; this header selects a backend when one is available and exposes a stable json alias.
+
 namespace mgmake::ext {
 	struct no_json_backend_t;
 	struct nlohmann_json_backend_t;
@@ -3602,6 +3667,8 @@ namespace mgmake::ext {
 #include <string>
 #include <string_view>
 #include <vector>
+
+// Common JSON wrappers define the backend-independent shape used by extension parsers.
 
 namespace mgmake::ext {
 	struct no_json_backend_t {
@@ -3724,6 +3791,8 @@ namespace mgmake::ext {
 #include <string_view>
 #include <utility>
 #include <vector>
+
+// nlohmann_json_backend_t adapts nlohmann::json to the backend-independent json_value API.
 
 namespace mgmake::ext {
 	struct nlohmann_json_backend_t {
@@ -3942,6 +4011,8 @@ namespace mgmake::ext {
 #include <string_view>
 #include <utility>
 #include <vector>
+
+// Parsers intentionally target compiler-generated dependency files, not general Makefiles or arbitrary JSON.
 
 namespace mgmake::dep {
 	namespace detail {
@@ -4162,6 +4233,8 @@ namespace mgmake::dep {
 #include <utility>
 #include <vector>
 
+// The dependency database is populated from depfiles from previous builds and feeds discovered headers back into the next DAG.
+
 namespace mgmake::dep {
 	struct database {
 		std::set<std::filesystem::path> m_consumed;
@@ -4171,6 +4244,7 @@ namespace mgmake::dep {
 			std::vector<std::filesystem::path>
 		> m_dependencies_by_target;
 
+		// Missing depfiles are normal on the first build, so consume() quietly treats them as no data yet.
 		void consume(const dep::file& depfile) {
 			if (depfile.m_path.empty()) {
 				return;
@@ -4251,6 +4325,8 @@ namespace mgmake::dep {
 #include <string_view>
 #include <utility>
 #include <vector>
+
+// A registry is a small constexpr list of named toolchains used by CLI selection and help output.
 
 namespace mgmake::build {
 	struct toolchain_registry {
@@ -4342,6 +4418,8 @@ namespace mgmake::build {
 #include <optional>
 #include <string_view>
 #include <utility>
+
+// Action names form the public command verbs accepted by the entry point.
 
 namespace mgmake::cli {
 	enum struct action_kind {
@@ -4484,6 +4562,8 @@ namespace mgmake::cli {
 #include <optional>
 #include <string_view>
 
+// Backend names are parsed from CLI text and later mapped to concrete backend types in backend/registry.hxx.
+
 namespace mgmake::cli {
 	enum struct backend_kind {
 		automatic,
@@ -4557,6 +4637,8 @@ namespace mgmake::cli {
 
 #include <string>
 #include <vector>
+
+// cli::options is the raw parsed user intent; build::request is the normalized form used by build phases.
 
 namespace mgmake::cli {
 	struct options {
@@ -4645,6 +4727,8 @@ namespace mgmake::cli {
 #include <format>
 #include <string>
 
+// Converts parsed CLI options into a build request while keeping toolchain selection errors near the CLI boundary.
+
 namespace mgmake::build {
 	template <toolchain_registry_like Toolchains>
 	[[nodiscard]] inline std::expected<request, std::string> request_from_options(
@@ -4693,6 +4777,8 @@ namespace mgmake::build {
 // skipped duplicate include: include/mgmake/sys/platform.hxx
 
 #include <string_view>
+
+// Centralizes platform-specific output names so lowering does not duplicate extension and prefix rules.
 
 namespace mgmake::build {
 	using executable_extensions = detail::enum_table<
@@ -4803,6 +4889,8 @@ namespace mgmake::build {
 
 #include <string>
 
+// Target flags are emitted only when the selected toolchain wants mgmake to pass an explicit target triple.
+
 namespace mgmake::build {
 	inline void append_target_args(
 		sys::command_line& command,
@@ -4853,6 +4941,8 @@ namespace mgmake::build {
 #include <print>
 #include <filesystem>
 #include <string>
+
+// Clean is intentionally handled before project construction; it only needs the resolved build directory.
 
 namespace mgmake::build {
 	inline void print_clean_command(const build::request& req) {
@@ -4934,6 +5024,8 @@ namespace mgmake::build {
 
 #include <filesystem>
 
+// A fetched source records the DAG target, readiness stamp, and local source directory for an external input.
+
 namespace mgmake::prep {
 	struct fetched {
 		dag::target::id m_target{};
@@ -4955,6 +5047,8 @@ namespace mgmake::prep {
 
 #include <filesystem>
 #include <string>
+
+// A provider ref connects a mgmake target to an external project target and the root where its outputs should be read.
 
 namespace mgmake::ext {
 	enum struct provider_kind {
@@ -5003,6 +5097,8 @@ namespace mgmake::ext {
 #include <string_view>
 #include <utility>
 #include <vector>
+
+// CMake File API helpers request and parse codemodel replies so mgmake can find external target artifacts.
 
 namespace mgmake::ext::cmake_file_api {
 	struct target {
@@ -5056,6 +5152,7 @@ namespace mgmake::ext::cmake_file_api {
 		};
 	}
 
+	// Only the codemodel fields needed for provider artifact lookup are materialized.
 	[[nodiscard]] inline std::optional<target> parse_target_file(
 		const std::filesystem::path& file,
 		const std::filesystem::path& build_dir
@@ -5161,6 +5258,8 @@ namespace mgmake::ext::cmake_file_api {
 #include <string>
 #include <string_view>
 
+// Prep result keeps the preparation DAG and lookup tables consumed by the lower phase.
+
 namespace mgmake::prep {
 #ifdef MGMK_ENABLE_EXT_CMAKE
 	using cmake_target = ext::cmake_file_api::target;
@@ -5216,6 +5315,8 @@ namespace mgmake::prep {
 #include <set>
 #include <string>
 #include <string_view>
+
+// Base target uses CRTP so executable and library share fluent source/include/link helpers.
 
 namespace mgmake::spec {
 	template<typename target_t>
@@ -5301,6 +5402,8 @@ namespace mgmake::spec {
 #include <string_view>
 #include <vector>
 
+// Executable specs describe user targets before validation, preparation, and DAG lowering.
+
 namespace mgmake::spec {
 	struct executable : public target<executable> {
 		using id = std::vector<executable>::size_type;
@@ -5357,6 +5460,8 @@ namespace mgmake::spec {
 #include <string>
 #include <string_view>
 #include <vector>
+
+// Library specs may be interface, static, shared, or provider-backed, and propagate usage to dependents.
 
 namespace mgmake::spec {
 	struct project;
@@ -5457,6 +5562,8 @@ namespace mgmake::spec {
 #include <string_view>
 #include <variant>
 #include <vector>
+
+// Fetch specs describe how external source trees are acquired before lowering provider-backed targets.
 
 namespace mgmake::ext {
 	enum struct archive_format {
@@ -5606,6 +5713,8 @@ namespace mgmake::ext {
 #include <utility>
 #include <vector>
 
+// The CMake extension describes an external project and exposes provider-backed mgmake targets for its outputs.
+
 namespace mgmake::ext {
 	struct cmake {
 		using id = std::vector<cmake>::size_type;
@@ -5712,6 +5821,8 @@ namespace mgmake::ext {
 #include <string_view>
 #include <vector>
 
+// Project owns the validated spec graph: executables, libraries, fetches, and optional external providers.
+
 namespace mgmake::spec {
 	struct project {
 		std::string m_name;
@@ -5727,6 +5838,7 @@ namespace mgmake::spec {
 			mgmkassert(not m_name.empty(), "mgmake spec: project has no name");
 		}
 
+		// Validation stays close to the mutation that adds user-declared targets to the project.
 		inline project& add_target(const spec::executable& exe) {
 			mgmkassert(not exe.m_name.empty(), "mgmake spec: executable target has no name");
             mgmkassert(not find_library(exe.m_name).has_value(), "mgmake spec: target name conflict '" + exe.m_name + "'");
@@ -5932,6 +6044,7 @@ namespace mgmake::spec {
 			return false;
 		}
 
+		// The active stack catches cycles before lowering recursively walks library links.
 		inline constexpr void assert_library_link_closure_is_acyclic(
 			std::string_view library_name,
 			const std::set<std::string>& linked_libraries,
@@ -5990,6 +6103,8 @@ namespace mgmake::spec {
 #include <filesystem>
 #include <string>
 #include <string_view>
+
+// The run action first chooses one executable target to build, then invokes the produced artifact.
 
 namespace mgmake::build {
 	[[nodiscard]] inline std::expected<std::string, std::string> resolve_run_target_name(
@@ -6133,6 +6248,8 @@ namespace mgmake::build {
 #include <string>
 #include <utility>
 
+// A single-option parse result reports how many argv entries were consumed and whether parsing failed.
+
 namespace mgmake::cli {
 	struct option_parse_result {
 		bool m_matched = false;
@@ -6182,6 +6299,8 @@ namespace mgmake::cli {
 #include <charconv>
 #include <string_view>
 
+// Small CLI helpers stay separate so parsers can share spelling and prefix checks.
+
 namespace mgmake::cli {
 	[[nodiscard]] inline constexpr bool parse_positive_int(std::string_view text, int& out) {
 		if (text.empty()) {
@@ -6216,6 +6335,8 @@ namespace mgmake::cli {
 #include <format>
 #include <string>
 #include <string_view>
+
+// Value parsers convert one option argument string into a typed destination value.
 
 namespace mgmake::cli {
 	template <typename T>
@@ -6265,6 +6386,8 @@ namespace mgmake::cli {
 #include <string>
 #include <string_view>
 #include <utility>
+
+// Adapts detail::enum_string tables to the generic CLI value parser interface.
 
 namespace mgmake::cli {
 	template <typename ParseTable, typename ChoiceTable = ParseTable>
@@ -6396,6 +6519,9 @@ namespace mgmake::cli {
 #include <type_traits>
 #include <utility>
 #include <vector>
+
+// Option builder describes one command-line option and the target field or callback it writes.
+// The parser stores these lightweight descriptors instead of hard-coding every option branch.
 
 namespace mgmake::cli {
 	template <detail::static_string... Values>
@@ -6855,6 +6981,8 @@ namespace mgmake::cli {
 #include <string>
 #include <utility>
 
+// The parser returns either fully parsed options or a user-facing error string.
+
 namespace mgmake::cli {
 	struct parse_result {
 		bool m_ok = false;
@@ -6896,6 +7024,8 @@ namespace mgmake::cli {
 #include <string>
 #include <string_view>
 #include <utility>
+
+// The option parser walks argv once, dispatching known options to option_builder descriptors.
 
 namespace mgmake::cli::detail {
 	template <typename Option>
@@ -7128,6 +7258,8 @@ namespace mgmake::cli {
 // ===== end include/mgmake/cli/option_parser.hxx =====
 
 // skipped duplicate include: include/mgmake/sys/command_line.hxx
+
+// Top-level CLI parsing wires action aliases, options, passthrough handling, and positional targets together.
 
 namespace mgmake::cli {
 	inline void apply_help(options& opts) {
@@ -7433,6 +7565,8 @@ namespace mgmake::cli {
 #include <print>
 #include <string_view>
 
+// Help output is generated from the same parser definitions used by cli::parse.
+
 namespace mgmake::cli {
 	template <build::toolchain_registry_like Toolchains>
 	inline void print_help(
@@ -7481,6 +7615,8 @@ namespace mgmake::cli {
 #include <string>
 #include <string_view>
 #include <vector>
+
+// Emitter is the mutation API for DAG construction; lowering code uses it instead of editing vectors directly.
 
 namespace mgmake::dag {
 	struct emitter {
@@ -7706,6 +7842,8 @@ namespace mgmake::dag {
 
 #include <string>
 
+// Backend tool requirements describe tools needed by a backend itself, such as ninja.
+
 namespace mgmake::discovery {
 	struct backend_tool_requirement {
 		tool_role m_role{};
@@ -7769,6 +7907,8 @@ namespace mgmake::discovery {
 #include <string>
 #include <string_view>
 
+// Environment helpers read host environment variables without spreading getenv calls through providers.
+
 namespace mgmake::discovery {
 	[[nodiscard]] inline std::optional<std::string> getenv_string(std::string_view name) {
 		const std::string key{name};
@@ -7827,6 +7967,8 @@ namespace mgmake::discovery {
 #ifdef MGMK_PLATFORM_POSIX
 	#include <unistd.h>
 #endif // MGMK_PLATFORM_POSIX
+
+// Filesystem helpers normalize common provider checks such as PATH lookup and explicit path detection.
 
 namespace mgmake::discovery {
 	[[nodiscard]] inline bool has_windows_drive_prefix(std::string_view text) noexcept {
@@ -7973,6 +8115,8 @@ namespace mgmake::discovery {
 #include <string_view>
 #include <utility>
 #include <vector>
+
+// The discovery cache records validated tools per host, target, toolchain, and role to avoid repeated searches.
 
 namespace mgmake::discovery {
 	struct cache_entry {
@@ -8171,6 +8315,8 @@ namespace mgmake::discovery {
 #include <string>
 #include <vector>
 
+// Discovery context carries shared inputs, cache state, and diagnostics while resolving one toolchain.
+
 namespace mgmake::spec { struct project; }
 
 namespace mgmake::discovery {
@@ -8224,6 +8370,8 @@ namespace mgmake::discovery {
 #include <string>
 #include <string_view>
 #include <vector>
+
+// Tool-name helpers generate exact, family, and target-prefixed executable candidates for each role.
 
 namespace mgmake::discovery {
 	using tool_environment_variables = detail::enum_table<
@@ -8441,6 +8589,8 @@ namespace mgmake::discovery {
 #include <string_view>
 #include <variant>
 #include <vector>
+
+// Tool requirements are derived from the project shape so discovery only searches for tools that may be needed.
 
 namespace mgmake::discovery {
 	enum struct requirement_strength {
@@ -8747,6 +8897,8 @@ namespace mgmake::discovery {
 #include <string>
 #include <vector>
 
+// Providers contribute ordered tool candidates from explicit paths, overrides, caches, roots, PATH, and platform-specific sources.
+
 namespace mgmake::discovery {
 	using candidate_list = std::vector<tool_candidate>;
 
@@ -9004,6 +9156,7 @@ namespace mgmake::discovery {
 	[[nodiscard]] inline candidate_list candidates_for(context& ctx, const tool_requirement& req) {
 		candidate_list out;
 
+		// Candidate order goes from most intentional to broadest fallback.
 		add_explicit_path_candidates(ctx, req, out);
 		add_cli_override_candidates(ctx, req, out);
 		add_environment_override_candidates(ctx, req, out);
@@ -9031,6 +9184,7 @@ namespace mgmake::discovery {
 		add_emscripten_sdk_candidates(ctx, req, out);
 		add_embedded_sdk_candidates(ctx, req, out);
 
+		// Keep final ordering deterministic even when platform providers add candidates conditionally.
 		std::ranges::sort(out, {}, &tool_candidate::m_priority);
 		return out;
 	}
@@ -9042,6 +9196,8 @@ namespace mgmake::discovery {
 
 #include <functional>
 #include <ranges>
+
+// Android NDK helpers translate mgmake target options into NDK host tags, ABI names, and sysroot flags.
 
 namespace mgmake::discovery {
 	[[nodiscard]] inline std::string android_host_tag() {
@@ -9172,6 +9328,8 @@ namespace mgmake::discovery {
 
 #include <string>
 #include <vector>
+
+// Discovery diagnostics collect searched candidates, rejection reasons, and suggested fixes for missing tools.
 
 namespace mgmake::discovery {
 	struct diagnostic {
@@ -9305,6 +9463,8 @@ namespace mgmake::discovery {
 #include <filesystem>
 #include <fstream>
 #include <string>
+
+// Candidate validation checks executable existence and gathers version/details before accepting a tool.
 
 namespace mgmake::discovery {
 	[[nodiscard]] inline bool is_ninja_name(std::string_view stem) noexcept {
@@ -9513,6 +9673,8 @@ namespace mgmake::discovery {
 #include <ranges>
 #include <sstream>
 #include <utility>
+
+// Visual Studio discovery finds compiler, linker, librarian, resource, and shell environment tools.
 
 namespace mgmake::discovery::windows {
 	struct visual_studio_instance {
@@ -9753,6 +9915,8 @@ namespace mgmake::discovery {
 // ===== end include/mgmake/discovery/windows/visual_studio.hxx =====
 
 
+// Environment discovery captures shell setup needed by resolved tools before backend commands run.
+
 namespace mgmake::discovery {
 	[[nodiscard]] inline tool_environment discover_tool_environment(
 		const cli::options&,
@@ -9800,6 +9964,8 @@ namespace mgmake::discovery {
 #include <expected>
 #include <string>
 
+// Resolution validates ordered candidates, records diagnostics, applies resolved tool paths to a build request, and writes the cache.
+
 namespace mgmake::discovery {
 	[[nodiscard]] inline discovery::mode effective_discovery_mode(
 		const cli::options& opts,
@@ -9822,6 +9988,7 @@ namespace mgmake::discovery {
 		diag.m_logical_name = req.m_logical_name;
 		diag.m_needed_because = req.m_needed_because;
 
+		// Providers return candidates in priority order; the first validated candidate wins.
 		for (const auto& candidate : candidates_for(ctx, req)) {
 			ctx.m_searched.push_back({
 				.m_candidate = candidate,
@@ -9990,6 +10157,7 @@ namespace mgmake::discovery {
 			ctx.m_cache = load_cache(req);
 		}
 
+		// Requirements are project-shaped, so unused tool roles do not need to resolve.
 		for (const auto& requirement : required_tools(opts, req, project)) {
 			auto tool = resolve_tool_requirement(ctx, requirement);
 
@@ -10036,6 +10204,7 @@ namespace mgmake::discovery {
 		resolved_tc.m_searched = std::move(ctx.m_searched);
 		resolved_tc.m_rejected = std::move(ctx.m_rejected);
 
+		// Environment probing needs resolved compiler paths, so probe through a temporary request copy.
 		build::request bridge = req;
 		apply_resolved_toolchain(bridge, resolved_tc);
 		resolved_tc.m_environment = discover_tool_environment(opts, bridge, project);
@@ -10123,6 +10292,8 @@ namespace mgmake::discovery {
 #include <string>
 #include <string_view>
 #include <utility>
+
+// The Ninja backend serializes mgmake actions into build.ninja rules, then invokes the resolved ninja executable.
 
 namespace mgmake::backend {
     namespace detail {
@@ -10269,6 +10440,7 @@ namespace mgmake::backend {
                 out << "build __mgmake_always: phony\n\n";
             }
 
+            // Each mgmake action becomes one Ninja rule/build pair so commands can stay action-local.
             for (auto i = 0; i < graph.m_actions.size(); ++i) {
                 const auto& action = graph.action(i);
 
@@ -10342,6 +10514,7 @@ namespace mgmake::backend {
                 out << "\n\n";
             }
 
+            // DAG targets become phony Ninja targets that collect outputs and target-level dependencies.
             for (const auto& target : graph.m_targets) {
                 out << "build " << detail::ninja_escape_build_text(target.m_name) << ": phony ";
                 if (not target.m_outputs.empty()) {
@@ -10396,6 +10569,7 @@ namespace mgmake::backend {
 				command.m_args.emplace_back("-v");
 			}
 
+			// CLI-selected targets are forwarded to Ninja; an empty list lets Ninja build defaults.
 			for (const auto& target : req.m_targets) {
 				command.m_args.emplace_back(target);
 			}
@@ -10429,6 +10603,9 @@ namespace mgmake::backend {
 // skipped duplicate include: include/mgmake/cli/backend.hxx
 
 #include <type_traits>
+
+// Maps a parsed backend enum to its concrete backend type at compile time.
+// A void mapping means the backend name is accepted by the CLI but not implemented yet.
 
 namespace mgmake::backend {
 	template <cli::backend_kind Kind>
@@ -10473,6 +10650,8 @@ namespace mgmake::backend {
 #include <concepts>
 #include <expected>
 #include <string>
+
+// Compile-time capability checks keep backend dispatch generic without forcing every backend to implement every action.
 
 namespace mgmake::backend {
 	template <typename Backend>
@@ -10532,6 +10711,9 @@ namespace mgmake::backend {
 #include <expected>
 #include <string>
 #include <type_traits>
+
+// Backend execution is the bridge from a lowered DAG to the selected backend action.
+// The entry point handles project setup, run, graph, clean, help, and version around this layer.
 
 namespace mgmake::backend {
 	template <cli::backend_kind Kind>
@@ -10711,6 +10893,8 @@ namespace mgmake::backend {
 
 // skipped duplicate include: include/mgmake/spec/executable.hxx
 
+// Kept as a stable include point for future executable implementation details.
+
 #endif // MGMK_SPEC_EXECUTABLE_IMPL_HXX
 // ===== end include/mgmake/spec/executable_impl.hxx =====
 
@@ -10723,6 +10907,8 @@ namespace mgmake::backend {
 #define MGMK_SPEC_LIBRARY_IMPL_HXX
 
 // skipped duplicate include: include/mgmake/spec/library.hxx
+
+// Kept as a stable include point for future library implementation details.
 
 #endif // MGMK_SPEC_LIBRARY_IMPL_HXX
 // ===== end include/mgmake/spec/library_impl.hxx =====
@@ -10771,6 +10957,8 @@ namespace mgmake::backend {
 // skipped duplicate include: include/mgmake/sys/platform.hxx
 	#pragma comment(lib, "Advapi32.lib")
 #endif // defined(_WIN32)
+
+// Windows registry helpers read install locations used by Visual Studio and SDK discovery.
 
 namespace mgmake::discovery::windows {
 #if defined(_WIN32)
@@ -10857,6 +11045,8 @@ namespace mgmake::discovery {
 // skipped duplicate include: include/mgmake/discovery/providers.hxx
 
 #include <functional>
+
+// Windows SDK discovery locates SDK tools such as rc and mt when MSVC-style builds need them.
 
 namespace mgmake::discovery {
 	[[nodiscard]] inline bool is_windows_sdk_role(tool_role role) noexcept {
@@ -10971,6 +11161,8 @@ namespace mgmake::discovery {
 // skipped duplicate include: include/mgmake/discovery/providers.hxx
 // skipped duplicate include: include/mgmake/discovery/validate.hxx
 
+// xcrun discovery asks Apple toolchains where platform-specific compiler tools live.
+
 namespace mgmake::discovery {
 	inline void add_xcrun_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
 #if defined(__APPLE__)
@@ -11033,6 +11225,8 @@ namespace mgmake::discovery {
 
 // skipped duplicate include: include/mgmake/discovery/providers.hxx
 
+// Unix tool providers add common system, package-manager, and distro compiler locations.
+
 namespace mgmake::discovery {
 	inline void add_unix_system_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
 #if defined(MGMK_PLATFORM_POSIX)
@@ -11085,6 +11279,8 @@ namespace mgmake::discovery {
 #include <expected>
 #include <print>
 #include <string>
+
+// The tools action runs discovery and prints the resolved toolchain plus optional search diagnostics.
 
 namespace mgmake::discovery {
 	inline void print_resolved_tool(const resolved_tool& tool) {
@@ -11189,6 +11385,8 @@ namespace mgmake::discovery {
 // ===== end include/mgmake/discovery/print_tools.hxx =====
 
 
+// This header gathers the discovery pipeline entry points used by the mgmake entry layer.
+
 #endif // MGMAKE_DISCOVERY_DISCOVERY_HXX
 // ===== end include/mgmake/discovery/discovery.hxx =====
 
@@ -11206,6 +11404,8 @@ namespace mgmake::discovery {
 #include <optional>
 #include <set>
 #include <vector>
+
+// A lowered target is the internal result of lowering a spec target into linkable artifacts and DAG metadata.
 
 namespace mgmake::lower {
 	struct target {
@@ -11234,6 +11434,8 @@ namespace mgmake::lower {
 #include <filesystem>
 #include <set>
 #include <vector>
+
+// Usage data is the transitive include, link, and DAG dependency information propagated through linked libraries.
 
 namespace mgmake::lower {
 	struct usage {
@@ -11270,6 +11472,8 @@ namespace mgmake::lower {
 #include <set>
 #include <string>
 #include <vector>
+
+// Prep context builds a DAG for external fetch/configure work and memoizes fetched/provider project results by name.
 
 namespace mgmake::spec {
 	struct project;
@@ -11365,6 +11569,8 @@ namespace mgmake::prep {
 #include <utility>
 
 
+// The prep executor runs preparation DAG actions directly and uses hashes to skip actions that are already up to date.
+
 namespace mgmake::prep {
 	[[nodiscard]] inline bool action_is_up_to_date(
 		const dag::graph& graph,
@@ -11432,6 +11638,7 @@ namespace mgmake::prep {
 	) {
 		const auto& graph = result.m_dag;
 
+		// Prep actions run directly in DAG order because they produce inputs needed before backend generation.
 		for (std::size_t i = 0; i < graph.m_actions.size(); ++i) {
 			const auto& action = graph.action(i);
 
@@ -11513,6 +11720,8 @@ namespace mgmake::prep {
 #include <string_view>
 #include <utility>
 #include <vector>
+
+// Prep emits actions that make external inputs available before the main build graph is lowered.
 
 namespace mgmake::prep {
 	[[nodiscard]] inline std::filesystem::path fetch_root(const build::request& req) {
@@ -11827,6 +12036,7 @@ namespace mgmake::prep {
 	inline prep::fetched context::fetch_value(const ext::fetch& fetch) {
 		mgmkassert(!fetch.m_name.empty(), "mgmake prep: fetch has no name");
 
+		// Fetches are keyed by name so repeated provider references share one prepared source tree.
 		if (auto existing = m_named_fetches.find(fetch.m_name); existing != m_named_fetches.end()) {
 			return existing->second;
 		}
@@ -11885,6 +12095,7 @@ namespace mgmake::prep {
 		const auto query_id = m_emit.generated(query_path);
 		const auto configure_id = m_emit.generated(configure_output);
 
+		// CMake must see the query file before configure so it writes codemodel replies.
 		m_emit.action(
 			"Write CMake File API query " + cmake_project.m_name,
 			"Writes CMake File API query for external project '" + cmake_project.m_name + "'.",
@@ -12000,6 +12211,7 @@ namespace mgmake::prep {
 			archive_extract_command(request(), format, archive_path, tmp_dir)
 		);
 
+		// Archives often contain a top-level directory; normalization gives dependents a stable source root.
 		const auto normalized_from = archive.m_strip_prefix.empty()
 			? tmp_dir
 			: tmp_dir / archive.m_strip_prefix;
@@ -12080,6 +12292,8 @@ namespace mgmake::prep {
 #include <string_view>
 #include <span>
 #include <vector>
+
+// Lowering context converts validated project specs plus prep results into a DAG of artifacts, actions, and targets.
 
 namespace mgmake::spec {
 	struct project;
@@ -12205,6 +12419,8 @@ namespace mgmake::lower {
 #include <utility>
 #include <vector>
 
+// Object lowering turns each source file into a compile action and wires depfile-discovered headers into the DAG.
+
 namespace mgmake::lower {
 	template<typename target_t>
 	inline std::vector<dag::artifact::id> context::lower_objects(
@@ -12219,6 +12435,7 @@ namespace mgmake::lower {
 
 		std::size_t source_index = 0;
 
+		// Object paths are index-based to avoid leaking source-tree layout into build artifacts.
 		for (const auto& source : target.m_sources) {
 			auto source_id = m_emit.source(source);
 			const std::string_view object_extension =
@@ -12374,6 +12591,7 @@ namespace mgmake::lower {
 					break;
 			}
 
+			// Discovered headers are kept separate from explicit inputs so visualizers can show them differently.
 			std::vector<dag::artifact::id> discovered_dependencies{};
 			std::set<dag::artifact::id> discovered_dependency_ids{};
 
@@ -12453,6 +12671,8 @@ namespace mgmake::lower {
 #include <utility>
 #include <array>
 #include <vector>
+
+// Lowering is demand-driven: libraries are lowered when linked, executables are lowered explicitly, and provider targets become DAG dependencies.
 
 namespace mgmake::lower {
 	inline context::context(
@@ -12591,6 +12811,7 @@ namespace mgmake::lower {
 	) {
 		lower::usage result{};
 
+		// Usage propagation turns named library edges into include paths, link inputs, and DAG target dependencies.
 		for (const auto& library_name : libraries) {
 			const auto linked_id = m_project.find_library(library_name);
 
@@ -12629,6 +12850,7 @@ namespace mgmake::lower {
 			"mgmake lower: invalid library id"
 		);
 
+		// Libraries are memoized because multiple dependents can request the same lowered library.
 		if (m_libraries.at(id).has_value()) {
 			return m_libraries.at(id).value();
 		}
@@ -13079,6 +13301,7 @@ namespace mgmake::lower {
 			lowered.m_linkable_artifacts.emplace_back(artifact_id);
 		}
 
+		// The provider build stamp becomes a usage input so dependents wait for the external target.
 		auto provider_target = lower_cmake_target(provider, provider_outputs);
 		usage.m_dag_dependencies.emplace(provider_target.m_dag_target);
 		usage.m_usage_inputs.emplace_back(provider_target.m_ready_stamp);
@@ -13158,6 +13381,8 @@ namespace mgmake::lower {
 
 #include <utility>
 
+// Project implementation is the phase boundary from spec to prep DAG and final build DAG.
+
 namespace mgmake::spec {
 	inline prep::result project::prepare(const build::request& req) const {
 		prep::result result{};
@@ -13213,6 +13438,8 @@ namespace mgmake::spec {
 #include <type_traits>
 #include <utility>
 
+// Project factories let the entry point accept either a ready project or a callable that builds one from CLI options.
+
 namespace mgmake::detail {
 	template <typename>
 	inline constexpr bool always_false_v = false;
@@ -13255,6 +13482,8 @@ namespace mgmake::detail {
 #ifndef MGMAKE_ENTRY_EXIT_CODE_HXX
 #define MGMAKE_ENTRY_EXIT_CODE_HXX
 
+// Entry exit codes keep usage errors separate from build/action failures.
+
 namespace mgmake::detail {
 	inline constexpr int entry_exit_success = 0;
 	inline constexpr int entry_exit_action_failure = 1;
@@ -13292,12 +13521,15 @@ namespace mgmake::detail {
 #include <type_traits>
 #include <utility>
 
+// The entry point owns program flow: parse CLI, build a request, resolve tools, prepare externals, lower the DAG, then dispatch the action.
+
 namespace mgmake {
 	template <build::toolchain_registry_like Toolchains>
 	[[nodiscard]] inline int entry(
 		const sys::command_line& command_line,
 		const Toolchains& toolchains
 	) {
+		// Parse first so help/version/clean can be handled before any project work.
 		auto parsed = cli::parse(command_line.user_args());
 
 		if (!parsed) {
@@ -13363,6 +13595,7 @@ namespace mgmake {
 		ProjectFactory&& project_factory,
 		const Toolchains& toolchains
 	) {
+		// Parse before constructing the project so help/version/clean stay cheap.
 		auto parsed = cli::parse(command_line.user_args());
 
 		if (!parsed) {
@@ -13422,6 +13655,7 @@ namespace mgmake {
 			return detail::entry_exit_success;
 		}
 
+		// Discovery produces a request copy with resolved tool paths and environment metadata.
 		auto resolved_req_result = discovery::resolve_request(opts, req, proj);
 
 		if (!resolved_req_result) {
@@ -13431,6 +13665,7 @@ namespace mgmake {
 
 		auto resolved_req = std::move(*resolved_req_result);
 		auto hashes = detail::hashes::load(resolved_req);
+		// Preparation creates a small DAG for external fetch/configure steps before build lowering.
 		auto prep_result = proj.prepare(resolved_req);
 
 		if (opts.m_action == cli::action_kind::graph) {
@@ -13493,6 +13728,7 @@ namespace mgmake {
 			return detail::entry_exit_usage_error;
 		}
 
+		// Build lowering consumes any dependency side files already on disk and emits the main DAG.
 		dep::database deps{};
 		auto graph = proj.build(resolved_req, prep_result, deps);
 
@@ -13592,6 +13828,8 @@ namespace mgmake {
 
 // skipped duplicate include: include/mgmake/entry/entry.hxx
 
+// Entry macros generate main or wmain and forward argv into the typed mgmake entry overloads.
+
 namespace mgmk = mgmake;
 
 #if defined(MGMK_PLATFORM_WINDOWS) && defined(MGMK_INCLUDED_WINDOWS)
@@ -13657,6 +13895,8 @@ int main(int argc, char** argv) {                                               
 // skipped duplicate include: include/mgmake/ext/fetch.hxx
 #ifdef MGMK_ENABLE_EXT_CMAKE
 // skipped duplicate include: include/mgmake/ext/cmake.hxx
+
+// Umbrella include for the public single-header-style API; order matters because later phases depend on earlier type declarations.
 #endif // MGMK_ENABLE_EXT_CMAKE
 
 #endif // MGMAKE_MGMAKE_HXX
