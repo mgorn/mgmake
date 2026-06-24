@@ -3,6 +3,7 @@
 #ifndef MGMAKE_DETAIL_ENUM_STRING_HXX
 #define MGMAKE_DETAIL_ENUM_STRING_HXX
 
+#include "enum.hxx"
 #include "static_string.hxx"
 
 #include <array>
@@ -14,25 +15,6 @@
 #include <type_traits>
 
 namespace mgmake::detail {
-    template <typename E>
-    concept enum_type = std::is_enum_v<E>;
-
-    template <enum_type E>
-    [[nodiscard]] inline constexpr auto enum_underlying(E value) noexcept {
-        return static_cast<std::underlying_type_t<E>>(value);
-    }
-
-    template <enum_type E>
-    [[nodiscard]] inline constexpr bool enum_underlying_is_negative(E value) noexcept {
-        using U = std::underlying_type_t<E>;
-
-        if constexpr (std::is_signed_v<U>) {
-            return enum_underlying(value) < 0;
-        } else {
-            return false;
-        }
-    }
-
     template <enum_type E>
     struct enum_view_entry {
         E m_value{};
