@@ -5,9 +5,11 @@
 
 #include "artifact.hxx"
 
+#include "../dep/file.hxx"
 #include "../sys/command_line.hxx"
 
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -25,6 +27,13 @@ namespace mgmake::dag {
 
         sys::command_line m_command;
         std::filesystem::path m_working_directory;
+
+        // Dependencies discovered from an existing compiler dependency file.
+        // These are mgmake graph metadata, not backend explicit inputs.
+        std::vector<artifact::id> m_discovered_dependencies;
+
+        // Compile actions can emit dependency side files. Other action kinds leave this empty.
+        std::optional<dep::file> m_depfile;
     };
 }
 

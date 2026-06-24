@@ -30,6 +30,10 @@
 // will need to be enabled for json. But json is used for other features
 // as well, and as such should be available independently of the cmake ext.
 #include "ext/json.hxx"
+#include "dep/format.hxx"
+#include "dep/file.hxx"
+#include "dep/parser.hxx"
+#include "dep/database.hxx"
 #include "build/toolchain.hxx"
 #include "build/toolchain_registry.hxx"
 #include "build/request.hxx"

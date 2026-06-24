@@ -199,6 +199,26 @@ namespace mgmake::backend {
                     out << "  command = " << command_text << "\n";
                 }
 
+                if (action.m_depfile.has_value()) {
+                    const auto& depfile = *action.m_depfile;
+
+                    if (depfile.m_format.has(dep::format_bits::gcc)) {
+                        if (!depfile.m_path.empty()) {
+                            out << "  depfile = "
+                                << detail::ninja_escape_path(depfile.m_path)
+                                << "\n";
+                        }
+                    }
+
+                    if (depfile.m_format.has(dep::format_bits::msvc_show_includes)) {
+                        out << "  deps = msvc\n";
+
+                        // This is the default English MSVC /showIncludes prefix.
+                        // Localized toolchains may need this to become configurable later.
+                        out << "  msvc_deps_prefix = Note: including file:\n";
+                    }
+                }
+
                 out << "\n";
 
                 out << "build ";

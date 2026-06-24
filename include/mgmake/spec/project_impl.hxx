@@ -29,10 +29,11 @@ namespace mgmake::spec {
 
 	inline dag::graph project::build(
 		const build::request& req,
-		const prep::result& prepared
+		const prep::result& prepared,
+		dep::database& deps
 	) const {
 		dag::graph result{};
-		lower::context ctx{result, req, *this, prepared};
+		lower::context ctx{result, req, *this, prepared, deps};
 
 		for (spec::library::id id = 0; id < m_libraries.size(); ++id) {
 			ctx.lower_library(id);

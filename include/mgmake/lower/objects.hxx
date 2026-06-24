@@ -6,12 +6,14 @@
 #include "context.hxx"
 #include "../build/target.hxx"
 #include "../build/toolchain.hxx"
+#include "../dep/file.hxx"
 #include "../detail/assert.hxx"
 #include "../discovery/source_role.hxx"
 #include "../sys/command_line.hxx"
 
 #include <cstddef>
 #include <filesystem>
+#include <optional>
 #include <set>
 #include <span>
 #include <string>
@@ -57,6 +59,8 @@ namespace mgmake::lower {
 			const bool is_c_source = role == discovery::tool_role::c_compiler;
 			const bool is_cxx_source = role == discovery::tool_role::cxx_compiler;
 			const bool is_resource_source = role == discovery::tool_role::resource_compiler;
+			const bool is_compiled_source = is_c_source || is_cxx_source;
+			std::optional<dep::file> depfile{};
 
 			mgmkassert(
 				role != discovery::tool_role::midl_compiler,
@@ -134,6 +138,42 @@ namespace mgmake::lower {
 				}
 			}
 
+			if (is_compiled_source) {
+				switch (tc.dialect()) {
+					case build::toolchain::dialect::gcc:
+						depfile = dep::file{};
+						depfile->m_format = dep::format::gcc;
+						depfile->m_path = object_path;
+						depfile->m_path += ".d";
+						depfile->m_target = object_path;
+
+						// Ask GCC/Clang to emit a Make-style depfile beside the object.
+						// Ninja consumes this for rebuild correctness, and mgmake consumes
+						// the previous invocation's file during graph lowering.
+						command.m_args.emplace_back("-MMD");
+						command.m_args.emplace_back("-MP");
+						command.m_args.emplace_back("-MF");
+						command.m_args.emplace_back(depfile->m_path.string());
+						command.m_args.emplace_back("-MT");
+						command.m_args.emplace_back(object_path.string());
+						break;
+
+					case build::toolchain::dialect::msvc:
+						depfile = dep::file{};
+						depfile->m_format = dep::format::msvc_all;
+						depfile->m_path = object_path;
+						depfile->m_path += ".json";
+						depfile->m_target = object_path;
+
+						// /showIncludes is for Ninja-native rebuild correctness.
+						// /sourceDependencies writes JSON that mgmake can consume later.
+						command.m_args.emplace_back("/showIncludes");
+						command.m_args.emplace_back("/sourceDependencies");
+						command.m_args.emplace_back(depfile->m_path.string());
+						break;
+				}
+			}
+
 			switch (tc.dialect()) {
 				case build::toolchain::dialect::gcc:
 					command.m_args.emplace_back("-c");
@@ -149,13 +189,50 @@ namespace mgmake::lower {
 					break;
 			}
 
-			m_emit.action(
+			std::vector<dag::artifact::id> discovered_dependencies{};
+			std::set<dag::artifact::id> discovered_dependency_ids{};
+
+			if (depfile.has_value()) {
+				// This consumes dependency information from a previous build invocation.
+				// A clean build will usually have no depfile yet; the compiler emits it
+				// during the build, and the next graph/build invocation can materialize it.
+				m_deps.consume(*depfile);
+
+				for (const auto& dependency : m_deps.dependencies_for(depfile->m_target)) {
+					const auto dependency_id = m_emit.header(dependency);
+
+					bool already_input = false;
+
+					for (const auto input : compile_inputs) {
+						if (input == dependency_id) {
+							already_input = true;
+							break;
+						}
+					}
+
+					if (already_input) {
+						continue;
+					}
+
+					if (!discovered_dependency_ids.emplace(dependency_id).second) {
+						continue;
+					}
+
+					discovered_dependencies.emplace_back(dependency_id);
+				}
+			}
+
+			const auto action_id = m_emit.action(
 				std::string{"Compile "} + source.string(),
 				std::string{"Compiles source file '"} + source.string() + "' for target '" + target.m_name + "'.",
 				compile_inputs,
 				{ object_id },
 				command
 			);
+
+			auto& action = m_emit.m_graph.action(action_id);
+			action.m_discovered_dependencies = std::move(discovered_dependencies);
+			action.m_depfile = std::move(depfile);
 
 			object_ids.emplace_back(object_id);
 		}

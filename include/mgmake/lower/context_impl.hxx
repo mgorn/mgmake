@@ -26,11 +26,13 @@ namespace mgmake::lower {
 		dag::graph& graph,
 		const build::request& req,
 		const spec::project& project,
-		const prep::result& prep
+		const prep::result& prep,
+		dep::database& deps
 	)
 		: m_req{req}
 		, m_project{project}
 		, m_prep{prep}
+		, m_deps{deps}
 		, m_emit{graph}
 		, m_libraries(project.m_libraries.size()) {}
 

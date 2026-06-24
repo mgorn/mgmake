@@ -7,6 +7,7 @@
 #include "usage.hxx"
 #include "../build/request.hxx"
 #include "../dag/emitter.hxx"
+#include "../dep/database.hxx"
 #include "../prep/result.hxx"
 #include "../spec/executable.hxx"
 #include "../spec/library.hxx"
@@ -34,13 +35,15 @@ namespace mgmake::lower {
 		const build::request& m_req;
 		const spec::project& m_project;
 		const prep::result& m_prep;
+		dep::database& m_deps;
 		dag::emitter m_emit;
 
 		context(
 			dag::graph& graph,
 			const build::request& req,
 			const spec::project& project,
-			const prep::result& prep
+			const prep::result& prep,
+			dep::database& deps
 		);
 
 		dag::emitter& emit() {

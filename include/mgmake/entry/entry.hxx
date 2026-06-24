@@ -9,6 +9,7 @@
 #include "../build/request_from_options.hxx"
 #include "../build/run.hxx"
 #include "../build/toolchain_registry.hxx"
+#include "../dep/database.hxx"
 #include "../cli/help.hxx"
 #include "../cli/parse.hxx"
 #include "../detail/graphviz.hxx"
@@ -206,7 +207,8 @@ namespace mgmake {
 			}
 
 			if (graph_kind == "build" || graph_kind == "all") {
-				auto build_graph = proj.build(resolved_req, prep_result);
+				dep::database deps{};
+				auto build_graph = proj.build(resolved_req, prep_result, deps);
 				detail::write_graphviz_dot_file(
 					build_graph,
 					graph_dir / "build.dot"
@@ -223,7 +225,8 @@ namespace mgmake {
 			return detail::entry_exit_usage_error;
 		}
 
-		auto graph = proj.build(resolved_req, prep_result);
+		dep::database deps{};
+		auto graph = proj.build(resolved_req, prep_result, deps);
 
 		if (opts.m_action == cli::action_kind::run) {
 			const auto run_target = build::resolve_run_target_name(opts, proj);

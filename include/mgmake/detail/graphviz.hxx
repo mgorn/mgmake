@@ -52,6 +52,9 @@ namespace mgmake::detail {
                 case dag::artifact::kind::source:
                     return "box";
 
+                case dag::artifact::kind::header:
+                    return "box";
+
                 case dag::artifact::kind::generated:
                     return "component";
 
@@ -66,6 +69,9 @@ namespace mgmake::detail {
             switch (kind) {
                 case dag::artifact::kind::source:
                     return "source";
+
+                case dag::artifact::kind::header:
+                    return "header";
 
                 case dag::artifact::kind::generated:
                     return "generated";
@@ -179,6 +185,12 @@ namespace mgmake::detail {
 
 			for (const auto input : action.m_inputs) {
 				out << "    artifact_" << input << " -> action_" << i << ";\n";
+			}
+
+			for (const auto dependency : action.m_discovered_dependencies) {
+				out << "    artifact_" << dependency
+					<< " -> action_" << i
+					<< " [style=dotted, label=\"dep\"];\n";
 			}
 
 			for (const auto output : action.m_outputs) {

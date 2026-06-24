@@ -81,6 +81,22 @@ namespace mgmake::dag {
 			}
 		}
 
+		[[nodiscard]] inline std::optional<dag::artifact::id> find_artifact(
+			const std::filesystem::path& path
+		) const {
+			if (path.empty()) {
+				return std::nullopt;
+			}
+
+			for (dag::artifact::id id = 0; id < m_artifacts.size(); ++id) {
+				if (m_artifacts[id].m_path == path) {
+					return id;
+				}
+			}
+
+			return std::nullopt;
+		}
+
 		[[nodiscard]] inline constexpr std::optional<dag::target::id> find_target(
 			std::string_view name
 		) const {

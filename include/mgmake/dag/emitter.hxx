@@ -23,12 +23,39 @@ namespace mgmake::dag {
 		emitter(dag::graph& graph)
 			: m_graph{graph} {}
 
+		dag::artifact::id file_artifact(
+			dag::artifact::kind kind,
+			const std::filesystem::path& path
+		) {
+			if (const auto existing_id = m_graph.find_artifact(path)) {
+				auto& existing = m_graph.artifact(*existing_id);
+
+				// A discovered header is the weakest file-artifact classification.
+				// If the same path is later emitted as an explicit source or generated
+				// output, keep the existing artifact id and refine the kind.
+				if (
+					existing.m_kind == dag::artifact::kind::header &&
+					kind != dag::artifact::kind::header
+				) {
+					existing.m_kind = kind;
+				}
+
+				return *existing_id;
+			}
+
+			return m_graph.create_artifact(kind, path);
+		}
+
 		dag::artifact::id source(const std::filesystem::path& path) {
-			return m_graph.create_artifact(dag::artifact::kind::source, path);
+			return file_artifact(dag::artifact::kind::source, path);
+		}
+
+		dag::artifact::id header(const std::filesystem::path& path) {
+			return file_artifact(dag::artifact::kind::header, path);
 		}
 
 		dag::artifact::id generated(const std::filesystem::path& path) {
-			return m_graph.create_artifact(dag::artifact::kind::generated, path);
+			return file_artifact(dag::artifact::kind::generated, path);
 		}
 
 		const std::filesystem::path& path(dag::artifact::id id) const {

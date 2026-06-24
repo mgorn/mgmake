@@ -5,6 +5,7 @@
 
 #include "../build/request.hxx"
 #include "../dag/graph.hxx"
+#include "../dep/database.hxx"
 #include "../detail/assert.hxx"
 #include "../prep/result.hxx"
 #include "executable.hxx"
@@ -190,7 +191,8 @@ namespace mgmake::spec {
 
 		dag::graph build(
 			const build::request& req,
-			const prep::result& prepared
+			const prep::result& prepared,
+			dep::database& deps
 		) const;
 
 	private:
