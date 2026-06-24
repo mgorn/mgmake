@@ -16,6 +16,9 @@
 #include <string>
 #include <type_traits>
 
+// Backend execution is the bridge from a lowered DAG to the selected backend action.
+// The entry point handles project setup, run, graph, clean, help, and version around this layer.
+
 namespace mgmake::backend {
 	template <cli::backend_kind Kind>
 	[[nodiscard]] inline std::expected<void, std::string> generate(

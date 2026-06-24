@@ -9,6 +9,8 @@
 #include <string_view>
 #include <vector>
 
+// Common JSON wrappers define the backend-independent shape used by extension parsers.
+
 namespace mgmake::ext {
 	struct no_json_backend_t {
 		struct native_type {};

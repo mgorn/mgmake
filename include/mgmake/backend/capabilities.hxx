@@ -12,6 +12,8 @@
 #include <expected>
 #include <string>
 
+// Compile-time capability checks keep backend dispatch generic without forcing every backend to implement every action.
+
 namespace mgmake::backend {
 	template <typename Backend>
 	concept can_generate =

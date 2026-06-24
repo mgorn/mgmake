@@ -10,6 +10,8 @@
 #include <string>
 #include <string_view>
 
+// Base target uses CRTP so executable and library share fluent source/include/link helpers.
+
 namespace mgmake::spec {
 	template<typename target_t>
 	struct target {

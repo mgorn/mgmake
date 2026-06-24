@@ -10,6 +10,8 @@
 #include <sstream>
 #include <utility>
 
+// Visual Studio discovery finds compiler, linker, librarian, resource, and shell environment tools.
+
 namespace mgmake::discovery::windows {
 	struct visual_studio_instance {
 		std::filesystem::path m_root{};

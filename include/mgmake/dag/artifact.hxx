@@ -9,6 +9,8 @@
 #include <system_error>
 #include <vector>
 
+// A DAG artifact is a node: source, discovered header, generated file, or phony target placeholder.
+
 namespace mgmake::dag {
     struct artifact {
         using id = std::vector<artifact>::size_type;

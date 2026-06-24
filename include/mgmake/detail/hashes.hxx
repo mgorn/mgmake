@@ -18,6 +18,8 @@
 #include <system_error>
 #include <unordered_map>
 
+// Artifact hashes are stored in the build directory and used to detect changed inputs across invocations.
+
 namespace mgmake::detail {
 	struct hashes {
 		using hash_type = std::uint64_t;
@@ -39,6 +41,7 @@ namespace mgmake::detail {
 			return result;
 		}
 
+		// A missing cached hash means mgmake has not seen this artifact before.
 		[[nodiscard]] inline bool is_dirty(const file_type& file) const {
 			if (!exists(file)) {
 				return true;

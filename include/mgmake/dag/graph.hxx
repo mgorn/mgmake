@@ -13,6 +13,8 @@
 #include <utility>
 #include <vector>
 
+// The DAG stores artifacts, actions, and user-visible targets by stable vector indices.
+
 namespace mgmake::dag {
     struct graph {
         std::vector<artifact> m_artifacts;
@@ -63,6 +65,7 @@ namespace mgmake::dag {
 			return m_targets.at(id);
 		}
 
+		// check() records current hashes for existing files and reports whether any artifact changed.
 		[[nodiscard]] inline bool check(detail::hashes& hashes) const {
 			bool dirty = false;
 

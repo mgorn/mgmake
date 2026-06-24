@@ -14,6 +14,8 @@
 #include <string_view>
 #include <utility>
 
+// The option parser walks argv once, dispatching known options to option_builder descriptors.
+
 namespace mgmake::cli::detail {
 	template <typename Option>
 	[[nodiscard]] inline std::string option_usage_string() {

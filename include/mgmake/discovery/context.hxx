@@ -13,6 +13,8 @@
 #include <string>
 #include <vector>
 
+// Discovery context carries shared inputs, cache state, and diagnostics while resolving one toolchain.
+
 namespace mgmake::spec { struct project; }
 
 namespace mgmake::discovery {

@@ -9,6 +9,8 @@
 #include <string_view>
 #include <utility>
 
+// Action names form the public command verbs accepted by the entry point.
+
 namespace mgmake::cli {
 	enum struct action_kind {
 		build,

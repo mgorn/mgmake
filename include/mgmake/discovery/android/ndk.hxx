@@ -8,6 +8,8 @@
 #include <functional>
 #include <ranges>
 
+// Android NDK helpers translate mgmake target options into NDK host tags, ABI names, and sysroot flags.
+
 namespace mgmake::discovery {
 	[[nodiscard]] inline std::string android_host_tag() {
 #if defined(_WIN32)

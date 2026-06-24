@@ -5,6 +5,8 @@
 
 #include <type_traits>
 
+// Shared enum constraints and helpers keep enum-string and enum-flag utilities consistent.
+
 namespace mgmake::detail {
     template <typename enum_t>
     concept enum_type = std::is_enum_v<enum_t>;

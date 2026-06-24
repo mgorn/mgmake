@@ -12,6 +12,8 @@
 #include <string_view>
 #include <vector>
 
+// command_line stores argv-like tokens and is responsible for producing a shell-safe display/invocation string.
+
 namespace mgmake::sys {
 	struct command_run_options {
 		bool m_verbose = false;
@@ -33,6 +35,7 @@ namespace mgmake::sys {
 			return std::span<const std::string>(m_args).subspan(1);
 		}
 
+		// full_command() is used both for actual process invocation and for generated backend command text.
 		inline constexpr std::string full_command() const {
 			std::string result;
 

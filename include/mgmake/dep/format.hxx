@@ -7,6 +7,8 @@
 
 #include <cstdint>
 
+// Dependency formats are flags because a compiler action may expose more than one dependency mechanism.
+
 namespace mgmake::dep {
 	enum struct format_bits : std::uint8_t {
 		gcc,

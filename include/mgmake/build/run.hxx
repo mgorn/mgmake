@@ -14,6 +14,8 @@
 #include <string>
 #include <string_view>
 
+// The run action first chooses one executable target to build, then invokes the produced artifact.
+
 namespace mgmake::build {
 	[[nodiscard]] inline std::expected<std::string, std::string> resolve_run_target_name(
 		const cli::options& opts,

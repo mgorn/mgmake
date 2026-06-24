@@ -10,6 +10,8 @@
 #include "tool_environment.hxx"
 #include "windows/visual_studio.hxx"
 
+// Environment discovery captures shell setup needed by resolved tools before backend commands run.
+
 namespace mgmake::discovery {
 	[[nodiscard]] inline tool_environment discover_tool_environment(
 		const cli::options&,

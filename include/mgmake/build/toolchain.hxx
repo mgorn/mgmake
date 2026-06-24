@@ -14,6 +14,9 @@
 #include <string_view>
 #include <vector>
 
+// Toolchain is the user-facing description of compiler dialect, tool names, flags, roots, and target behavior.
+// Tool discovery may rewrite tool names to absolute resolved paths in build::request.
+
 namespace mgmake::build {
     struct toolchain {
         // Determines how MGMake should pass args to the compiler driver(s)

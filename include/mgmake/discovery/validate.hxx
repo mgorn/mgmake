@@ -14,6 +14,8 @@
 #include <fstream>
 #include <string>
 
+// Candidate validation checks executable existence and gathers version/details before accepting a tool.
+
 namespace mgmake::discovery {
 	[[nodiscard]] inline bool is_ninja_name(std::string_view stem) noexcept {
 		return stem == "ninja" || stem == "ninja-build";

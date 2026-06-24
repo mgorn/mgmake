@@ -6,6 +6,8 @@
 #include <filesystem>
 #include <string>
 
+// A provider ref connects a mgmake target to an external project target and the root where its outputs should be read.
+
 namespace mgmake::ext {
 	enum struct provider_kind {
 		cmake

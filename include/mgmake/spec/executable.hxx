@@ -12,6 +12,8 @@
 #include <string_view>
 #include <vector>
 
+// Executable specs describe user targets before validation, preparation, and DAG lowering.
+
 namespace mgmake::spec {
 	struct executable : public target<executable> {
 		using id = std::vector<executable>::size_type;

@@ -9,6 +9,8 @@
 
 #include <utility>
 
+// Project implementation is the phase boundary from spec to prep DAG and final build DAG.
+
 namespace mgmake::spec {
 	inline prep::result project::prepare(const build::request& req) const {
 		prep::result result{};

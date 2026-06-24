@@ -13,6 +13,8 @@
 #include <string>
 #include <vector>
 
+// A DAG action is an edge: it consumes input artifacts, produces output artifacts, and carries the command to run.
+
 namespace mgmake::dag {
     struct action {
         using id = std::vector<action>::size_type;

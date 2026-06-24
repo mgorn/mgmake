@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+// Tool environment stores command-prefix setup needed by toolchains such as Visual Studio developer shells.
+
 namespace mgmake::discovery {
 #if defined(_WIN32)
 	[[nodiscard]] inline std::string cmd_call_quote(std::string_view text) {

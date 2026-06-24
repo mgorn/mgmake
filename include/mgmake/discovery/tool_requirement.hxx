@@ -17,6 +17,8 @@
 #include <variant>
 #include <vector>
 
+// Tool requirements are derived from the project shape so discovery only searches for tools that may be needed.
+
 namespace mgmake::discovery {
 	enum struct requirement_strength {
 		required,

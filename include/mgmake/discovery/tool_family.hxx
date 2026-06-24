@@ -7,6 +7,8 @@
 
 #include <string_view>
 
+// Tool family is a coarse grouping used when discovery falls back across compatible compiler ecosystems.
+
 namespace mgmake::discovery {
 	enum struct tool_family {
 		unknown,

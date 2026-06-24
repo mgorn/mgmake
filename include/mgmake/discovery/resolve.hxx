@@ -14,6 +14,8 @@
 #include <expected>
 #include <string>
 
+// Resolution validates ordered candidates, records diagnostics, applies resolved tool paths to a build request, and writes the cache.
+
 namespace mgmake::discovery {
 	[[nodiscard]] inline discovery::mode effective_discovery_mode(
 		const cli::options& opts,
@@ -36,6 +38,7 @@ namespace mgmake::discovery {
 		diag.m_logical_name = req.m_logical_name;
 		diag.m_needed_because = req.m_needed_because;
 
+		// Providers return candidates in priority order; the first validated candidate wins.
 		for (const auto& candidate : candidates_for(ctx, req)) {
 			ctx.m_searched.push_back({
 				.m_candidate = candidate,
@@ -204,6 +207,7 @@ namespace mgmake::discovery {
 			ctx.m_cache = load_cache(req);
 		}
 
+		// Requirements are project-shaped, so unused tool roles do not need to resolve.
 		for (const auto& requirement : required_tools(opts, req, project)) {
 			auto tool = resolve_tool_requirement(ctx, requirement);
 
@@ -250,6 +254,7 @@ namespace mgmake::discovery {
 		resolved_tc.m_searched = std::move(ctx.m_searched);
 		resolved_tc.m_rejected = std::move(ctx.m_rejected);
 
+		// Environment probing needs resolved compiler paths, so probe through a temporary request copy.
 		build::request bridge = req;
 		apply_resolved_toolchain(bridge, resolved_tc);
 		resolved_tc.m_environment = discover_tool_environment(opts, bridge, project);

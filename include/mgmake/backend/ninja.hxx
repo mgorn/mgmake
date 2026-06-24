@@ -19,6 +19,8 @@
 #include <string_view>
 #include <utility>
 
+// The Ninja backend serializes mgmake actions into build.ninja rules, then invokes the resolved ninja executable.
+
 namespace mgmake::backend {
     namespace detail {
         inline std::string ninja_escape_build_text(std::string_view text) {
@@ -164,6 +166,7 @@ namespace mgmake::backend {
                 out << "build __mgmake_always: phony\n\n";
             }
 
+            // Each mgmake action becomes one Ninja rule/build pair so commands can stay action-local.
             for (auto i = 0; i < graph.m_actions.size(); ++i) {
                 const auto& action = graph.action(i);
 
@@ -237,6 +240,7 @@ namespace mgmake::backend {
                 out << "\n\n";
             }
 
+            // DAG targets become phony Ninja targets that collect outputs and target-level dependencies.
             for (const auto& target : graph.m_targets) {
                 out << "build " << detail::ninja_escape_build_text(target.m_name) << ": phony ";
                 if (not target.m_outputs.empty()) {
@@ -291,6 +295,7 @@ namespace mgmake::backend {
 				command.m_args.emplace_back("-v");
 			}
 
+			// CLI-selected targets are forwarded to Ninja; an empty list lets Ninja build defaults.
 			for (const auto& target : req.m_targets) {
 				command.m_args.emplace_back(target);
 			}

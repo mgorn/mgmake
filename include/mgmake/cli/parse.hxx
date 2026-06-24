@@ -6,6 +6,8 @@
 #include "option_parser.hxx"
 #include "../sys/command_line.hxx"
 
+// Top-level CLI parsing wires action aliases, options, passthrough handling, and positional targets together.
+
 namespace mgmake::cli {
 	inline void apply_help(options& opts) {
 		opts.m_action = action_kind::help;

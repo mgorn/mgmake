@@ -15,6 +15,8 @@
 #include <string>
 #include <vector>
 
+// Providers contribute ordered tool candidates from explicit paths, overrides, caches, roots, PATH, and platform-specific sources.
+
 namespace mgmake::discovery {
 	using candidate_list = std::vector<tool_candidate>;
 
@@ -272,6 +274,7 @@ namespace mgmake::discovery {
 	[[nodiscard]] inline candidate_list candidates_for(context& ctx, const tool_requirement& req) {
 		candidate_list out;
 
+		// Candidate order goes from most intentional to broadest fallback.
 		add_explicit_path_candidates(ctx, req, out);
 		add_cli_override_candidates(ctx, req, out);
 		add_environment_override_candidates(ctx, req, out);
@@ -299,6 +302,7 @@ namespace mgmake::discovery {
 		add_emscripten_sdk_candidates(ctx, req, out);
 		add_embedded_sdk_candidates(ctx, req, out);
 
+		// Keep final ordering deterministic even when platform providers add candidates conditionally.
 		std::ranges::sort(out, {}, &tool_candidate::m_priority);
 		return out;
 	}

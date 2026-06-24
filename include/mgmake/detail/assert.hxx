@@ -8,6 +8,8 @@
 #include <source_location>
 #include <string_view>
 
+// mgmkassert is the lightweight invariant check used throughout spec construction and lowering.
+
 namespace mgmake::detail {
 
 [[noreturn]] inline void assertion_failed(

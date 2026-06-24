@@ -14,6 +14,8 @@
 #include <utility>
 #include <vector>
 
+// The dependency database is populated from depfiles from previous builds and feeds discovered headers back into the next DAG.
+
 namespace mgmake::dep {
 	struct database {
 		std::set<std::filesystem::path> m_consumed;
@@ -23,6 +25,7 @@ namespace mgmake::dep {
 			std::vector<std::filesystem::path>
 		> m_dependencies_by_target;
 
+		// Missing depfiles are normal on the first build, so consume() quietly treats them as no data yet.
 		void consume(const dep::file& depfile) {
 			if (depfile.m_path.empty()) {
 				return;

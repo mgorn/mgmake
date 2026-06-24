@@ -11,6 +11,8 @@
 #include <string>
 #include <vector>
 
+// cli::options is the raw parsed user intent; build::request is the normalized form used by build phases.
+
 namespace mgmake::cli {
 	struct options {
 		action_kind m_action = action_kind::build;

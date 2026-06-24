@@ -15,6 +15,8 @@
 #include <string>
 #include <string_view>
 
+// Prep result keeps the preparation DAG and lookup tables consumed by the lower phase.
+
 namespace mgmake::prep {
 #ifdef MGMK_ENABLE_EXT_CMAKE
 	using cmake_target = ext::cmake_file_api::target;

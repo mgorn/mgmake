@@ -41,6 +41,8 @@
 	#define MGMK_PLATFORM_UNSUPPORTED 1
 #endif // defined(_WIN32)
 
+// Platform enums model host and requested build targets and provide CLI names plus target-triple fragments.
+
 namespace mgmake::sys {
 	enum struct arch {
 		unknown,

@@ -18,6 +18,8 @@
 #include <string>
 #include <vector>
 
+// Prep context builds a DAG for external fetch/configure work and memoizes fetched/provider project results by name.
+
 namespace mgmake::spec {
 	struct project;
 }

@@ -7,6 +7,8 @@
 
 #include <string>
 
+// Backend tool requirements describe tools needed by a backend itself, such as ninja.
+
 namespace mgmake::discovery {
 	struct backend_tool_requirement {
 		tool_role m_role{};

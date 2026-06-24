@@ -11,6 +11,8 @@
 #include <variant>
 #include <vector>
 
+// Fetch specs describe how external source trees are acquired before lowering provider-backed targets.
+
 namespace mgmake::ext {
 	enum struct archive_format {
 		auto_detect,

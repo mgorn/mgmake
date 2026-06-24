@@ -6,6 +6,8 @@
 #include <charconv>
 #include <string_view>
 
+// Small CLI helpers stay separate so parsers can share spelling and prefix checks.
+
 namespace mgmake::cli {
 	[[nodiscard]] inline constexpr bool parse_positive_int(std::string_view text, int& out) {
 		if (text.empty()) {

@@ -25,6 +25,8 @@
 #include <utility>
 #include <vector>
 
+// Prep emits actions that make external inputs available before the main build graph is lowered.
+
 namespace mgmake::prep {
 	[[nodiscard]] inline std::filesystem::path fetch_root(const build::request& req) {
 		return req.build_dir() / "ext";
@@ -338,6 +340,7 @@ namespace mgmake::prep {
 	inline prep::fetched context::fetch_value(const ext::fetch& fetch) {
 		mgmkassert(!fetch.m_name.empty(), "mgmake prep: fetch has no name");
 
+		// Fetches are keyed by name so repeated provider references share one prepared source tree.
 		if (auto existing = m_named_fetches.find(fetch.m_name); existing != m_named_fetches.end()) {
 			return existing->second;
 		}
@@ -396,6 +399,7 @@ namespace mgmake::prep {
 		const auto query_id = m_emit.generated(query_path);
 		const auto configure_id = m_emit.generated(configure_output);
 
+		// CMake must see the query file before configure so it writes codemodel replies.
 		m_emit.action(
 			"Write CMake File API query " + cmake_project.m_name,
 			"Writes CMake File API query for external project '" + cmake_project.m_name + "'.",
@@ -511,6 +515,7 @@ namespace mgmake::prep {
 			archive_extract_command(request(), format, archive_path, tmp_dir)
 		);
 
+		// Archives often contain a top-level directory; normalization gives dependents a stable source root.
 		const auto normalized_from = archive.m_strip_prefix.empty()
 			? tmp_dir
 			: tmp_dir / archive.m_strip_prefix;

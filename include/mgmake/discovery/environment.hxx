@@ -9,6 +9,8 @@
 #include <string>
 #include <string_view>
 
+// Environment helpers read host environment variables without spreading getenv calls through providers.
+
 namespace mgmake::discovery {
 	[[nodiscard]] inline std::optional<std::string> getenv_string(std::string_view name) {
 		const std::string key{name};

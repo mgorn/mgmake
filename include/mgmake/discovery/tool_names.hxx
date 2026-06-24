@@ -14,6 +14,8 @@
 #include <string_view>
 #include <vector>
 
+// Tool-name helpers generate exact, family, and target-prefixed executable candidates for each role.
+
 namespace mgmake::discovery {
 	using tool_environment_variables = detail::enum_table<
 		tool_role,

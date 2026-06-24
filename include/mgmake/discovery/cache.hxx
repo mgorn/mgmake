@@ -16,6 +16,8 @@
 #include <utility>
 #include <vector>
 
+// The discovery cache records validated tools per host, target, toolchain, and role to avoid repeated searches.
+
 namespace mgmake::discovery {
 	struct cache_entry {
 		std::string m_toolchain{};

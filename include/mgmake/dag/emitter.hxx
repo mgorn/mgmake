@@ -16,6 +16,8 @@
 #include <string_view>
 #include <vector>
 
+// Emitter is the mutation API for DAG construction; lowering code uses it instead of editing vectors directly.
+
 namespace mgmake::dag {
 	struct emitter {
 		dag::graph& m_graph;

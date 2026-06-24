@@ -21,6 +21,8 @@
 #include <array>
 #include <vector>
 
+// Lowering is demand-driven: libraries are lowered when linked, executables are lowered explicitly, and provider targets become DAG dependencies.
+
 namespace mgmake::lower {
 	inline context::context(
 		dag::graph& graph,
@@ -158,6 +160,7 @@ namespace mgmake::lower {
 	) {
 		lower::usage result{};
 
+		// Usage propagation turns named library edges into include paths, link inputs, and DAG target dependencies.
 		for (const auto& library_name : libraries) {
 			const auto linked_id = m_project.find_library(library_name);
 
@@ -196,6 +199,7 @@ namespace mgmake::lower {
 			"mgmake lower: invalid library id"
 		);
 
+		// Libraries are memoized because multiple dependents can request the same lowered library.
 		if (m_libraries.at(id).has_value()) {
 			return m_libraries.at(id).value();
 		}
@@ -646,6 +650,7 @@ namespace mgmake::lower {
 			lowered.m_linkable_artifacts.emplace_back(artifact_id);
 		}
 
+		// The provider build stamp becomes a usage input so dependents wait for the external target.
 		auto provider_target = lower_cmake_target(provider, provider_outputs);
 		usage.m_dag_dependencies.emplace(provider_target.m_dag_target);
 		usage.m_usage_inputs.emplace_back(provider_target.m_ready_stamp);

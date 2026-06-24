@@ -14,6 +14,9 @@
 #include <utility>
 #include <vector>
 
+// A build request is the normalized execution context created from CLI options and tool discovery.
+// Later phases read this instead of re-parsing user options.
+
 namespace mgmake::build {
     struct request {
         toolchain m_tc;

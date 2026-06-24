@@ -9,6 +9,8 @@
 #include <string>
 #include <vector>
 
+// Discovery diagnostics collect searched candidates, rejection reasons, and suggested fixes for missing tools.
+
 namespace mgmake::discovery {
 	struct diagnostic {
 		tool_role m_role{};

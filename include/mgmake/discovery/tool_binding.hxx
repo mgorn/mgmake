@@ -7,6 +7,8 @@
 
 #include <string>
 
+// Tool bindings connect a logical tool role to a concrete executable name candidate.
+
 namespace mgmake::discovery {
 	struct tool_binding {
 		tool_role m_role{};

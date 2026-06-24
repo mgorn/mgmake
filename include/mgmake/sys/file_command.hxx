@@ -9,6 +9,8 @@
 #include <filesystem>
 #include <string>
 
+// File commands are represented as command_line objects so prep/clean actions can share dry-run and verbose behavior.
+
 namespace mgmake::sys {
 	[[nodiscard]] inline command_line shell_command(std::string command) {
 #if defined(MGMK_PLATFORM_WINDOWS)

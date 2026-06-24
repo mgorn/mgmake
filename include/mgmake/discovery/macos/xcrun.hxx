@@ -6,6 +6,8 @@
 #include "../providers.hxx"
 #include "../validate.hxx"
 
+// xcrun discovery asks Apple toolchains where platform-specific compiler tools live.
+
 namespace mgmake::discovery {
 	inline void add_xcrun_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
 #if defined(__APPLE__)

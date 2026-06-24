@@ -14,6 +14,8 @@
 #include <utility>
 #include <vector>
 
+// The CMake extension describes an external project and exposes provider-backed mgmake targets for its outputs.
+
 namespace mgmake::ext {
 	struct cmake {
 		using id = std::vector<cmake>::size_type;

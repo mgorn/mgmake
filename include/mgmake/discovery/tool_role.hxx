@@ -7,6 +7,8 @@
 
 #include <string_view>
 
+// Tool roles describe what a tool does; concrete names are selected later by discovery providers.
+
 namespace mgmake::discovery {
 	enum struct tool_role {
 		c_compiler,

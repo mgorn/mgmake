@@ -14,6 +14,8 @@
 #include <string_view>
 #include <type_traits>
 
+// Enum string tables are constexpr lookup tables used by CLI parsing, diagnostics, and help text.
+
 namespace mgmake::detail {
     template <enum_type E>
     struct enum_view_entry {

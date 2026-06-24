@@ -16,6 +16,8 @@
 #include <utility>
 #include <vector>
 
+// CMake File API helpers request and parse codemodel replies so mgmake can find external target artifacts.
+
 namespace mgmake::ext::cmake_file_api {
 	struct target {
 		std::string m_name;
@@ -68,6 +70,7 @@ namespace mgmake::ext::cmake_file_api {
 		};
 	}
 
+	// Only the codemodel fields needed for provider artifact lookup are materialized.
 	[[nodiscard]] inline std::optional<target> parse_target_file(
 		const std::filesystem::path& file,
 		const std::filesystem::path& build_dir

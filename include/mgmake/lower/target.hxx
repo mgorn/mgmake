@@ -11,6 +11,8 @@
 #include <set>
 #include <vector>
 
+// A lowered target is the internal result of lowering a spec target into linkable artifacts and DAG metadata.
+
 namespace mgmake::lower {
 	struct target {
 		std::optional<dag::target::id> m_dag_target;

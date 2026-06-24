@@ -8,6 +8,8 @@
 #include <optional>
 #include <string_view>
 
+// Backend names are parsed from CLI text and later mapped to concrete backend types in backend/registry.hxx.
+
 namespace mgmake::cli {
 	enum struct backend_kind {
 		automatic,

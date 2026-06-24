@@ -24,12 +24,15 @@
 #include <type_traits>
 #include <utility>
 
+// The entry point owns program flow: parse CLI, build a request, resolve tools, prepare externals, lower the DAG, then dispatch the action.
+
 namespace mgmake {
 	template <build::toolchain_registry_like Toolchains>
 	[[nodiscard]] inline int entry(
 		const sys::command_line& command_line,
 		const Toolchains& toolchains
 	) {
+		// Parse first so help/version/clean can be handled before any project work.
 		auto parsed = cli::parse(command_line.user_args());
 
 		if (!parsed) {
@@ -95,6 +98,7 @@ namespace mgmake {
 		ProjectFactory&& project_factory,
 		const Toolchains& toolchains
 	) {
+		// Parse before constructing the project so help/version/clean stay cheap.
 		auto parsed = cli::parse(command_line.user_args());
 
 		if (!parsed) {
@@ -154,6 +158,7 @@ namespace mgmake {
 			return detail::entry_exit_success;
 		}
 
+		// Discovery produces a request copy with resolved tool paths and environment metadata.
 		auto resolved_req_result = discovery::resolve_request(opts, req, proj);
 
 		if (!resolved_req_result) {
@@ -163,6 +168,7 @@ namespace mgmake {
 
 		auto resolved_req = std::move(*resolved_req_result);
 		auto hashes = detail::hashes::load(resolved_req);
+		// Preparation creates a small DAG for external fetch/configure steps before build lowering.
 		auto prep_result = proj.prepare(resolved_req);
 
 		if (opts.m_action == cli::action_kind::graph) {
@@ -225,6 +231,7 @@ namespace mgmake {
 			return detail::entry_exit_usage_error;
 		}
 
+		// Build lowering consumes any dependency side files already on disk and emits the main DAG.
 		dep::database deps{};
 		auto graph = proj.build(resolved_req, prep_result, deps);
 

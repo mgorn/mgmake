@@ -7,6 +7,8 @@
 
 #include <string_view>
 
+// Tool provider identifies where a candidate came from and gives diagnostics human-readable provenance.
+
 namespace mgmake::discovery {
 	enum struct tool_provider {
 		explicit_path,

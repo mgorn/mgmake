@@ -8,6 +8,8 @@
 
 #include <string_view>
 
+// Centralizes platform-specific output names so lowering does not duplicate extension and prefix rules.
+
 namespace mgmake::build {
 	using executable_extensions = detail::enum_table<
 		sys::platform,

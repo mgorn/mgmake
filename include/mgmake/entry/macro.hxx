@@ -5,6 +5,8 @@
 
 #include "entry.hxx"
 
+// Entry macros generate main or wmain and forward argv into the typed mgmake entry overloads.
+
 namespace mgmk = mgmake;
 
 #if defined(MGMK_PLATFORM_WINDOWS) && defined(MGMK_INCLUDED_WINDOWS)

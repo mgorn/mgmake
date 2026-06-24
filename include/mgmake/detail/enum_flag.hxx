@@ -9,6 +9,8 @@
 #include <concepts>
 #include <cstddef>
 
+// enum_flag wraps bitmask-style enums while preserving type safety around underlying integer operations.
+
 namespace mgmake::detail {
     template <typename enum_t>
     struct enum_flag_traits;

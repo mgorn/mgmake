@@ -3,6 +3,8 @@
 #ifndef MGMK_EXT_JSON_HXX
 #define MGMK_EXT_JSON_HXX
 
+// JSON support is optional; this header selects a backend when one is available and exposes a stable json alias.
+
 namespace mgmake::ext {
 	struct no_json_backend_t;
 	struct nlohmann_json_backend_t;

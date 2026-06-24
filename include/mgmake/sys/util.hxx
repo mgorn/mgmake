@@ -8,6 +8,8 @@
 #include <string>
 #include <string_view>
 
+// Shell escaping is platform-specific and is used whenever mgmake must embed paths inside shell commands.
+
 namespace mgmake::sys {
 #ifdef MGMK_PLATFORM_WINDOWS
 	inline constexpr std::string shell_escape(std::string_view arg) {

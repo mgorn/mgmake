@@ -11,6 +11,8 @@
 #include <optional>
 #include <string>
 
+// A resolved tool is a validated executable plus the provider and reason that selected it.
+
 namespace mgmake::discovery {
 	struct tool_candidate {
 		tool_role m_role{};

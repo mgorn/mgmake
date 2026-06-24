@@ -7,6 +7,8 @@
 
 #include <functional>
 
+// Windows SDK discovery locates SDK tools such as rc and mt when MSVC-style builds need them.
+
 namespace mgmake::discovery {
 	[[nodiscard]] inline bool is_windows_sdk_role(tool_role role) noexcept {
 		switch (role) {

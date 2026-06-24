@@ -6,6 +6,8 @@
 #include <string>
 #include <utility>
 
+// A single-option parse result reports how many argv entries were consumed and whether parsing failed.
+
 namespace mgmake::cli {
 	struct option_parse_result {
 		bool m_matched = false;

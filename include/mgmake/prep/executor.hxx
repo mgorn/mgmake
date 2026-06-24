@@ -19,6 +19,8 @@
 #include <utility>
 
 
+// The prep executor runs preparation DAG actions directly and uses hashes to skip actions that are already up to date.
+
 namespace mgmake::prep {
 	[[nodiscard]] inline bool action_is_up_to_date(
 		const dag::graph& graph,
@@ -86,6 +88,7 @@ namespace mgmake::prep {
 	) {
 		const auto& graph = result.m_dag;
 
+		// Prep actions run directly in DAG order because they produce inputs needed before backend generation.
 		for (std::size_t i = 0; i < graph.m_actions.size(); ++i) {
 			const auto& action = graph.action(i);
 

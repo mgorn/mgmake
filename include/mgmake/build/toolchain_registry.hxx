@@ -12,6 +12,8 @@
 #include <utility>
 #include <vector>
 
+// A registry is a small constexpr list of named toolchains used by CLI selection and help output.
+
 namespace mgmake::build {
 	struct toolchain_registry {
 		std::vector<toolchain> m_toolchains{};

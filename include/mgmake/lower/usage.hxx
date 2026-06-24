@@ -10,6 +10,8 @@
 #include <set>
 #include <vector>
 
+// Usage data is the transitive include, link, and DAG dependency information propagated through linked libraries.
+
 namespace mgmake::lower {
 	struct usage {
 		std::set<std::filesystem::path> m_include_dirs;

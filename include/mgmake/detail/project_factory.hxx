@@ -10,6 +10,8 @@
 #include <type_traits>
 #include <utility>
 
+// Project factories let the entry point accept either a ready project or a callable that builds one from CLI options.
+
 namespace mgmake::detail {
 	template <typename>
 	inline constexpr bool always_false_v = false;

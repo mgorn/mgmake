@@ -12,6 +12,8 @@
 #include <format>
 #include <string>
 
+// Converts parsed CLI options into a build request while keeping toolchain selection errors near the CLI boundary.
+
 namespace mgmake::build {
 	template <toolchain_registry_like Toolchains>
 	[[nodiscard]] inline std::expected<request, std::string> request_from_options(

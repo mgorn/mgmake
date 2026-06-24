@@ -23,6 +23,8 @@
 #include <string_view>
 #include <vector>
 
+// Project owns the validated spec graph: executables, libraries, fetches, and optional external providers.
+
 namespace mgmake::spec {
 	struct project {
 		std::string m_name;
@@ -38,6 +40,7 @@ namespace mgmake::spec {
 			mgmkassert(not m_name.empty(), "mgmake spec: project has no name");
 		}
 
+		// Validation stays close to the mutation that adds user-declared targets to the project.
 		inline project& add_target(const spec::executable& exe) {
 			mgmkassert(not exe.m_name.empty(), "mgmake spec: executable target has no name");
             mgmkassert(not find_library(exe.m_name).has_value(), "mgmake spec: target name conflict '" + exe.m_name + "'");
@@ -243,6 +246,7 @@ namespace mgmake::spec {
 			return false;
 		}
 
+		// The active stack catches cycles before lowering recursively walks library links.
 		inline constexpr void assert_library_link_closure_is_acyclic(
 			std::string_view library_name,
 			const std::set<std::string>& linked_libraries,

@@ -11,6 +11,8 @@
 #include <filesystem>
 #include <string>
 
+// Clean is intentionally handled before project construction; it only needs the resolved build directory.
+
 namespace mgmake::build {
 	inline void print_clean_command(const build::request& req) {
 #if defined(MGMK_PLATFORM_WINDOWS)

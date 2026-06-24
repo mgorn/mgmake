@@ -5,6 +5,8 @@
 
 #include "../providers.hxx"
 
+// Unix tool providers add common system, package-manager, and distro compiler locations.
+
 namespace mgmake::discovery {
 	inline void add_unix_system_candidates(context& ctx, const tool_requirement& req, candidate_list& out) {
 #if defined(MGMK_PLATFORM_POSIX)

@@ -14,6 +14,8 @@
 #include <string_view>
 #include <utility>
 
+// Adapts detail::enum_string tables to the generic CLI value parser interface.
+
 namespace mgmake::cli {
 	template <typename ParseTable, typename ChoiceTable = ParseTable>
 	struct enum_value_parser {

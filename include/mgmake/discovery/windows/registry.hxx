@@ -14,6 +14,8 @@
 	#pragma comment(lib, "Advapi32.lib")
 #endif // defined(_WIN32)
 
+// Windows registry helpers read install locations used by Visual Studio and SDK discovery.
+
 namespace mgmake::discovery::windows {
 #if defined(_WIN32)
 	[[nodiscard]] inline std::optional<std::string> read_registry_string(

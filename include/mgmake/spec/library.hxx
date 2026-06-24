@@ -12,6 +12,8 @@
 #include <string_view>
 #include <vector>
 
+// Library specs may be interface, static, shared, or provider-backed, and propagate usage to dependents.
+
 namespace mgmake::spec {
 	struct project;
 

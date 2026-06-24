@@ -12,6 +12,8 @@
 #include <string>
 #include <string_view>
 
+// Graphviz output is a diagnostic view of the DAG, not an execution backend.
+
 namespace mgmake::detail {
     namespace graphviz_detail {
         inline std::string dot_escape(std::string_view text) {

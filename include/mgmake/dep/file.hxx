@@ -7,6 +7,8 @@
 
 #include <filesystem>
 
+// Describes one compiler-emitted dependency side file and the output target it belongs to.
+
 namespace mgmake::dep {
 	struct file {
 		format_flags m_format{};

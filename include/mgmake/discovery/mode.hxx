@@ -7,6 +7,8 @@
 
 #include <string_view>
 
+// Discovery mode controls how aggressively mgmake falls back from exact tool names to family and PATH guesses.
+
 namespace mgmake::discovery {
 	enum struct mode {
 		automatic,

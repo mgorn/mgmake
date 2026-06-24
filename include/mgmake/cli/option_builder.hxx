@@ -19,6 +19,9 @@
 #include <utility>
 #include <vector>
 
+// Option builder describes one command-line option and the target field or callback it writes.
+// The parser stores these lightweight descriptors instead of hard-coding every option branch.
+
 namespace mgmake::cli {
 	template <detail::static_string... Values>
 	struct choice_list {

@@ -8,6 +8,8 @@
 
 #include <filesystem>
 
+// A fetched source records the DAG target, readiness stamp, and local source directory for an external input.
+
 namespace mgmake::prep {
 	struct fetched {
 		dag::target::id m_target{};

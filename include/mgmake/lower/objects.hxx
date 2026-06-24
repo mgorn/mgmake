@@ -20,6 +20,8 @@
 #include <utility>
 #include <vector>
 
+// Object lowering turns each source file into a compile action and wires depfile-discovered headers into the DAG.
+
 namespace mgmake::lower {
 	template<typename target_t>
 	inline std::vector<dag::artifact::id> context::lower_objects(
@@ -34,6 +36,7 @@ namespace mgmake::lower {
 
 		std::size_t source_index = 0;
 
+		// Object paths are index-based to avoid leaking source-tree layout into build artifacts.
 		for (const auto& source : target.m_sources) {
 			auto source_id = m_emit.source(source);
 			const std::string_view object_extension =
@@ -189,6 +192,7 @@ namespace mgmake::lower {
 					break;
 			}
 
+			// Discovered headers are kept separate from explicit inputs so visualizers can show them differently.
 			std::vector<dag::artifact::id> discovered_dependencies{};
 			std::set<dag::artifact::id> discovered_dependency_ids{};
 

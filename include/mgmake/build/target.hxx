@@ -11,6 +11,8 @@
 
 #include <string>
 
+// Target flags are emitted only when the selected toolchain wants mgmake to pass an explicit target triple.
+
 namespace mgmake::build {
 	inline void append_target_args(
 		sys::command_line& command,

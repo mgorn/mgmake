@@ -7,6 +7,8 @@
 
 #include <filesystem>
 
+// Source role detection maps file extensions to the tool role that should compile them.
+
 namespace mgmake::discovery {
 	[[nodiscard]] inline tool_role source_tool_role(
 		const std::filesystem::path& source

@@ -10,6 +10,8 @@
 #include <string>
 #include <string_view>
 
+// Value parsers convert one option argument string into a typed destination value.
+
 namespace mgmake::cli {
 	template <typename T>
 	struct value_parser;

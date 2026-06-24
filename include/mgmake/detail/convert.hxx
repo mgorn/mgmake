@@ -10,6 +10,8 @@
 #include <string>
 #include <string_view>
 
+// String conversion helpers isolate platform-specific UTF-8 and wide-string handling.
+
 namespace mgmake::detail {
 #ifdef MGMK_INCLUDED_WINDOWS
 	inline constexpr std::string wide_to_utf8(std::wstring_view text) {

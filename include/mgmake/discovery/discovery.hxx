@@ -32,4 +32,6 @@
 #include "resolve.hxx"
 #include "print_tools.hxx"
 
+// This header gathers the discovery pipeline entry points used by the mgmake entry layer.
+
 #endif // MGMAKE_DISCOVERY_DISCOVERY_HXX

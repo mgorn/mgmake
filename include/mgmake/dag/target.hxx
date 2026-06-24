@@ -9,6 +9,8 @@
 #include <string>
 #include <vector>
 
+// A DAG target names a user-visible build goal and points at the artifacts/actions that satisfy it.
+
 namespace mgmake::dag {
     struct target {
         using id = std::vector<target>::size_type;

@@ -12,6 +12,8 @@
 #include <utility>
 #include <vector>
 
+// nlohmann_json_backend_t adapts nlohmann::json to the backend-independent json_value API.
+
 namespace mgmake::ext {
 	struct nlohmann_json_backend_t {
 		using native_type = nlohmann::json;

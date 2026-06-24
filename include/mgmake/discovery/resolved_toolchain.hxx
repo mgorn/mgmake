@@ -12,6 +12,8 @@
 #include <vector>
 #include <initializer_list>
 
+// A resolved toolchain is the selected toolchain plus all resolved tools, prefix args, environment, and search diagnostics.
+
 namespace mgmake::discovery {
 	struct resolved_toolchain {
 		std::string m_name{};

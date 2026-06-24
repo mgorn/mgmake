@@ -8,6 +8,9 @@
 
 #include <type_traits>
 
+// Maps a parsed backend enum to its concrete backend type at compile time.
+// A void mapping means the backend name is accepted by the CLI but not implemented yet.
+
 namespace mgmake::backend {
 	template <cli::backend_kind Kind>
 	struct for_kind {

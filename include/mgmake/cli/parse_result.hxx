@@ -8,6 +8,8 @@
 #include <string>
 #include <utility>
 
+// The parser returns either fully parsed options or a user-facing error string.
+
 namespace mgmake::cli {
 	struct parse_result {
 		bool m_ok = false;

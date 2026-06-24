@@ -9,6 +9,8 @@
 #include <print>
 #include <string_view>
 
+// Help output is generated from the same parser definitions used by cli::parse.
+
 namespace mgmake::cli {
 	template <build::toolchain_registry_like Toolchains>
 	inline void print_help(

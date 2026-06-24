@@ -15,6 +15,8 @@
 #include <utility>
 #include <vector>
 
+// Parsers intentionally target compiler-generated dependency files, not general Makefiles or arbitrary JSON.
+
 namespace mgmake::dep {
 	namespace detail {
 		[[nodiscard]] inline std::string collapse_make_continuations(

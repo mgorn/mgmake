@@ -17,6 +17,8 @@
 	#include <unistd.h>
 #endif // MGMK_PLATFORM_POSIX
 
+// Filesystem helpers normalize common provider checks such as PATH lookup and explicit path detection.
+
 namespace mgmake::discovery {
 	[[nodiscard]] inline bool has_windows_drive_prefix(std::string_view text) noexcept {
 		return text.size() >= 2

@@ -89,6 +89,8 @@
 #include "ext/fetch.hxx"
 #ifdef MGMK_ENABLE_EXT_CMAKE
 #include "ext/cmake.hxx"
+
+// Umbrella include for the public single-header-style API; order matters because later phases depend on earlier type declarations.
 #endif // MGMK_ENABLE_EXT_CMAKE
 
 #endif // MGMAKE_MGMAKE_HXX

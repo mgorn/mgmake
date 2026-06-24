@@ -9,6 +9,8 @@
 #include <print>
 #include <string>
 
+// The tools action runs discovery and prints the resolved toolchain plus optional search diagnostics.
+
 namespace mgmake::discovery {
 	inline void print_resolved_tool(const resolved_tool& tool) {
 		std::println("  {}", name(tool.m_role));

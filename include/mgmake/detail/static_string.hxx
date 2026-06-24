@@ -7,6 +7,8 @@
 #include <cstddef>
 #include <string_view>
 
+// static_string carries compile-time strings through templates without relying on runtime storage.
+
 namespace mgmake::detail {
 	template <std::size_t N>
 	struct static_string {

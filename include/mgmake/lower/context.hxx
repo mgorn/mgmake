@@ -19,6 +19,8 @@
 #include <span>
 #include <vector>
 
+// Lowering context converts validated project specs plus prep results into a DAG of artifacts, actions, and targets.
+
 namespace mgmake::spec {
 	struct project;
 }
