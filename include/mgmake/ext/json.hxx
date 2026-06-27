@@ -18,6 +18,11 @@ namespace mgmake::ext {
 #if defined(MGMK_JSON_BACKEND_HEADER)
 	#include MGMK_JSON_BACKEND_HEADER
 #elif defined(__cxxmg_urlinclude)
+	// trick to link c++ and abi on mac
+	#if defined(__APPLE__) && defined(__clang__)
+		asm(".linker_option \"-lc++\"");
+		asm(".linker_option \"-lc++abi\"");
+	#endif
 	#define JSON_NOEXCEPTION
 	#urlinclude <https://raw.githubusercontent.com/nlohmann/json/refs/tags/v3.12.0/single_include/nlohmann/json.hpp>
 #endif // defined(MGMK_JSON_BACKEND_HEADER)
