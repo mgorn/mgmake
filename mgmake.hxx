@@ -3772,6 +3772,7 @@ namespace mgmake::ext {
 #if defined(MGMK_JSON_BACKEND_HEADER)
 	#include MGMK_JSON_BACKEND_HEADER
 #elif defined(__cxxmg_urlinclude)
+	#define JSON_NOEXCEPTION
 	#urlinclude <https://raw.githubusercontent.com/nlohmann/json/refs/tags/v3.12.0/single_include/nlohmann/json.hpp>
 #endif // defined(MGMK_JSON_BACKEND_HEADER)
 
