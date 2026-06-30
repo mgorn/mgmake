@@ -300,6 +300,57 @@ namespace mgmake::discovery {
 				.m_logical_name = "cmake",
 				.m_needed_because = "the project configures external CMake projects"
 			});
+
+			struct declared_tool {
+				tool_role m_role{};
+				std::string_view m_logical_name{};
+			};
+
+			std::vector<declared_tool> declared_tools{
+				{tool_role::c_compiler, tc.tool(tool_role::c_compiler)},
+				{tool_role::cxx_compiler, tc.tool(tool_role::cxx_compiler)},
+				{tool_role::archiver, tc.tool(tool_role::archiver)},
+				{tool_role::linker, tc.tool(tool_role::linker)}
+			};
+
+			for (const auto& binding : tc.m_tools) {
+				declared_tools.push_back({binding.m_role, binding.m_name});
+			}
+
+			for (const auto declared_tool : declared_tools) {
+				if (declared_tool.m_logical_name.empty()) {
+					continue;
+				}
+
+				bool already_requested = false;
+				for (const auto& requirement : result) {
+					if (requirement.is_any_of()) {
+						continue;
+					}
+
+					if (requirement.m_role != declared_tool.m_role) {
+						continue;
+					}
+
+					if (requirement.m_logical_name != declared_tool.m_logical_name) {
+						continue;
+					}
+
+					already_requested = true;
+					break;
+				}
+
+				if (already_requested) {
+					continue;
+				}
+
+				result.push_back({
+					.m_role = declared_tool.m_role,
+					.m_strength = requirement_strength::optional,
+					.m_logical_name = std::string{declared_tool.m_logical_name},
+					.m_needed_because = "external CMake projects can inherit declared selected-toolchain tools"
+				});
+			}
 		}
 #endif // MGMK_ENABLE_EXT_CMAKE
 
