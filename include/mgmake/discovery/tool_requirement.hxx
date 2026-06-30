@@ -202,7 +202,7 @@ namespace mgmake::discovery {
 	}
 
 	[[nodiscard]] inline std::vector<tool_requirement> required_tools(
-		const cli::options&,
+		const cli::options& opts,
 		const build::request& req,
 		const spec::project& project
 	) {
@@ -300,6 +300,15 @@ namespace mgmake::discovery {
 				.m_logical_name = "cmake",
 				.m_needed_because = "the project configures external CMake projects"
 			});
+
+			if (opts.m_backend == cli::backend_kind::automatic || opts.m_backend == cli::backend_kind::ninja) {
+				result.push_back({
+					.m_role = tool_role::generator_ninja,
+					.m_strength = requirement_strength::required,
+					.m_logical_name = opts.m_ninja.empty() ? "ninja" : opts.m_ninja,
+					.m_needed_because = "external CMake projects use the selected mgmake Ninja backend generator"
+				});
+			}
 
 			struct declared_tool {
 				tool_role m_role{};

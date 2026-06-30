@@ -34,6 +34,7 @@ namespace mgmake::build {
 
 		request result{};
 
+		result.m_backend = opts.m_backend;
 		result.m_tc = *selected_toolchain;
 
 		if (!opts.m_target_triple.empty()) {

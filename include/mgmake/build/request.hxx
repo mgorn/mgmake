@@ -3,6 +3,7 @@
 #ifndef MGMAKE_BUILD_REQUEST_HXX
 #define MGMAKE_BUILD_REQUEST_HXX
 
+#include "../cli/backend.hxx"
 #include "../discovery/resolved_toolchain.hxx"
 #include "toolchain.hxx"
 #include "../sys/platform.hxx"
@@ -20,6 +21,7 @@
 namespace mgmake::build {
     struct request {
         toolchain m_tc;
+        cli::backend_kind m_backend = cli::backend_kind::automatic;
         std::filesystem::path m_build_dir;
         std::vector<std::string> m_targets; // Which targets to build, empty = build all
         sys::target m_target = sys::g_host_target;
@@ -30,6 +32,15 @@ namespace mgmake::build {
         }
         inline constexpr auto& toolchain(struct toolchain& tc) {
             m_tc = tc;
+            return *this;
+        }
+
+        [[nodiscard]] inline constexpr cli::backend_kind backend() const noexcept {
+            return m_backend;
+        }
+
+        inline constexpr auto& backend(cli::backend_kind value) noexcept {
+            m_backend = value;
             return *this;
         }
 

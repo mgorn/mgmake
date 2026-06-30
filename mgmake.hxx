@@ -1202,6 +1202,88 @@ namespace mgmake::detail {
 #define MGMAKE_BUILD_REQUEST_HXX
 
 
+// ===== begin include/mgmake/cli/backend.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CLI_BACKEND_HXX
+#define MGMAKE_CLI_BACKEND_HXX
+
+// skipped duplicate include: include/mgmake/detail/enum_string.hxx
+
+#include <optional>
+#include <string_view>
+
+// Backend names are parsed from CLI text and later mapped to concrete backend types in backend/registry.hxx.
+
+namespace mgmake::cli {
+	enum struct backend_kind {
+		automatic,
+		ninja,
+		make,
+		direct,
+
+		count
+	};
+
+	using backend_kind_names = detail::enum_table<
+		backend_kind,
+		detail::enum_entry<backend_kind::automatic, "auto">,
+		detail::enum_entry<backend_kind::ninja, "ninja">,
+		detail::enum_entry<backend_kind::make, "make">,
+		detail::enum_entry<backend_kind::direct, "direct">
+	>;
+
+	static_assert(
+		backend_kind_names::is_zero_based_count_canonical(backend_kind::count),
+		"backend_kind_names must cover every backend_kind value exactly once"
+	);
+
+	using backend_kind_parse_names = detail::enum_table<
+		backend_kind,
+		detail::enum_entry<backend_kind::automatic, "auto">,
+		detail::enum_entry<backend_kind::automatic, "automatic">,
+		detail::enum_entry<backend_kind::ninja, "ninja">,
+		detail::enum_entry<backend_kind::make, "make">,
+		detail::enum_entry<backend_kind::make, "makefile">,
+		detail::enum_entry<backend_kind::make, "makefiles">,
+		detail::enum_entry<backend_kind::direct, "direct">,
+		detail::enum_entry<backend_kind::direct, "compiler">
+	>;
+
+	static_assert(
+		backend_kind_parse_names::is_display_aliases(),
+		"backend_kind_parse_names must not contain duplicate or empty names"
+	);
+
+	[[nodiscard]] inline constexpr std::string_view backend_name(backend_kind backend) noexcept {
+		return backend_kind_names::to_string(backend);
+	}
+
+	[[nodiscard]] inline constexpr std::optional<backend_kind> backend_from_string(
+		std::string_view text
+	) noexcept {
+		return backend_kind_parse_names::from_string(text);
+	}
+
+	[[nodiscard]] inline constexpr bool parse_backend(
+		std::string_view text,
+		backend_kind& out
+	) noexcept {
+		const auto parsed = backend_from_string(text);
+
+		if (!parsed.has_value()) {
+			return false;
+		}
+
+		out = *parsed;
+		return true;
+	}
+}
+
+#endif // MGMAKE_CLI_BACKEND_HXX
+// ===== end include/mgmake/cli/backend.hxx =====
+
+
 // ===== begin include/mgmake/discovery/resolved_toolchain.hxx =====
 #pragma once
 
@@ -2451,6 +2533,7 @@ namespace mgmake::build {
 namespace mgmake::build {
     struct request {
         toolchain m_tc;
+        cli::backend_kind m_backend = cli::backend_kind::automatic;
         std::filesystem::path m_build_dir;
         std::vector<std::string> m_targets; // Which targets to build, empty = build all
         sys::target m_target = sys::g_host_target;
@@ -2461,6 +2544,15 @@ namespace mgmake::build {
         }
         inline constexpr auto& toolchain(struct toolchain& tc) {
             m_tc = tc;
+            return *this;
+        }
+
+        [[nodiscard]] inline constexpr cli::backend_kind backend() const noexcept {
+            return m_backend;
+        }
+
+        inline constexpr auto& backend(cli::backend_kind value) noexcept {
+            m_backend = value;
             return *this;
         }
 
@@ -4556,88 +4648,7 @@ namespace mgmake::cli {
 #endif // MGMAKE_CLI_ACTION_HXX
 // ===== end include/mgmake/cli/action.hxx =====
 
-
-// ===== begin include/mgmake/cli/backend.hxx =====
-#pragma once
-
-#ifndef MGMAKE_CLI_BACKEND_HXX
-#define MGMAKE_CLI_BACKEND_HXX
-
-// skipped duplicate include: include/mgmake/detail/enum_string.hxx
-
-#include <optional>
-#include <string_view>
-
-// Backend names are parsed from CLI text and later mapped to concrete backend types in backend/registry.hxx.
-
-namespace mgmake::cli {
-	enum struct backend_kind {
-		automatic,
-		ninja,
-		make,
-		direct,
-
-		count
-	};
-
-	using backend_kind_names = detail::enum_table<
-		backend_kind,
-		detail::enum_entry<backend_kind::automatic, "auto">,
-		detail::enum_entry<backend_kind::ninja, "ninja">,
-		detail::enum_entry<backend_kind::make, "make">,
-		detail::enum_entry<backend_kind::direct, "direct">
-	>;
-
-	static_assert(
-		backend_kind_names::is_zero_based_count_canonical(backend_kind::count),
-		"backend_kind_names must cover every backend_kind value exactly once"
-	);
-
-	using backend_kind_parse_names = detail::enum_table<
-		backend_kind,
-		detail::enum_entry<backend_kind::automatic, "auto">,
-		detail::enum_entry<backend_kind::automatic, "automatic">,
-		detail::enum_entry<backend_kind::ninja, "ninja">,
-		detail::enum_entry<backend_kind::make, "make">,
-		detail::enum_entry<backend_kind::make, "makefile">,
-		detail::enum_entry<backend_kind::make, "makefiles">,
-		detail::enum_entry<backend_kind::direct, "direct">,
-		detail::enum_entry<backend_kind::direct, "compiler">
-	>;
-
-	static_assert(
-		backend_kind_parse_names::is_display_aliases(),
-		"backend_kind_parse_names must not contain duplicate or empty names"
-	);
-
-	[[nodiscard]] inline constexpr std::string_view backend_name(backend_kind backend) noexcept {
-		return backend_kind_names::to_string(backend);
-	}
-
-	[[nodiscard]] inline constexpr std::optional<backend_kind> backend_from_string(
-		std::string_view text
-	) noexcept {
-		return backend_kind_parse_names::from_string(text);
-	}
-
-	[[nodiscard]] inline constexpr bool parse_backend(
-		std::string_view text,
-		backend_kind& out
-	) noexcept {
-		const auto parsed = backend_from_string(text);
-
-		if (!parsed.has_value()) {
-			return false;
-		}
-
-		out = *parsed;
-		return true;
-	}
-}
-
-#endif // MGMAKE_CLI_BACKEND_HXX
-// ===== end include/mgmake/cli/backend.hxx =====
-
+// skipped duplicate include: include/mgmake/cli/backend.hxx
 // skipped duplicate include: include/mgmake/discovery/mode.hxx
 // skipped duplicate include: include/mgmake/sys/platform.hxx
 
@@ -4755,6 +4766,7 @@ namespace mgmake::build {
 
 		request result{};
 
+		result.m_backend = opts.m_backend;
 		result.m_tc = *selected_toolchain;
 
 		if (!opts.m_target_triple.empty()) {
@@ -8781,7 +8793,7 @@ namespace mgmake::discovery {
 	}
 
 	[[nodiscard]] inline std::vector<tool_requirement> required_tools(
-		const cli::options&,
+		const cli::options& opts,
 		const build::request& req,
 		const spec::project& project
 	) {
@@ -8879,6 +8891,15 @@ namespace mgmake::discovery {
 				.m_logical_name = "cmake",
 				.m_needed_because = "the project configures external CMake projects"
 			});
+
+			if (opts.m_backend == cli::backend_kind::automatic || opts.m_backend == cli::backend_kind::ninja) {
+				result.push_back({
+					.m_role = tool_role::generator_ninja,
+					.m_strength = requirement_strength::required,
+					.m_logical_name = opts.m_ninja.empty() ? "ninja" : opts.m_ninja,
+					.m_needed_because = "external CMake projects use the selected mgmake Ninja backend generator"
+				});
+			}
 
 			struct declared_tool {
 				tool_role m_role{};
@@ -11923,6 +11944,45 @@ namespace mgmake::prep {
 		}
 	}
 
+	[[nodiscard]] inline std::string_view cmake_generator_for_backend(
+		cli::backend_kind backend
+	) noexcept {
+		switch (backend) {
+			case cli::backend_kind::automatic:
+			case cli::backend_kind::ninja:
+				return "Ninja";
+
+			case cli::backend_kind::make:
+			case cli::backend_kind::direct:
+			case cli::backend_kind::count:
+				return {};
+		}
+
+		return {};
+	}
+
+	inline void append_cmake_backend_generator_args(
+		sys::command_line& command,
+		const build::request& req
+	) {
+		const auto generator = cmake_generator_for_backend(req.backend());
+
+		if (generator.empty()) {
+			return;
+		}
+
+		command.m_args.emplace_back("-G");
+		command.m_args.emplace_back(std::string{generator});
+
+		if (generator == "Ninja") {
+			if (const auto* ninja = req.discovered_tool(discovery::tool_role::generator_ninja)) {
+				command.m_args.emplace_back(
+					"-DCMAKE_MAKE_PROGRAM=" + ninja->path_string()
+				);
+			}
+		}
+	}
+
 	inline void append_cmake_discovered_toolchain_args(
 		sys::command_line& command,
 		const build::request& req
@@ -11973,12 +12033,14 @@ namespace mgmake::prep {
 		command.m_args.emplace_back(build_dir.string());
 		command.m_args.emplace_back("-DCMAKE_INSTALL_PREFIX=" + install_dir.string());
 
-		append_cmake_discovered_toolchain_args(command, req);
-
 		if (!cmake_project.m_generator.empty()) {
 			command.m_args.emplace_back("-G");
 			command.m_args.emplace_back(cmake_project.m_generator);
+		} else {
+			append_cmake_backend_generator_args(command, req);
 		}
+
+		append_cmake_discovered_toolchain_args(command, req);
 
 		if (!cmake_project.m_build_config.empty()) {
 			command.m_args.emplace_back("-DCMAKE_BUILD_TYPE=" + cmake_project.m_build_config);
