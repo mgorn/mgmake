@@ -266,11 +266,16 @@ namespace mgmake::spec {
 				);
 
 				const auto linked_id = find_library(linked_name);
+				/*
 				mgmkassert(
 					linked_id.has_value(),
 					"mgmake spec: library '" + std::string{library_name} +
 						"' links unknown library '" + linked_name + "'"
 				);
+				*/
+				if (not linked_id.has_value()) {
+					continue;
+				}
 
 				const auto& linked_library = m_libraries.at(linked_id.value());
 				assert_library_link_closure_is_acyclic(

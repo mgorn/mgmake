@@ -27,6 +27,18 @@ namespace mgmake::dag {
 		void add_dependency(const target::id dep) {
 			m_dependencies.emplace(dep);
 		}
+
+        const std::string_view name() const {
+            return m_name;
+        }
+
+        const std::set<artifact::id>& outputs() const {
+            return m_outputs;
+        }
+
+        const std::set<target::id>& dependencies() const {
+            return m_dependencies;
+        }
     };
 }
 

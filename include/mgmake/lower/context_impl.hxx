@@ -469,7 +469,11 @@ namespace mgmake::lower {
 		command.m_args.emplace_back(shared_path.string());
 
 		std::vector<dag::artifact::id> inputs = object_ids;
-		inputs.insert(inputs.end(), usage.m_link_inputs.begin(), usage.m_link_inputs.end());
+		for (auto input : usage.m_link_inputs) {
+			if (not m_emit.graph().artifact(input).is_system()) {
+				inputs.emplace_back(input);
+			}
+		}
 		inputs.insert(inputs.end(), usage.m_usage_inputs.begin(), usage.m_usage_inputs.end());
 
 		m_emit.action(
@@ -532,7 +536,11 @@ namespace mgmake::lower {
 
 		auto object_ids = lower_objects(exe, include_dirs, usage.m_usage_inputs);
 		std::vector<dag::artifact::id> inputs = object_ids;
-		inputs.insert(inputs.end(), usage.m_link_inputs.begin(), usage.m_link_inputs.end());
+		for (auto input : usage.m_link_inputs) {
+			if (not m_emit.graph().artifact(input).is_system()) {
+				inputs.emplace_back(input);
+			}
+		}
 		inputs.insert(inputs.end(), usage.m_usage_inputs.begin(), usage.m_usage_inputs.end());
 
 		std::filesystem::path output =

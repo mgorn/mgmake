@@ -3228,6 +3228,18 @@ namespace mgmake::dag {
 		void add_dependency(const target::id dep) {
 			m_dependencies.emplace(dep);
 		}
+
+        const std::string_view name() const {
+            return m_name;
+        }
+
+        const std::set<artifact::id>& outputs() const {
+            return m_outputs;
+        }
+
+        const std::set<target::id>& dependencies() const {
+            return m_dependencies;
+        }
     };
 }
 
@@ -6101,11 +6113,16 @@ namespace mgmake::spec {
 				);
 
 				const auto linked_id = find_library(linked_name);
+				/*
 				mgmkassert(
 					linked_id.has_value(),
 					"mgmake spec: library '" + std::string{library_name} +
 						"' links unknown library '" + linked_name + "'"
 				);
+				*/
+				if (not linked_id.has_value()) {
+					continue;
+				}
 
 				const auto& linked_library = m_libraries.at(linked_id.value());
 				assert_library_link_closure_is_acyclic(
@@ -10567,11 +10584,11 @@ namespace mgmake::backend {
                 }
 
                 if (!action.m_working_directory.empty()) {
-#if defined(_WIN32)
+#ifdef MGMK_PLATFORM_WINDOWS
                     command_text = "cd /d ";
 #else
                     command_text = "cd ";
-#endif // defined(_WIN32)
+#endif // MGMK_PLATFORM_WINDOWS
                     command_text += sys::shell_escape(action.m_working_directory.string());
                     command_text += " && ";
                     command_text += action.m_command.full_command();
@@ -10622,8 +10639,17 @@ namespace mgmake::backend {
 
             // DAG targets become phony Ninja targets that collect outputs and target-level dependencies.
             for (const auto& target : graph.m_targets) {
+                // Check if it is a system library
+                bool sys_lib = false;
+                if (not target.outputs().empty() and target.outputs().size() == 1) {
+                    auto& only_artifact = graph.artifact(*target.outputs().begin());
+                    if (only_artifact.is_system()) {
+                        sys_lib = true;
+                    }
+                }
+
                 out << "build " << detail::ninja_escape_build_text(target.m_name) << ": phony ";
-                if (not target.m_outputs.empty()) {
+                if (not target.m_outputs.empty() and not sys_lib) {
                     out << ' ';
                     detail::write_artifact_list(out, graph, target.m_outputs);
                 }
@@ -13382,7 +13408,11 @@ namespace mgmake::lower {
 		command.m_args.emplace_back(shared_path.string());
 
 		std::vector<dag::artifact::id> inputs = object_ids;
-		inputs.insert(inputs.end(), usage.m_link_inputs.begin(), usage.m_link_inputs.end());
+		for (auto input : usage.m_link_inputs) {
+			if (not m_emit.graph().artifact(input).is_system()) {
+				inputs.emplace_back(input);
+			}
+		}
 		inputs.insert(inputs.end(), usage.m_usage_inputs.begin(), usage.m_usage_inputs.end());
 
 		m_emit.action(
@@ -13445,7 +13475,11 @@ namespace mgmake::lower {
 
 		auto object_ids = lower_objects(exe, include_dirs, usage.m_usage_inputs);
 		std::vector<dag::artifact::id> inputs = object_ids;
-		inputs.insert(inputs.end(), usage.m_link_inputs.begin(), usage.m_link_inputs.end());
+		for (auto input : usage.m_link_inputs) {
+			if (not m_emit.graph().artifact(input).is_system()) {
+				inputs.emplace_back(input);
+			}
+		}
 		inputs.insert(inputs.end(), usage.m_usage_inputs.begin(), usage.m_usage_inputs.end());
 
 		std::filesystem::path output =
