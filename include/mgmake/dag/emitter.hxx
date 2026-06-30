@@ -25,6 +25,10 @@ namespace mgmake::dag {
 		emitter(dag::graph& graph)
 			: m_graph{graph} {}
 
+		const dag::graph& graph() const {
+			return m_graph;
+		}
+		
 		dag::artifact::id file_artifact(
 			dag::artifact::kind kind,
 			const std::filesystem::path& path

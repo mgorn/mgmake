@@ -266,7 +266,7 @@ namespace mgmake::lower {
 	}
 
 	inline lower::target context::lower_system_library(std::string_view lib) {
-		auto artifact = m_emit.file_artifact(dag::artifact::kind::phony, lib);
+		auto artifact = m_emit.file_artifact(dag::artifact::kind::system, lib);
 		dag::target dag_target{ 
 			.m_name = std::string{ lib },
 			.m_outputs = { artifact }
@@ -558,7 +558,33 @@ namespace mgmake::lower {
 		}
 
 		for (auto link_input : usage.m_link_inputs) {
-			command.m_args.emplace_back(m_emit.path(link_input).string());
+			auto& link_artifact = m_emit.graph().artifact(link_input);
+			auto& link_path = link_artifact.path();
+			if (link_artifact.is_system()) {
+				auto name = link_path.string();
+				auto arg = [&name, &tc] -> std::string {
+					if (name.starts_with("-l")) {
+						return name;
+					}
+
+					if (tc.dialect() == build::toolchain::dialect::msvc) {
+						if (name.ends_with(".lib")) {
+							return name;
+						}
+
+						return name + ".lib";
+					}
+
+					if (name.ends_with(".lib")) {
+						name = name.substr(0, name.size() - 4);
+					}
+
+					return "-l" + name;
+				}();
+				command.m_args.emplace_back(arg);
+			} else {
+				command.m_args.emplace_back(link_path.string());
+			}
 		}
 
 		for (const auto& flag : tc.link_flags()) {

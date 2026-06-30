@@ -52,9 +52,8 @@ namespace mgmake::detail {
         inline std::string artifact_shape(dag::artifact::kind kind) {
             switch (kind) {
                 case dag::artifact::kind::source:
-                    return "box";
-
                 case dag::artifact::kind::header:
+				case dag::artifact::kind::system:
                     return "box";
 
                 case dag::artifact::kind::generated:
@@ -74,6 +73,9 @@ namespace mgmake::detail {
 
                 case dag::artifact::kind::header:
                     return "header";
+
+				case dag::artifact::kind::system:
+                    return "system";
 
                 case dag::artifact::kind::generated:
                     return "generated";
