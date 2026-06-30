@@ -189,6 +189,7 @@ namespace mgmake {
 
 		auto prep_execute_result = prep::execute(
 			opts,
+			resolved_req,
 			prep_result,
 			hashes
 		);

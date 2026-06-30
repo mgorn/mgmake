@@ -101,6 +101,77 @@ namespace mgmake::prep {
 		return build_dir / "CMakeCache.txt";
 	}
 
+	inline void append_cmake_tool_if_discovered(
+		sys::command_line& command,
+		const build::request& req,
+		discovery::tool_role role,
+		std::string_view cmake_variable
+	) {
+		const auto* tool = req.discovered_tool(role);
+
+		if (tool == nullptr) {
+			std::print("No tool found for cmake var {}\n", cmake_variable);
+			return;
+		}
+
+		command.m_args.emplace_back(
+			"-D" + std::string{cmake_variable} + "=" + tool->path_string()
+		);
+	}
+
+	inline void append_cmake_archive_tool_if_discovered(
+		sys::command_line& command,
+		const build::request& req
+	) {
+		if (const auto* tool = req.discovered_tool(discovery::tool_role::archiver)) {
+			command.m_args.emplace_back(
+				"-DCMAKE_AR=" + tool->path_string()
+			);
+			return;
+		}
+
+		if (const auto* tool = req.discovered_tool(discovery::tool_role::librarian)) {
+			command.m_args.emplace_back(
+				"-DCMAKE_AR=" + tool->path_string()
+			);
+		}
+	}
+
+	inline void append_cmake_discovered_toolchain_args(
+		sys::command_line& command,
+		const build::request& req
+	) {
+		append_cmake_tool_if_discovered(
+			command,
+			req,
+			discovery::tool_role::c_compiler,
+			"CMAKE_C_COMPILER"
+		);
+
+		append_cmake_tool_if_discovered(
+			command,
+			req,
+			discovery::tool_role::cxx_compiler,
+			"CMAKE_CXX_COMPILER"
+		);
+
+		append_cmake_archive_tool_if_discovered(command, req);
+
+		append_cmake_tool_if_discovered(
+			command,
+			req,
+			discovery::tool_role::ranlib,
+			"CMAKE_RANLIB"
+		);
+
+		append_cmake_tool_if_discovered(
+			command,
+			req,
+			discovery::tool_role::resource_compiler,
+			"CMAKE_RC_COMPILER"
+		);
+	}
+
 	[[nodiscard]] inline sys::command_line cmake_configure_command(
 		const build::request& req,
 		const ext::cmake& cmake_project,
@@ -115,6 +186,8 @@ namespace mgmake::prep {
 		command.m_args.emplace_back("-B");
 		command.m_args.emplace_back(build_dir.string());
 		command.m_args.emplace_back("-DCMAKE_INSTALL_PREFIX=" + install_dir.string());
+
+		append_cmake_discovered_toolchain_args(command, req);
 
 		if (!cmake_project.m_generator.empty()) {
 			command.m_args.emplace_back("-G");

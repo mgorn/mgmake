@@ -4,14 +4,17 @@
 #define MGMK_PREP_EXECUTOR_HXX
 
 #include "result.hxx"
+#include "../build/request.hxx"
 #include "../cli/options.hxx"
 #include "../dag/graph.hxx"
 #include "../detail/hashes.hxx"
+#include "../discovery/tool_environment.hxx"
 #include "../sys/command_line.hxx"
 #ifdef MGMK_ENABLE_EXT_CMAKE
 #include "../ext/cmake/file_api.hxx"
 #endif // MGMK_ENABLE_EXT_CMAKE
 
+#include <cstdlib>
 #include <expected>
 #include <filesystem>
 #include <print>
@@ -81,8 +84,34 @@ namespace mgmake::prep {
 		}
 	}
 
+	[[nodiscard]] inline int invoke_env_command(
+		const build::request& req,
+		const sys::command_line& command,
+		sys::command_run_options opts = {}
+	) {
+		if (req.tool_environment().empty()) {
+			return command.invoke(opts);
+		}
+
+		auto command_text = discovery::wrap_command_for_environment(
+			req.tool_environment(),
+			command.full_command()
+		);
+
+		if (opts.m_verbose || opts.m_dry_run) {
+			std::println("{}", command_text);
+		}
+
+		if (opts.m_dry_run) {
+			return 0;
+		}
+
+		return std::system(command_text.c_str());
+	}
+
 	[[nodiscard]] inline std::expected<void, std::string> execute(
 		const cli::options& opts,
+		const build::request& req,
 		prep::result& result,
 		detail::hashes& hashes
 	) {
@@ -106,10 +135,14 @@ namespace mgmake::prep {
 				std::filesystem::current_path(action.m_working_directory);
 			}
 
-			const int exit_code = action.m_command.invoke({
-				.m_verbose = opts.m_verbose || opts.m_dry_run,
-				.m_dry_run = opts.m_dry_run
-			});
+			const int exit_code = invoke_env_command(
+				req,
+				action.m_command,
+				{
+					.m_verbose = opts.m_verbose || opts.m_dry_run,
+					.m_dry_run = opts.m_dry_run
+				}
+			);
 
 			if (!action.m_working_directory.empty() && !opts.m_dry_run) {
 				std::filesystem::current_path(old_cwd);

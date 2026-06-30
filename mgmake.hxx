@@ -11560,14 +11560,17 @@ namespace mgmake::prep {
 #define MGMK_PREP_EXECUTOR_HXX
 
 // skipped duplicate include: include/mgmake/prep/result.hxx
+// skipped duplicate include: include/mgmake/build/request.hxx
 // skipped duplicate include: include/mgmake/cli/options.hxx
 // skipped duplicate include: include/mgmake/dag/graph.hxx
 // skipped duplicate include: include/mgmake/detail/hashes.hxx
+// skipped duplicate include: include/mgmake/discovery/tool_environment.hxx
 // skipped duplicate include: include/mgmake/sys/command_line.hxx
 #ifdef MGMK_ENABLE_EXT_CMAKE
 // skipped duplicate include: include/mgmake/ext/cmake/file_api.hxx
 #endif // MGMK_ENABLE_EXT_CMAKE
 
+#include <cstdlib>
 #include <expected>
 #include <filesystem>
 #include <print>
@@ -11637,8 +11640,34 @@ namespace mgmake::prep {
 		}
 	}
 
+	[[nodiscard]] inline int invoke_env_command(
+		const build::request& req,
+		const sys::command_line& command,
+		sys::command_run_options opts = {}
+	) {
+		if (req.tool_environment().empty()) {
+			return command.invoke(opts);
+		}
+
+		auto command_text = discovery::wrap_command_for_environment(
+			req.tool_environment(),
+			command.full_command()
+		);
+
+		if (opts.m_verbose || opts.m_dry_run) {
+			std::println("{}", command_text);
+		}
+
+		if (opts.m_dry_run) {
+			return 0;
+		}
+
+		return std::system(command_text.c_str());
+	}
+
 	[[nodiscard]] inline std::expected<void, std::string> execute(
 		const cli::options& opts,
+		const build::request& req,
 		prep::result& result,
 		detail::hashes& hashes
 	) {
@@ -11662,10 +11691,14 @@ namespace mgmake::prep {
 				std::filesystem::current_path(action.m_working_directory);
 			}
 
-			const int exit_code = action.m_command.invoke({
-				.m_verbose = opts.m_verbose || opts.m_dry_run,
-				.m_dry_run = opts.m_dry_run
-			});
+			const int exit_code = invoke_env_command(
+				req,
+				action.m_command,
+				{
+					.m_verbose = opts.m_verbose || opts.m_dry_run,
+					.m_dry_run = opts.m_dry_run
+				}
+			);
 
 			if (!action.m_working_directory.empty() && !opts.m_dry_run) {
 				std::filesystem::current_path(old_cwd);
@@ -11803,6 +11836,77 @@ namespace mgmake::prep {
 		return build_dir / "CMakeCache.txt";
 	}
 
+	inline void append_cmake_tool_if_discovered(
+		sys::command_line& command,
+		const build::request& req,
+		discovery::tool_role role,
+		std::string_view cmake_variable
+	) {
+		const auto* tool = req.discovered_tool(role);
+
+		if (tool == nullptr) {
+			std::print("No tool found for cmake var {}\n", cmake_variable);
+			return;
+		}
+
+		command.m_args.emplace_back(
+			"-D" + std::string{cmake_variable} + "=" + tool->path_string()
+		);
+	}
+
+	inline void append_cmake_archive_tool_if_discovered(
+		sys::command_line& command,
+		const build::request& req
+	) {
+		if (const auto* tool = req.discovered_tool(discovery::tool_role::archiver)) {
+			command.m_args.emplace_back(
+				"-DCMAKE_AR=" + tool->path_string()
+			);
+			return;
+		}
+
+		if (const auto* tool = req.discovered_tool(discovery::tool_role::librarian)) {
+			command.m_args.emplace_back(
+				"-DCMAKE_AR=" + tool->path_string()
+			);
+		}
+	}
+
+	inline void append_cmake_discovered_toolchain_args(
+		sys::command_line& command,
+		const build::request& req
+	) {
+		append_cmake_tool_if_discovered(
+			command,
+			req,
+			discovery::tool_role::c_compiler,
+			"CMAKE_C_COMPILER"
+		);
+
+		append_cmake_tool_if_discovered(
+			command,
+			req,
+			discovery::tool_role::cxx_compiler,
+			"CMAKE_CXX_COMPILER"
+		);
+
+		append_cmake_archive_tool_if_discovered(command, req);
+
+		append_cmake_tool_if_discovered(
+			command,
+			req,
+			discovery::tool_role::ranlib,
+			"CMAKE_RANLIB"
+		);
+
+		append_cmake_tool_if_discovered(
+			command,
+			req,
+			discovery::tool_role::resource_compiler,
+			"CMAKE_RC_COMPILER"
+		);
+	}
+
 	[[nodiscard]] inline sys::command_line cmake_configure_command(
 		const build::request& req,
 		const ext::cmake& cmake_project,
@@ -11817,6 +11921,8 @@ namespace mgmake::prep {
 		command.m_args.emplace_back("-B");
 		command.m_args.emplace_back(build_dir.string());
 		command.m_args.emplace_back("-DCMAKE_INSTALL_PREFIX=" + install_dir.string());
+
+		append_cmake_discovered_toolchain_args(command, req);
 
 		if (!cmake_project.m_generator.empty()) {
 			command.m_args.emplace_back("-G");
@@ -13692,6 +13798,7 @@ namespace mgmake {
 
 		auto prep_execute_result = prep::execute(
 			opts,
+			resolved_req,
 			prep_result,
 			hashes
 		);
