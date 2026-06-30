@@ -163,14 +163,23 @@ namespace mgmake::lower {
 		// Usage propagation turns named library edges into include paths, link inputs, and DAG target dependencies.
 		for (const auto& library_name : libraries) {
 			const auto linked_id = m_project.find_library(library_name);
+			
+			const lower::target& dep = [&] {
+				if (linked_id.has_value()) {
+					return lower_library(linked_id.value());
+				} else {
+					// lowering with just the name assumes system/external
+					return lower_library(library_name);
+				}
+			}();
 
+			/*
 			mgmkassert(
 				linked_id.has_value(),
 				"mgmake lower: target '" + std::string{owner_name} +
 					"' links unknown library '" + library_name + "'"
 			);
-
-			const lower::target& dep = lower_library(linked_id.value());
+			*/
 
 			if (dep.m_dag_target.has_value()) {
 				result.m_dag_dependencies.emplace(dep.m_dag_target.value());
@@ -245,6 +254,27 @@ namespace mgmake::lower {
 		m_active_libraries.erase(id);
 
 		return m_libraries.at(id).value();
+	}
+
+	// When we only have a string for a library, it's probably a system library
+	inline const lower::target& context::lower_library(std::string_view lib) {
+		// assert it is NOT part of the project
+		mgmkassert(not m_project.find_library(lib).has_value(), "mgmake target passed as external/system library? This should never happen.");
+
+		// Append external/system libs AFTER project libraries
+		return m_libraries.emplace_back(lower_system_library(lib)).value();
+	}
+
+	inline lower::target context::lower_system_library(std::string_view lib) {
+		auto artifact = m_emit.file_artifact(dag::artifact::kind::phony, lib);
+		dag::target dag_target{ 
+			.m_name = std::string{ lib },
+			.m_outputs = { artifact }
+		};
+		return lower::target{
+			.m_dag_target = m_emit.target(dag_target),
+			.m_linkable_artifacts = { artifact }
+		};
 	}
 
 	inline lower::target context::lower_interface_library(

@@ -205,8 +205,8 @@ namespace mgmake::dag {
 			return action(name, description, inputs, outputs, command, {});
 		}
 
-		dag::target::id target(const dag::target& target) {
-			return m_graph.create_target(target);
+		dag::target::id target(auto&&... args) {
+			return m_graph.create_target(std::forward<decltype(args)>(args)...);
 		}
 	};
 }

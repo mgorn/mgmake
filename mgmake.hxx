@@ -2538,6 +2538,7 @@ namespace mgmake::build {
         std::vector<std::string> m_targets; // Which targets to build, empty = build all
         sys::target m_target = sys::g_host_target;
         std::optional<discovery::resolved_toolchain> m_resolved_toolchain{};
+        bool m_discover_source_dependencies = false;
 
         [[nodiscard]] inline constexpr const toolchain& toolchain() const {
             return m_tc;
@@ -2652,6 +2653,13 @@ namespace mgmake::build {
             }
 
             return m_resolved_toolchain->m_link_prefix_args;
+        }
+
+        inline const void discover_source_dependencies(bool value) noexcept {
+            m_discover_source_dependencies = value;
+        }
+        [[nodiscard]] inline const bool discover_source_dependencies() const noexcept {
+            return m_discover_source_dependencies;
         }
     };
 }
@@ -4683,6 +4691,7 @@ namespace mgmake::cli {
 		bool m_refresh_tools = false;
 		bool m_no_tool_cache = false;
 		bool m_show_tool_search = false;
+		bool m_discover_source_dependencies = false;
 
 		discovery::mode m_tool_discovery = discovery::mode::automatic;
 
@@ -4776,6 +4785,7 @@ namespace mgmake::build {
 		result.m_build_dir = std::filesystem::path{ opts.m_build_dir };
 		result.m_targets = opts.m_targets;
 		result.m_target = opts.target_platform();
+		result.m_discover_source_dependencies = opts.m_discover_source_dependencies;
 
 		return result;
 	}
@@ -5394,6 +5404,9 @@ namespace mgmake::spec {
 		inline constexpr auto& link(const std::string& lib) {
 			return link(std::string_view{ lib });
 		}
+		inline constexpr auto& link(const char* lib) {
+			return link(std::string_view{ lib });
+		}
 		inline constexpr auto& linked_libraries() const {
 			return m_linked_libraries;
 		}
@@ -5868,7 +5881,7 @@ namespace mgmake::spec {
 			assert_known_provider_for(exe.m_provider, exe.m_name);
 #endif // MGMK_ENABLE_EXT_CMAKE
 
-			assert_known_libraries_for(exe.m_linked_libraries, exe.m_name);
+			//assert_known_libraries_for(exe.m_linked_libraries, exe.m_name);
 
 			m_executables.emplace_back(exe);
 			return *this;
@@ -5912,7 +5925,7 @@ namespace mgmake::spec {
 #ifdef MGMK_ENABLE_EXT_CMAKE
 			assert_known_provider_for(lib.m_provider, lib.m_name);
 #endif // MGMK_ENABLE_EXT_CMAKE
-			assert_known_libraries_for(lib.m_linked_libraries, lib.m_name);
+			//assert_known_libraries_for(lib.m_linked_libraries, lib.m_name);
 			assert_library_link_closure_is_acyclic(lib);
 
 			m_libraries.emplace_back(lib);
@@ -7363,6 +7376,10 @@ namespace mgmake::cli {
 		flag_option<&options::m_show_tool_search, "show-tool-search">
 			::description<"Print detailed tool discovery search diagnostics.">;
 
+	using discover_source_dependencies_option =
+		flag_option<&options::m_discover_source_dependencies, "discover-source-dependencies">
+			::description<"Discover source dependencies (typically included headers) from depfiles and populate them as artifacts in the build graph.">;
+
 	using tool_discovery_option =
 		value_option<&options::m_tool_discovery, "tool-discovery">
 			::value_name<"mode">
@@ -7530,6 +7547,7 @@ namespace mgmake::cli {
 		refresh_tools_option,
 		no_tool_cache_option,
 		show_tool_search_option,
+		discover_source_dependencies_option,
 		tool_discovery_option,
 		toolchain_root_option,
 		sdk_root_option,
@@ -7823,8 +7841,8 @@ namespace mgmake::dag {
 			return action(name, description, inputs, outputs, command, {});
 		}
 
-		dag::target::id target(const dag::target& target) {
-			return m_graph.create_target(target);
+		dag::target::id target(auto&&... args) {
+			return m_graph.create_target(std::forward<decltype(args)>(args)...);
 		}
 	};
 }
@@ -12564,6 +12582,8 @@ namespace mgmake::lower {
 		}
 
 		const lower::target& lower_library(spec::library::id id);
+		// Lowering a library by name is reserved for external/system libraries
+		const lower::target& lower_library(std::string_view lib);
 		void lower_executable(spec::executable::id id);
 #ifdef MGMK_ENABLE_EXT_CMAKE
 		lower::cmake_target lower_cmake_target(
@@ -12598,6 +12618,10 @@ namespace mgmake::lower {
 		lower::target lower_shared_library(
 			const spec::library& lib,
 			lower::usage usage
+		);
+
+		lower::target lower_system_library(
+			std::string_view lib
 		);
 
 #ifdef MGMK_ENABLE_EXT_CMAKE
@@ -12820,35 +12844,38 @@ namespace mgmake::lower {
 			std::vector<dag::artifact::id> discovered_dependencies{};
 			std::set<dag::artifact::id> discovered_dependency_ids{};
 
-			if (depfile.has_value()) {
-				// This consumes dependency information from a previous build invocation.
-				// A clean build will usually have no depfile yet; the compiler emits it
-				// during the build, and the next graph/build invocation can materialize it.
-				m_deps.consume(*depfile);
+			if (request().m_discover_source_dependencies) {
+				if (depfile.has_value()) {
+					// This consumes dependency information from a previous build invocation.
+					// A clean build will usually have no depfile yet; the compiler emits it
+					// during the build, and the next graph/build invocation can materialize it.
+					m_deps.consume(*depfile);
 
-				for (const auto& dependency : m_deps.dependencies_for(depfile->m_target)) {
-					const auto dependency_id = m_emit.header(dependency);
+					for (const auto& dependency : m_deps.dependencies_for(depfile->m_target)) {
+						const auto dependency_id = m_emit.header(dependency);
 
-					bool already_input = false;
+						bool already_input = false;
 
-					for (const auto input : compile_inputs) {
-						if (input == dependency_id) {
-							already_input = true;
-							break;
+						for (const auto input : compile_inputs) {
+							if (input == dependency_id) {
+								already_input = true;
+								break;
+							}
 						}
-					}
 
-					if (already_input) {
-						continue;
-					}
+						if (already_input) {
+							continue;
+						}
 
-					if (!discovered_dependency_ids.emplace(dependency_id).second) {
-						continue;
-					}
+						if (!discovered_dependency_ids.emplace(dependency_id).second) {
+							continue;
+						}
 
-					discovered_dependencies.emplace_back(dependency_id);
+						discovered_dependencies.emplace_back(dependency_id);
+					}
 				}
 			}
+			
 
 			const auto action_id = m_emit.action(
 				std::string{"Compile "} + source.string(),
@@ -13039,14 +13066,23 @@ namespace mgmake::lower {
 		// Usage propagation turns named library edges into include paths, link inputs, and DAG target dependencies.
 		for (const auto& library_name : libraries) {
 			const auto linked_id = m_project.find_library(library_name);
+			
+			const lower::target& dep = [&] {
+				if (linked_id.has_value()) {
+					return lower_library(linked_id.value());
+				} else {
+					// lowering with just the name assumes system/external
+					return lower_library(library_name);
+				}
+			}();
 
+			/*
 			mgmkassert(
 				linked_id.has_value(),
 				"mgmake lower: target '" + std::string{owner_name} +
 					"' links unknown library '" + library_name + "'"
 			);
-
-			const lower::target& dep = lower_library(linked_id.value());
+			*/
 
 			if (dep.m_dag_target.has_value()) {
 				result.m_dag_dependencies.emplace(dep.m_dag_target.value());
@@ -13121,6 +13157,27 @@ namespace mgmake::lower {
 		m_active_libraries.erase(id);
 
 		return m_libraries.at(id).value();
+	}
+
+	// When we only have a string for a library, it's probably a system library
+	inline const lower::target& context::lower_library(std::string_view lib) {
+		// assert it is NOT part of the project
+		mgmkassert(not m_project.find_library(lib).has_value(), "mgmake target passed as external/system library? This should never happen.");
+
+		// Append external/system libs AFTER project libraries
+		return m_libraries.emplace_back(lower_system_library(lib)).value();
+	}
+
+	inline lower::target context::lower_system_library(std::string_view lib) {
+		auto artifact = m_emit.file_artifact(dag::artifact::kind::phony, lib);
+		dag::target dag_target{ 
+			.m_name = std::string{ lib },
+			.m_outputs = { artifact }
+		};
+		return lower::target{
+			.m_dag_target = m_emit.target(dag_target),
+			.m_linkable_artifacts = { artifact }
+		};
 	}
 
 	inline lower::target context::lower_interface_library(

@@ -44,6 +44,7 @@ namespace mgmake::build {
 		result.m_build_dir = std::filesystem::path{ opts.m_build_dir };
 		result.m_targets = opts.m_targets;
 		result.m_target = opts.target_platform();
+		result.m_discover_source_dependencies = opts.m_discover_source_dependencies;
 
 		return result;
 	}

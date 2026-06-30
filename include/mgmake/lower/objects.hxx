@@ -196,35 +196,38 @@ namespace mgmake::lower {
 			std::vector<dag::artifact::id> discovered_dependencies{};
 			std::set<dag::artifact::id> discovered_dependency_ids{};
 
-			if (depfile.has_value()) {
-				// This consumes dependency information from a previous build invocation.
-				// A clean build will usually have no depfile yet; the compiler emits it
-				// during the build, and the next graph/build invocation can materialize it.
-				m_deps.consume(*depfile);
+			if (request().m_discover_source_dependencies) {
+				if (depfile.has_value()) {
+					// This consumes dependency information from a previous build invocation.
+					// A clean build will usually have no depfile yet; the compiler emits it
+					// during the build, and the next graph/build invocation can materialize it.
+					m_deps.consume(*depfile);
 
-				for (const auto& dependency : m_deps.dependencies_for(depfile->m_target)) {
-					const auto dependency_id = m_emit.header(dependency);
+					for (const auto& dependency : m_deps.dependencies_for(depfile->m_target)) {
+						const auto dependency_id = m_emit.header(dependency);
 
-					bool already_input = false;
+						bool already_input = false;
 
-					for (const auto input : compile_inputs) {
-						if (input == dependency_id) {
-							already_input = true;
-							break;
+						for (const auto input : compile_inputs) {
+							if (input == dependency_id) {
+								already_input = true;
+								break;
+							}
 						}
-					}
 
-					if (already_input) {
-						continue;
-					}
+						if (already_input) {
+							continue;
+						}
 
-					if (!discovered_dependency_ids.emplace(dependency_id).second) {
-						continue;
-					}
+						if (!discovered_dependency_ids.emplace(dependency_id).second) {
+							continue;
+						}
 
-					discovered_dependencies.emplace_back(dependency_id);
+						discovered_dependencies.emplace_back(dependency_id);
+					}
 				}
 			}
+			
 
 			const auto action_id = m_emit.action(
 				std::string{"Compile "} + source.string(),

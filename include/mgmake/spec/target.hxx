@@ -70,6 +70,9 @@ namespace mgmake::spec {
 		inline constexpr auto& link(const std::string& lib) {
 			return link(std::string_view{ lib });
 		}
+		inline constexpr auto& link(const char* lib) {
+			return link(std::string_view{ lib });
+		}
 		inline constexpr auto& linked_libraries() const {
 			return m_linked_libraries;
 		}

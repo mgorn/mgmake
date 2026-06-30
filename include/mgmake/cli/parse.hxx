@@ -92,6 +92,10 @@ namespace mgmake::cli {
 		flag_option<&options::m_show_tool_search, "show-tool-search">
 			::description<"Print detailed tool discovery search diagnostics.">;
 
+	using discover_source_dependencies_option =
+		flag_option<&options::m_discover_source_dependencies, "discover-source-dependencies">
+			::description<"Discover source dependencies (typically included headers) from depfiles and populate them as artifacts in the build graph.">;
+
 	using tool_discovery_option =
 		value_option<&options::m_tool_discovery, "tool-discovery">
 			::value_name<"mode">
@@ -259,6 +263,7 @@ namespace mgmake::cli {
 		refresh_tools_option,
 		no_tool_cache_option,
 		show_tool_search_option,
+		discover_source_dependencies_option,
 		tool_discovery_option,
 		toolchain_root_option,
 		sdk_root_option,

@@ -52,7 +52,7 @@ namespace mgmake::spec {
 			assert_known_provider_for(exe.m_provider, exe.m_name);
 #endif // MGMK_ENABLE_EXT_CMAKE
 
-			assert_known_libraries_for(exe.m_linked_libraries, exe.m_name);
+			//assert_known_libraries_for(exe.m_linked_libraries, exe.m_name);
 
 			m_executables.emplace_back(exe);
 			return *this;
@@ -96,7 +96,7 @@ namespace mgmake::spec {
 #ifdef MGMK_ENABLE_EXT_CMAKE
 			assert_known_provider_for(lib.m_provider, lib.m_name);
 #endif // MGMK_ENABLE_EXT_CMAKE
-			assert_known_libraries_for(lib.m_linked_libraries, lib.m_name);
+			//assert_known_libraries_for(lib.m_linked_libraries, lib.m_name);
 			assert_library_link_closure_is_acyclic(lib);
 
 			m_libraries.emplace_back(lib);

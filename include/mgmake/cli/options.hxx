@@ -39,6 +39,7 @@ namespace mgmake::cli {
 		bool m_refresh_tools = false;
 		bool m_no_tool_cache = false;
 		bool m_show_tool_search = false;
+		bool m_discover_source_dependencies = false;
 
 		discovery::mode m_tool_discovery = discovery::mode::automatic;
 

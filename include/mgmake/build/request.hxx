@@ -26,6 +26,7 @@ namespace mgmake::build {
         std::vector<std::string> m_targets; // Which targets to build, empty = build all
         sys::target m_target = sys::g_host_target;
         std::optional<discovery::resolved_toolchain> m_resolved_toolchain{};
+        bool m_discover_source_dependencies = false;
 
         [[nodiscard]] inline constexpr const toolchain& toolchain() const {
             return m_tc;
@@ -140,6 +141,13 @@ namespace mgmake::build {
             }
 
             return m_resolved_toolchain->m_link_prefix_args;
+        }
+
+        inline const void discover_source_dependencies(bool value) noexcept {
+            m_discover_source_dependencies = value;
+        }
+        [[nodiscard]] inline const bool discover_source_dependencies() const noexcept {
+            return m_discover_source_dependencies;
         }
     };
 }
