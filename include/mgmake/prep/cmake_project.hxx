@@ -4,6 +4,7 @@
 #define MGMK_PREP_CMAKE_PROJECT_HXX
 
 #include "../ext/cmake/codemodel.hxx"
+#include "../ext/cmake/file_api.hxx"
 #include "../ext/path_root.hxx"
 #include "../ext/rooted_path.hxx"
 
@@ -43,6 +44,18 @@ namespace mgmake::prep {
 
 		[[nodiscard]] const ext::cmake::target* find_target(std::string_view name) const {
 			return m_codemodel.find_target(name);
+		}
+
+		[[nodiscard]] const ext::cmake::target* find_target_id(std::string_view id) const {
+			return m_codemodel.find_target_id(id);
+		}
+
+		[[nodiscard]] const ext::cmake::target* find_target_artifact(const std::filesystem::path& artifact) const {
+			return m_codemodel.find_target_artifact(artifact);
+		}
+
+		std::size_t reload_file_api_reply() {
+			return ext::cmake::file_api::load_reply_targets(m_codemodel, m_build_dir);
 		}
 	};
 }

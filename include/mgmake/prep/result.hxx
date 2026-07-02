@@ -9,6 +9,7 @@
 #include "cmake_project.hxx"
 #endif // MGMK_ENABLE_EXT_CMAKE
 
+#include <cstddef>
 #include <map>
 #include <optional>
 #include <string>
@@ -38,6 +39,16 @@ namespace mgmake::prep {
 		[[nodiscard]] const prep::cmake_project* find_cmake_project(std::string_view name) const {
 			const auto found = m_cmake_projects.find(std::string{name});
 			return found == m_cmake_projects.end() ? nullptr : &found->second;
+		}
+
+		std::size_t reload_cmake_file_api_replies() {
+			std::size_t loaded_targets = 0;
+
+			for (auto& [name, project] : m_cmake_projects) {
+				loaded_targets += project.reload_file_api_reply();
+			}
+
+			return loaded_targets;
 		}
 #endif // MGMK_ENABLE_EXT_CMAKE
 	};

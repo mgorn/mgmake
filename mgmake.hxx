@@ -5110,13 +5110,29 @@ namespace mgmake::prep {
 #include <string>
 #include <vector>
 
-// CMake target metadata is parsed from File API replies and used to locate build-tree artifacts.
+// CMake target metadata is parsed from File API replies and used to locate build-tree artifacts and link usage.
 
 namespace mgmake::ext::cmake {
+	enum struct link_entry_kind {
+		fragment,
+		target_id
+	};
+
+	struct link_entry {
+		// CMake keeps linkLibraries/interfaceLinkLibraries as ordered arrays whose entries can be
+		// raw linker fragments or references to other CMake targets. Keep the kind next to the
+		// value so mgmake can replay that order when lowering provider target usage.
+		link_entry_kind m_kind = link_entry_kind::fragment;
+		std::string m_value;
+	};
+
 	struct target {
 		std::string m_name;
+		std::string m_id;
 		std::string m_type;
 		std::vector<std::filesystem::path> m_artifacts;
+		std::vector<link_entry> m_link_entries;
+		std::vector<link_entry> m_interface_link_entries;
 
 		[[nodiscard]] std::filesystem::path primary_artifact() const {
 			if (m_artifacts.empty()) {
@@ -5125,6 +5141,10 @@ namespace mgmake::ext::cmake {
 
 			return m_artifacts.front();
 		}
+
+		[[nodiscard]] bool has_link_usage() const noexcept {
+			return !m_link_entries.empty() || !m_interface_link_entries.empty();
+		}
 	};
 }
 
@@ -5132,25 +5152,454 @@ namespace mgmake::ext::cmake {
 // ===== end include/mgmake/ext/cmake/target.hxx =====
 
 
+#include <cstddef>
+#include <filesystem>
 #include <map>
 #include <string>
 #include <string_view>
+#include <utility>
 
 // A CMake codemodel stores the target metadata mgmake needs after CMake configuration.
 
 namespace mgmake::ext::cmake {
 	struct codemodel {
 		std::map<std::string, target> m_targets;
+		std::map<std::string, std::string> m_target_names_by_id;
+		std::map<std::string, std::string> m_target_names_by_artifact_filename;
+
+		[[nodiscard]] bool empty() const noexcept {
+			return m_targets.empty();
+		}
+
+		[[nodiscard]] std::size_t size() const noexcept {
+			return m_targets.size();
+		}
 
 		[[nodiscard]] const target* find_target(std::string_view name) const {
 			const auto found = m_targets.find(std::string{name});
-			return found == m_targets.end() ? nullptr : &found->second;
+
+			if (found != m_targets.end()) {
+				return &found->second;
+			}
+
+			const auto text = std::string{name};
+			const auto namespace_pos = text.rfind("::");
+
+			if (namespace_pos != std::string::npos) {
+				const auto unqualified = text.substr(namespace_pos + 2);
+				const auto unqualified_found = m_targets.find(unqualified);
+
+				if (unqualified_found != m_targets.end()) {
+					return &unqualified_found->second;
+				}
+			}
+
+			return nullptr;
+		}
+
+		[[nodiscard]] const target* find_target_id(std::string_view id) const {
+			const auto found = m_target_names_by_id.find(std::string{id});
+
+			if (found == m_target_names_by_id.end()) {
+				return nullptr;
+			}
+
+			return find_target(found->second);
+		}
+
+		[[nodiscard]] const target* find_target_artifact(const std::filesystem::path& artifact) const {
+			const auto filename = artifact.filename().string();
+
+			if (filename.empty()) {
+				return nullptr;
+			}
+
+			const auto found = m_target_names_by_artifact_filename.find(filename);
+
+			if (found == m_target_names_by_artifact_filename.end()) {
+				return nullptr;
+			}
+
+			return find_target(found->second);
+		}
+
+		void add_target(target value) {
+			const auto name = value.m_name;
+
+			if (!value.m_id.empty()) {
+				m_target_names_by_id.insert_or_assign(value.m_id, name);
+			}
+
+			for (const auto& artifact : value.m_artifacts) {
+				const auto filename = artifact.filename().string();
+
+				if (!filename.empty()) {
+					m_target_names_by_artifact_filename.insert_or_assign(filename, name);
+				}
+			}
+
+			m_targets.insert_or_assign(name, std::move(value));
 		}
 	};
 }
 
 #endif // MGMK_EXT_CMAKE_CODEMODEL_HXX
 // ===== end include/mgmake/ext/cmake/codemodel.hxx =====
+
+
+// ===== begin include/mgmake/ext/cmake/file_api.hxx =====
+#pragma once
+
+#ifndef MGMK_EXT_CMAKE_FILE_API_HXX
+#define MGMK_EXT_CMAKE_FILE_API_HXX
+
+// skipped duplicate include: include/mgmake/ext/cmake/codemodel.hxx
+// skipped duplicate include: include/mgmake/ext/json.hxx
+
+#include <filesystem>
+#include <fstream>
+#include <iterator>
+#include <optional>
+#include <set>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+// CMake File API helpers request and parse codemodel replies so mgmake can import external target artifacts and link usage.
+
+namespace mgmake::ext::cmake::file_api {
+	[[nodiscard]] inline std::filesystem::path query_file(
+		const std::filesystem::path& build_dir
+	) {
+		return build_dir / ".cmake" / "api" / "v1" / "query" / "client-mgmake" / "query.json";
+	}
+
+	[[nodiscard]] inline std::filesystem::path reply_dir(
+		const std::filesystem::path& build_dir
+	) {
+		return build_dir / ".cmake" / "api" / "v1" / "reply";
+	}
+
+	[[nodiscard]] inline std::string codemodel_query_text() {
+		return R"({"requests":[{"kind":"codemodel","version":{"major":2,"minor":9}}]})";
+	}
+
+	[[nodiscard]] inline bool write_query_file(
+		const std::filesystem::path& build_dir
+	) {
+		const auto path = query_file(build_dir);
+		const auto dir = path.parent_path();
+
+		if (!dir.empty()) {
+			std::filesystem::create_directories(dir);
+		}
+
+		std::ofstream out{path, std::ios::binary | std::ios::trunc};
+
+		if (!out.is_open()) {
+			return false;
+		}
+
+		out << codemodel_query_text();
+		return out.good();
+	}
+
+	[[nodiscard]] inline std::optional<std::string> read_file(
+		const std::filesystem::path& path
+	) {
+		std::ifstream in(path, std::ios::binary);
+
+		if (!in.is_open()) {
+			return std::nullopt;
+		}
+
+		return std::string{
+			std::istreambuf_iterator<char>{in},
+			std::istreambuf_iterator<char>{}
+		};
+	}
+
+	[[nodiscard]] inline std::optional<ext::json> parse_json_file(
+		const std::filesystem::path& path
+	) {
+		const auto content = read_file(path);
+
+		if (!content.has_value()) {
+			return std::nullopt;
+		}
+
+		return ext::json::parse(*content);
+	}
+
+	[[nodiscard]] inline std::optional<std::filesystem::path> latest_index_file(
+		const std::filesystem::path& dir
+	) {
+		if (!std::filesystem::exists(dir)) {
+			return std::nullopt;
+		}
+
+		std::optional<std::filesystem::path> result;
+		std::optional<std::filesystem::file_time_type> result_time;
+
+		for (const auto& entry : std::filesystem::directory_iterator{dir}) {
+			if (!entry.is_regular_file()) {
+				continue;
+			}
+
+			const auto filename = entry.path().filename().string();
+
+			if (!filename.starts_with("index-") || entry.path().extension() != ".json") {
+				continue;
+			}
+
+			const auto write_time = entry.last_write_time();
+
+			if (!result.has_value() || write_time > result_time.value()) {
+				result = entry.path();
+				result_time = write_time;
+			}
+		}
+
+		return result;
+	}
+
+	[[nodiscard]] inline std::optional<std::string> json_string_member(
+		const ext::json& value,
+		std::string_view key
+	) {
+		const auto member = value.get(key);
+
+		if (!member.has_value()) {
+			return std::nullopt;
+		}
+
+		return member->as_string();
+	}
+
+	[[nodiscard]] inline bool json_kind_is(
+		const ext::json& value,
+		std::string_view expected_kind
+	) {
+		const auto kind = json_string_member(value, "kind");
+		return kind.has_value() && *kind == expected_kind;
+	}
+
+	[[nodiscard]] inline std::optional<std::string> codemodel_file_from_client_reply(
+		const ext::json& index
+	) {
+		const auto reply = index.get("reply");
+
+		if (!reply.has_value()) {
+			return std::nullopt;
+		}
+
+		const auto client = reply->get("client-mgmake");
+
+		if (!client.has_value()) {
+			return std::nullopt;
+		}
+
+		const auto query = client->get("query.json");
+
+		if (!query.has_value()) {
+			return std::nullopt;
+		}
+
+		for (const auto& response : query->array("responses")) {
+			if (!json_kind_is(response, "codemodel")) {
+				continue;
+			}
+
+			const auto json_file = json_string_member(response, "jsonFile");
+
+			if (json_file.has_value()) {
+				return json_file;
+			}
+		}
+
+		return std::nullopt;
+	}
+
+	[[nodiscard]] inline std::optional<std::string> codemodel_file_from_objects(
+		const ext::json& index
+	) {
+		for (const auto& object : index.array("objects")) {
+			if (!json_kind_is(object, "codemodel")) {
+				continue;
+			}
+
+			const auto json_file = json_string_member(object, "jsonFile");
+
+			if (json_file.has_value()) {
+				return json_file;
+			}
+		}
+
+		return std::nullopt;
+	}
+
+	[[nodiscard]] inline std::optional<std::string> codemodel_file_from_index(
+		const ext::json& index
+	) {
+		if (const auto client_reply = codemodel_file_from_client_reply(index)) {
+			return client_reply;
+		}
+
+		return codemodel_file_from_objects(index);
+	}
+
+	[[nodiscard]] inline std::vector<std::string> target_files_from_codemodel(
+		const ext::json& codemodel_json
+	) {
+		std::vector<std::string> result;
+		std::set<std::string> seen;
+
+		for (const auto& configuration : codemodel_json.array("configurations")) {
+			for (const auto& target_ref : configuration.array("targets")) {
+				const auto json_file = json_string_member(target_ref, "jsonFile");
+
+				if (!json_file.has_value() || json_file->empty()) {
+					continue;
+				}
+
+				if (seen.emplace(*json_file).second) {
+					result.emplace_back(*json_file);
+				}
+			}
+		}
+
+		return result;
+	}
+
+	inline void parse_link_entries(
+		const ext::json& parsed,
+		std::string_view key,
+		std::vector<link_entry>& out
+	) {
+		for (const auto& item : parsed.array(key)) {
+			if (const auto fragment = item.get("fragment")) {
+				if (const auto text = fragment->as_string()) {
+					out.emplace_back(link_entry{
+						.m_kind = link_entry_kind::fragment,
+						.m_value = *text
+					});
+				}
+			}
+
+			if (const auto id = item.get("id")) {
+				if (const auto text = id->as_string()) {
+					out.emplace_back(link_entry{
+						.m_kind = link_entry_kind::target_id,
+						.m_value = *text
+					});
+				}
+			}
+		}
+	}
+
+	// Only the codemodel fields needed for provider artifact and link-usage lookup are materialized.
+	[[nodiscard]] inline std::optional<target> parse_target_file(
+		const std::filesystem::path& file,
+		const std::filesystem::path& build_dir
+	) {
+		const auto parsed = parse_json_file(file);
+
+		if (!parsed.has_value()) {
+			return std::nullopt;
+		}
+
+		const auto name_text = json_string_member(*parsed, "name");
+
+		if (!name_text.has_value()) {
+			return std::nullopt;
+		}
+
+		target result{};
+		result.m_name = *name_text;
+
+		if (const auto id_text = json_string_member(*parsed, "id")) {
+			result.m_id = *id_text;
+		}
+
+		if (const auto type_text = json_string_member(*parsed, "type")) {
+			result.m_type = *type_text;
+		}
+
+		for (const auto& artifact : parsed->array("artifacts")) {
+			const auto path_text = json_string_member(artifact, "path");
+
+			if (!path_text.has_value()) {
+				continue;
+			}
+
+			result.m_artifacts.emplace_back(*path_text);
+		}
+
+		for (auto& artifact : result.m_artifacts) {
+			if (artifact.is_relative()) {
+				artifact = build_dir / artifact;
+			}
+		}
+
+		parse_link_entries(*parsed, "linkLibraries", result.m_link_entries);
+		parse_link_entries(*parsed, "interfaceLinkLibraries", result.m_interface_link_entries);
+
+		return result;
+	}
+
+	inline std::size_t load_reply_targets(
+		codemodel& model,
+		const std::filesystem::path& build_dir
+	) {
+		const auto dir = reply_dir(build_dir);
+		const auto index_file = latest_index_file(dir);
+
+		if (!index_file.has_value()) {
+			model = codemodel{};
+			return 0;
+		}
+
+		const auto index = parse_json_file(*index_file);
+
+		if (!index.has_value()) {
+			model = codemodel{};
+			return 0;
+		}
+
+		const auto codemodel_file = codemodel_file_from_index(*index);
+
+		if (!codemodel_file.has_value() || codemodel_file->empty()) {
+			model = codemodel{};
+			return 0;
+		}
+
+		const auto codemodel_json = parse_json_file(dir / *codemodel_file);
+
+		if (!codemodel_json.has_value()) {
+			model = codemodel{};
+			return 0;
+		}
+
+		codemodel loaded{};
+
+		for (const auto& target_file : target_files_from_codemodel(*codemodel_json)) {
+			auto target = parse_target_file(dir / target_file, build_dir);
+
+			if (!target.has_value() || target->m_name.empty()) {
+				continue;
+			}
+
+			loaded.add_target(std::move(*target));
+		}
+
+		model = std::move(loaded);
+		return model.size();
+	}
+}
+
+#endif // MGMK_EXT_CMAKE_FILE_API_HXX
+// ===== end include/mgmake/ext/cmake/file_api.hxx =====
 
 
 // ===== begin include/mgmake/ext/path_root.hxx =====
@@ -5234,6 +5683,18 @@ namespace mgmake::prep {
 		[[nodiscard]] const ext::cmake::target* find_target(std::string_view name) const {
 			return m_codemodel.find_target(name);
 		}
+
+		[[nodiscard]] const ext::cmake::target* find_target_id(std::string_view id) const {
+			return m_codemodel.find_target_id(id);
+		}
+
+		[[nodiscard]] const ext::cmake::target* find_target_artifact(const std::filesystem::path& artifact) const {
+			return m_codemodel.find_target_artifact(artifact);
+		}
+
+		std::size_t reload_file_api_reply() {
+			return ext::cmake::file_api::load_reply_targets(m_codemodel, m_build_dir);
+		}
 	};
 }
 
@@ -5242,6 +5703,7 @@ namespace mgmake::prep {
 
 #endif // MGMK_ENABLE_EXT_CMAKE
 
+#include <cstddef>
 #include <map>
 #include <optional>
 #include <string>
@@ -5271,6 +5733,16 @@ namespace mgmake::prep {
 		[[nodiscard]] const prep::cmake_project* find_cmake_project(std::string_view name) const {
 			const auto found = m_cmake_projects.find(std::string{name});
 			return found == m_cmake_projects.end() ? nullptr : &found->second;
+		}
+
+		std::size_t reload_cmake_file_api_replies() {
+			std::size_t loaded_targets = 0;
+
+			for (auto& [name, project] : m_cmake_projects) {
+				loaded_targets += project.reload_file_api_reply();
+			}
+
+			return loaded_targets;
 		}
 #endif // MGMK_ENABLE_EXT_CMAKE
 	};
@@ -11705,157 +12177,6 @@ namespace mgmake::prep {
 // skipped duplicate include: include/mgmake/detail/hashes.hxx
 // skipped duplicate include: include/mgmake/discovery/tool_environment.hxx
 // skipped duplicate include: include/mgmake/sys/command_line.hxx
-#ifdef MGMK_ENABLE_EXT_CMAKE
-
-// ===== begin include/mgmake/ext/cmake/file_api.hxx =====
-#pragma once
-
-#ifndef MGMK_EXT_CMAKE_FILE_API_HXX
-#define MGMK_EXT_CMAKE_FILE_API_HXX
-
-// skipped duplicate include: include/mgmake/ext/cmake/codemodel.hxx
-// skipped duplicate include: include/mgmake/ext/json.hxx
-
-#include <filesystem>
-#include <fstream>
-#include <iterator>
-#include <optional>
-#include <string>
-#include <utility>
-
-// CMake File API helpers request and parse codemodel replies so mgmake can find external target artifacts.
-
-namespace mgmake::ext::cmake::file_api {
-	[[nodiscard]] inline std::filesystem::path query_file(
-		const std::filesystem::path& build_dir
-	) {
-		return build_dir / ".cmake" / "api" / "v1" / "query" / "client-mgmake" / "query.json";
-	}
-
-	[[nodiscard]] inline std::filesystem::path reply_dir(
-		const std::filesystem::path& build_dir
-	) {
-		return build_dir / ".cmake" / "api" / "v1" / "reply";
-	}
-
-	[[nodiscard]] inline std::string codemodel_query_text() {
-		return R"({"requests":[{"kind":"codemodel","version":2}]})";
-	}
-
-	[[nodiscard]] inline std::optional<std::string> read_file(
-		const std::filesystem::path& path
-	) {
-		std::ifstream in(path, std::ios::binary);
-
-		if (!in.is_open()) {
-			return std::nullopt;
-		}
-
-		return std::string{
-			std::istreambuf_iterator<char>{in},
-			std::istreambuf_iterator<char>{}
-		};
-	}
-
-	// Only the codemodel fields needed for provider artifact lookup are materialized.
-	[[nodiscard]] inline std::optional<target> parse_target_file(
-		const std::filesystem::path& file,
-		const std::filesystem::path& build_dir
-	) {
-		const auto content = read_file(file);
-
-		if (!content.has_value()) {
-			return std::nullopt;
-		}
-
-		const auto parsed = ext::json::parse(*content);
-
-		if (!parsed.has_value()) {
-			return std::nullopt;
-		}
-
-		const auto name = parsed->get("name");
-
-		if (!name.has_value()) {
-			return std::nullopt;
-		}
-
-		const auto name_text = name->as_string();
-
-		if (!name_text.has_value()) {
-			return std::nullopt;
-		}
-
-		target result{};
-		result.m_name = *name_text;
-
-		if (const auto type = parsed->get("type")) {
-			if (const auto type_text = type->as_string()) {
-				result.m_type = *type_text;
-			}
-		}
-
-		for (const auto& artifact : parsed->array("artifacts")) {
-			const auto path = artifact.get("path");
-
-			if (!path.has_value()) {
-				continue;
-			}
-
-			const auto path_text = path->as_string();
-
-			if (!path_text.has_value()) {
-				continue;
-			}
-
-			result.m_artifacts.emplace_back(*path_text);
-		}
-
-		for (auto& artifact : result.m_artifacts) {
-			if (artifact.is_relative()) {
-				artifact = build_dir / artifact;
-			}
-		}
-
-		return result;
-	}
-
-	inline void load_reply_targets(
-		codemodel& model,
-		const std::filesystem::path& build_dir
-	) {
-		const auto dir = reply_dir(build_dir);
-
-		if (!std::filesystem::exists(dir)) {
-			return;
-		}
-
-		for (const auto& entry : std::filesystem::directory_iterator{dir}) {
-			if (!entry.is_regular_file()) {
-				continue;
-			}
-
-			const auto filename = entry.path().filename().string();
-
-			if (!filename.starts_with("target-") || entry.path().extension() != ".json") {
-				continue;
-			}
-
-			auto target = parse_target_file(entry.path(), build_dir);
-
-			if (!target.has_value() || target->m_name.empty()) {
-				continue;
-			}
-
-			model.m_targets.insert_or_assign(target->m_name, std::move(*target));
-		}
-	}
-}
-
-#endif // MGMK_EXT_CMAKE_FILE_API_HXX
-// ===== end include/mgmake/ext/cmake/file_api.hxx =====
-
-#endif // MGMK_ENABLE_EXT_CMAKE
 
 #include <cstdlib>
 #include <expected>
@@ -12005,11 +12326,12 @@ namespace mgmake::prep {
 
 #ifdef MGMK_ENABLE_EXT_CMAKE
 		if (!opts.m_dry_run) {
-			for (auto& [name, cmake_project] : result.m_cmake_projects) {
-				ext::cmake::file_api::load_reply_targets(
-					cmake_project.m_codemodel,
-					cmake_project.m_build_dir
-				);
+			const auto loaded_cmake_targets = result.reload_cmake_file_api_replies();
+
+			if (!result.m_cmake_projects.empty() && loaded_cmake_targets == 0) {
+				return std::unexpected{
+					"mgmake prep: CMake File API reload loaded zero targets"
+				};
 			}
 		}
 #endif // MGMK_ENABLE_EXT_CMAKE
@@ -12099,25 +12421,6 @@ namespace mgmake::prep {
 		std::string_view name
 	) {
 		return fetch_root(req) / "install" / std::string{name};
-	}
-
-	[[nodiscard]] inline sys::command_line cmake_write_query_command(
-		const std::filesystem::path& query_path
-	) {
-		const auto query_dir = query_path.parent_path();
-		const auto query_text = ext::cmake::file_api::codemodel_query_text();
-#if defined(MGMK_PLATFORM_WINDOWS)
-		return sys::shell_command(
-			"if not exist " + sys::shell_path(query_dir) + " mkdir " + sys::shell_path(query_dir) +
-			" & echo " + query_text + " > " + sys::shell_path(query_path)
-		);
-#else
-		return sys::shell_command(
-			"mkdir -p " + sys::shell_path(query_dir) +
-			" && printf %s " + sys::shell_escape(query_text) +
-			" > " + sys::shell_path(query_path)
-		);
-#endif // defined(MGMK_PLATFORM_WINDOWS)
 	}
 
 	[[nodiscard]] inline std::filesystem::path cmake_configure_output(
@@ -12539,18 +12842,16 @@ namespace mgmake::prep {
 		const auto configure_id = m_emit.generated(configure_output);
 
 		// CMake must see the query file before configure so it writes codemodel replies.
-		m_emit.action(
-			"Write CMake File API query " + cmake_project.m_name,
-			"Writes CMake File API query for external project '" + cmake_project.m_name + "'.",
-			{fetched.m_stamp},
-			{query_id},
-			cmake_write_query_command(query_path)
+		// Write it directly instead of shelling out; JSON quoting through cmd/sh is fragile.
+		mgmkassert(
+			ext::cmake::file_api::write_query_file(build_dir),
+			"mgmake prep: failed to write CMake File API query for project '" + cmake_project.m_name + "'"
 		);
 
 		m_emit.action(
 			"Configure CMake project " + cmake_project.m_name,
 			"Configures external CMake project '" + cmake_project.m_name + "'.",
-			{query_id},
+			{fetched.m_stamp, query_id},
 			{configure_id},
 			cmake_configure_command(
 				request(),
@@ -12569,6 +12870,7 @@ namespace mgmake::prep {
 		m_emit.target(dag_target);
 
 		prep::cmake_project result{};
+		result.m_name = cmake_project.m_name;
 		result.m_source_dir = source_dir;
 		result.m_build_dir = build_dir;
 		result.m_install_dir = install_dir;
@@ -13278,7 +13580,229 @@ namespace mgmake::lower {
 		command.m_args.emplace_back(path.string());
 		return command;
 	}
+
+	inline void append_artifact_once(
+		std::vector<dag::artifact::id>& artifacts,
+		dag::artifact::id artifact
+	) {
+		if (std::find(artifacts.begin(), artifacts.end(), artifact) == artifacts.end()) {
+			artifacts.emplace_back(artifact);
+		}
+	}
+
+	[[nodiscard]] inline bool cmake_target_is_static(
+		const ext::cmake::target& target,
+		spec::library::kind fallback_kind
+	) {
+		if (target.m_type == "STATIC_LIBRARY") {
+			return true;
+		}
+
+		return target.m_type.empty() && fallback_kind == spec::library::kind::static_lib;
+	}
+
+	[[nodiscard]] inline bool cmake_link_fragment_is_path(std::string_view fragment) {
+		if (fragment.empty() || fragment.starts_with("-")) {
+			return false;
+		}
+
+		if (fragment.starts_with("/") && fragment.find('/', 1) == std::string_view::npos) {
+			return false;
+		}
+
+		return fragment.find('/') != std::string_view::npos ||
+			fragment.find('\\') != std::string_view::npos;
+	}
+
+	[[nodiscard]] inline std::filesystem::path resolve_cmake_link_fragment_path(
+		const prep::cmake_project& prepared,
+		std::string_view fragment
+	) {
+		auto path = std::filesystem::path{std::string{fragment}};
+
+		if (path.is_relative()) {
+			path = prepared.m_build_dir / path;
+		}
+
+		return path;
+	}
+
+	inline void append_cmake_target_link_usage(
+		dag::emitter& emit,
+		const prep::cmake_project& prepared,
+		const ext::cmake::target& target,
+		spec::library::kind fallback_kind,
+		std::vector<dag::artifact::id>& linkable_artifacts,
+		std::vector<dag::artifact::id>& provider_outputs,
+		std::set<std::string>& visited_targets
+	);
+
+	inline void append_cmake_link_fragment(
+		dag::emitter& emit,
+		const prep::cmake_project& prepared,
+		std::string_view fragment,
+		std::vector<dag::artifact::id>& linkable_artifacts,
+		std::vector<dag::artifact::id>& provider_outputs
+	) {
+		if (fragment.empty()) {
+			return;
+		}
+
+		if (cmake_link_fragment_is_path(fragment)) {
+			const auto artifact = emit.generated(resolve_cmake_link_fragment_path(prepared, fragment));
+			append_artifact_once(linkable_artifacts, artifact);
+			append_artifact_once(provider_outputs, artifact);
+			return;
+		}
+
+		const auto artifact = emit.file_artifact(
+			dag::artifact::kind::system,
+			std::filesystem::path{std::string{fragment}}
+		);
+
+		append_artifact_once(linkable_artifacts, artifact);
+	}
+
+	inline void append_cmake_target_ref(
+		dag::emitter& emit,
+		const prep::cmake_project& prepared,
+		std::string_view target_id,
+		std::vector<dag::artifact::id>& linkable_artifacts,
+		std::vector<dag::artifact::id>& provider_outputs,
+		std::set<std::string>& visited_targets
+	) {
+		if (target_id.empty()) {
+			return;
+		}
+
+		const auto target_id_text = std::string{target_id};
+
+		if (visited_targets.contains(target_id_text)) {
+			return;
+		}
+
+		visited_targets.emplace(target_id_text);
+
+		const auto* target = prepared.find_target_id(target_id_text);
+
+		if (target == nullptr) {
+			return;
+		}
+
+		if (prepared.m_usage_root == ext::path_root::build) {
+			const auto artifact_path = target->primary_artifact();
+
+			if (!artifact_path.empty()) {
+				const auto artifact = emit.generated(artifact_path);
+				append_artifact_once(linkable_artifacts, artifact);
+				append_artifact_once(provider_outputs, artifact);
+			}
+		}
+
+		append_cmake_target_link_usage(
+			emit,
+			prepared,
+			*target,
+			spec::library::kind::interface,
+			linkable_artifacts,
+			provider_outputs,
+			visited_targets
+		);
+	}
+
+	inline void append_cmake_link_entries(
+		dag::emitter& emit,
+		const prep::cmake_project& prepared,
+		const std::vector<ext::cmake::link_entry>& entries,
+		std::vector<dag::artifact::id>& linkable_artifacts,
+		std::vector<dag::artifact::id>& provider_outputs,
+		std::set<std::string>& visited_targets
+	) {
+		for (const auto& entry : entries) {
+			switch (entry.m_kind) {
+				case ext::cmake::link_entry_kind::fragment:
+					append_cmake_link_fragment(
+						emit,
+						prepared,
+						entry.m_value,
+						linkable_artifacts,
+						provider_outputs
+					);
+					break;
+
+				case ext::cmake::link_entry_kind::target_id:
+					append_cmake_target_ref(
+						emit,
+						prepared,
+						entry.m_value,
+						linkable_artifacts,
+						provider_outputs,
+						visited_targets
+					);
+					break;
+			}
+		}
+	}
+
+	inline void append_cmake_target_link_usage(
+		dag::emitter& emit,
+		const prep::cmake_project& prepared,
+		const ext::cmake::target& target,
+		spec::library::kind fallback_kind,
+		std::vector<dag::artifact::id>& linkable_artifacts,
+		std::vector<dag::artifact::id>& provider_outputs,
+		std::set<std::string>& visited_targets
+	) {
+		if (cmake_target_is_static(target, fallback_kind)) {
+			append_cmake_link_entries(
+				emit,
+				prepared,
+				target.m_link_entries,
+				linkable_artifacts,
+				provider_outputs,
+				visited_targets
+			);
+		}
+
+		append_cmake_link_entries(
+			emit,
+			prepared,
+			target.m_interface_link_entries,
+			linkable_artifacts,
+			provider_outputs,
+			visited_targets
+		);
+	}
 #endif // MGMK_ENABLE_EXT_CMAKE
+
+	[[nodiscard]] inline std::string render_link_input(
+		const dag::artifact& artifact,
+		const build::toolchain& tc
+	) {
+		auto name = artifact.path().string();
+
+		if (!artifact.is_system()) {
+			return name;
+		}
+
+		if (name.starts_with("-") || name.starts_with("/")) {
+			return name;
+		}
+
+		if (tc.dialect() == build::toolchain::dialect::msvc) {
+			if (name.ends_with(".lib")) {
+				return name;
+			}
+
+			return name + ".lib";
+		}
+
+		if (name.ends_with(".lib")) {
+			name = name.substr(0, name.size() - 4);
+		}
+
+		return "-l" + name;
+	}
 
 	inline lower::usage context::use_libraries(
 		const std::set<std::string>& libraries,
@@ -13584,7 +14108,9 @@ namespace mgmake::lower {
 		}
 
 		for (auto link_input : usage.m_link_inputs) {
-			command.m_args.emplace_back(m_emit.path(link_input).string());
+			command.m_args.emplace_back(
+				render_link_input(m_emit.graph().artifact(link_input), tc)
+			);
 		}
 
 		for (const auto& flag : tc.link_flags()) {
@@ -13692,33 +14218,9 @@ namespace mgmake::lower {
 		}
 
 		for (auto link_input : usage.m_link_inputs) {
-			auto& link_artifact = m_emit.graph().artifact(link_input);
-			auto& link_path = link_artifact.path();
-			if (link_artifact.is_system()) {
-				auto name = link_path.string();
-				auto arg = [&name, &tc] -> std::string {
-					if (name.starts_with("-l")) {
-						return name;
-					}
-
-					if (tc.dialect() == build::toolchain::dialect::msvc) {
-						if (name.ends_with(".lib")) {
-							return name;
-						}
-
-						return name + ".lib";
-					}
-
-					if (name.ends_with(".lib")) {
-						name = name.substr(0, name.size() - 4);
-					}
-
-					return "-l" + name;
-				}();
-				command.m_args.emplace_back(arg);
-			} else {
-				command.m_args.emplace_back(link_path.string());
-			}
+			command.m_args.emplace_back(
+				render_link_input(m_emit.graph().artifact(link_input), tc)
+			);
 		}
 
 		for (const auto& flag : tc.link_flags()) {
@@ -13822,9 +14324,10 @@ namespace mgmake::lower {
 
 		lower::target lowered{};
 		std::vector<dag::artifact::id> provider_outputs{};
+		std::filesystem::path artifact_path;
 
 		if (lib.m_kind != spec::library::kind::interface) {
-			const auto artifact_path = resolve_provider_library_artifact(
+			artifact_path = resolve_provider_library_artifact(
 				request(),
 				*prepared,
 				provider,
@@ -13836,6 +14339,42 @@ namespace mgmake::lower {
 			provider_outputs.emplace_back(artifact_id);
 			lowered.m_linkable_artifacts.emplace_back(artifact_id);
 		}
+
+		const ext::cmake::target* cmake_target = prepared->find_target(provider.m_target);
+
+		if (cmake_target == nullptr && !artifact_path.empty()) {
+			cmake_target = prepared->find_target_artifact(artifact_path);
+		}
+
+		mgmkassert(
+			cmake_target != nullptr,
+			"mgmake lower: CMake provider target '" + provider.m_target +
+				"' from project '" + provider.m_project +
+				"' was not found in the CMake File API codemodel"
+		);
+
+		const auto old_linkable_count = lowered.m_linkable_artifacts.size();
+		std::set<std::string> visited_cmake_targets;
+
+		if (!cmake_target->m_id.empty()) {
+			visited_cmake_targets.emplace(cmake_target->m_id);
+		}
+
+		append_cmake_target_link_usage(
+			m_emit,
+			*prepared,
+			*cmake_target,
+			lib.m_kind,
+			lowered.m_linkable_artifacts,
+			provider_outputs,
+			visited_cmake_targets
+		);
+
+		mgmkassert(
+			!cmake_target->has_link_usage() || lowered.m_linkable_artifacts.size() != old_linkable_count,
+			"mgmake lower: CMake provider target '" + provider.m_target +
+				"' was found and has link usage, but no CMake link inputs were imported"
+		);
 
 		// The provider build stamp becomes a usage input so dependents wait for the external target.
 		auto provider_target = lower_provider_build(provider, provider_outputs);

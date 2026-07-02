@@ -76,25 +76,6 @@ namespace mgmake::prep {
 		return fetch_root(req) / "install" / std::string{name};
 	}
 
-	[[nodiscard]] inline sys::command_line cmake_write_query_command(
-		const std::filesystem::path& query_path
-	) {
-		const auto query_dir = query_path.parent_path();
-		const auto query_text = ext::cmake::file_api::codemodel_query_text();
-#if defined(MGMK_PLATFORM_WINDOWS)
-		return sys::shell_command(
-			"if not exist " + sys::shell_path(query_dir) + " mkdir " + sys::shell_path(query_dir) +
-			" & echo " + query_text + " > " + sys::shell_path(query_path)
-		);
-#else
-		return sys::shell_command(
-			"mkdir -p " + sys::shell_path(query_dir) +
-			" && printf %s " + sys::shell_escape(query_text) +
-			" > " + sys::shell_path(query_path)
-		);
-#endif // defined(MGMK_PLATFORM_WINDOWS)
-	}
-
 	[[nodiscard]] inline std::filesystem::path cmake_configure_output(
 		const std::filesystem::path& build_dir
 	) {
@@ -514,18 +495,16 @@ namespace mgmake::prep {
 		const auto configure_id = m_emit.generated(configure_output);
 
 		// CMake must see the query file before configure so it writes codemodel replies.
-		m_emit.action(
-			"Write CMake File API query " + cmake_project.m_name,
-			"Writes CMake File API query for external project '" + cmake_project.m_name + "'.",
-			{fetched.m_stamp},
-			{query_id},
-			cmake_write_query_command(query_path)
+		// Write it directly instead of shelling out; JSON quoting through cmd/sh is fragile.
+		mgmkassert(
+			ext::cmake::file_api::write_query_file(build_dir),
+			"mgmake prep: failed to write CMake File API query for project '" + cmake_project.m_name + "'"
 		);
 
 		m_emit.action(
 			"Configure CMake project " + cmake_project.m_name,
 			"Configures external CMake project '" + cmake_project.m_name + "'.",
-			{query_id},
+			{fetched.m_stamp, query_id},
 			{configure_id},
 			cmake_configure_command(
 				request(),
@@ -544,6 +523,7 @@ namespace mgmake::prep {
 		m_emit.target(dag_target);
 
 		prep::cmake_project result{};
+		result.m_name = cmake_project.m_name;
 		result.m_source_dir = source_dir;
 		result.m_build_dir = build_dir;
 		result.m_install_dir = install_dir;

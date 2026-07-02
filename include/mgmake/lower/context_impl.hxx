@@ -178,7 +178,229 @@ namespace mgmake::lower {
 		command.m_args.emplace_back(path.string());
 		return command;
 	}
+
+	inline void append_artifact_once(
+		std::vector<dag::artifact::id>& artifacts,
+		dag::artifact::id artifact
+	) {
+		if (std::find(artifacts.begin(), artifacts.end(), artifact) == artifacts.end()) {
+			artifacts.emplace_back(artifact);
+		}
+	}
+
+	[[nodiscard]] inline bool cmake_target_is_static(
+		const ext::cmake::target& target,
+		spec::library::kind fallback_kind
+	) {
+		if (target.m_type == "STATIC_LIBRARY") {
+			return true;
+		}
+
+		return target.m_type.empty() && fallback_kind == spec::library::kind::static_lib;
+	}
+
+	[[nodiscard]] inline bool cmake_link_fragment_is_path(std::string_view fragment) {
+		if (fragment.empty() || fragment.starts_with("-")) {
+			return false;
+		}
+
+		if (fragment.starts_with("/") && fragment.find('/', 1) == std::string_view::npos) {
+			return false;
+		}
+
+		return fragment.find('/') != std::string_view::npos ||
+			fragment.find('\\') != std::string_view::npos;
+	}
+
+	[[nodiscard]] inline std::filesystem::path resolve_cmake_link_fragment_path(
+		const prep::cmake_project& prepared,
+		std::string_view fragment
+	) {
+		auto path = std::filesystem::path{std::string{fragment}};
+
+		if (path.is_relative()) {
+			path = prepared.m_build_dir / path;
+		}
+
+		return path;
+	}
+
+	inline void append_cmake_target_link_usage(
+		dag::emitter& emit,
+		const prep::cmake_project& prepared,
+		const ext::cmake::target& target,
+		spec::library::kind fallback_kind,
+		std::vector<dag::artifact::id>& linkable_artifacts,
+		std::vector<dag::artifact::id>& provider_outputs,
+		std::set<std::string>& visited_targets
+	);
+
+	inline void append_cmake_link_fragment(
+		dag::emitter& emit,
+		const prep::cmake_project& prepared,
+		std::string_view fragment,
+		std::vector<dag::artifact::id>& linkable_artifacts,
+		std::vector<dag::artifact::id>& provider_outputs
+	) {
+		if (fragment.empty()) {
+			return;
+		}
+
+		if (cmake_link_fragment_is_path(fragment)) {
+			const auto artifact = emit.generated(resolve_cmake_link_fragment_path(prepared, fragment));
+			append_artifact_once(linkable_artifacts, artifact);
+			append_artifact_once(provider_outputs, artifact);
+			return;
+		}
+
+		const auto artifact = emit.file_artifact(
+			dag::artifact::kind::system,
+			std::filesystem::path{std::string{fragment}}
+		);
+
+		append_artifact_once(linkable_artifacts, artifact);
+	}
+
+	inline void append_cmake_target_ref(
+		dag::emitter& emit,
+		const prep::cmake_project& prepared,
+		std::string_view target_id,
+		std::vector<dag::artifact::id>& linkable_artifacts,
+		std::vector<dag::artifact::id>& provider_outputs,
+		std::set<std::string>& visited_targets
+	) {
+		if (target_id.empty()) {
+			return;
+		}
+
+		const auto target_id_text = std::string{target_id};
+
+		if (visited_targets.contains(target_id_text)) {
+			return;
+		}
+
+		visited_targets.emplace(target_id_text);
+
+		const auto* target = prepared.find_target_id(target_id_text);
+
+		if (target == nullptr) {
+			return;
+		}
+
+		if (prepared.m_usage_root == ext::path_root::build) {
+			const auto artifact_path = target->primary_artifact();
+
+			if (!artifact_path.empty()) {
+				const auto artifact = emit.generated(artifact_path);
+				append_artifact_once(linkable_artifacts, artifact);
+				append_artifact_once(provider_outputs, artifact);
+			}
+		}
+
+		append_cmake_target_link_usage(
+			emit,
+			prepared,
+			*target,
+			spec::library::kind::interface,
+			linkable_artifacts,
+			provider_outputs,
+			visited_targets
+		);
+	}
+
+	inline void append_cmake_link_entries(
+		dag::emitter& emit,
+		const prep::cmake_project& prepared,
+		const std::vector<ext::cmake::link_entry>& entries,
+		std::vector<dag::artifact::id>& linkable_artifacts,
+		std::vector<dag::artifact::id>& provider_outputs,
+		std::set<std::string>& visited_targets
+	) {
+		for (const auto& entry : entries) {
+			switch (entry.m_kind) {
+				case ext::cmake::link_entry_kind::fragment:
+					append_cmake_link_fragment(
+						emit,
+						prepared,
+						entry.m_value,
+						linkable_artifacts,
+						provider_outputs
+					);
+					break;
+
+				case ext::cmake::link_entry_kind::target_id:
+					append_cmake_target_ref(
+						emit,
+						prepared,
+						entry.m_value,
+						linkable_artifacts,
+						provider_outputs,
+						visited_targets
+					);
+					break;
+			}
+		}
+	}
+
+	inline void append_cmake_target_link_usage(
+		dag::emitter& emit,
+		const prep::cmake_project& prepared,
+		const ext::cmake::target& target,
+		spec::library::kind fallback_kind,
+		std::vector<dag::artifact::id>& linkable_artifacts,
+		std::vector<dag::artifact::id>& provider_outputs,
+		std::set<std::string>& visited_targets
+	) {
+		if (cmake_target_is_static(target, fallback_kind)) {
+			append_cmake_link_entries(
+				emit,
+				prepared,
+				target.m_link_entries,
+				linkable_artifacts,
+				provider_outputs,
+				visited_targets
+			);
+		}
+
+		append_cmake_link_entries(
+			emit,
+			prepared,
+			target.m_interface_link_entries,
+			linkable_artifacts,
+			provider_outputs,
+			visited_targets
+		);
+	}
 #endif // MGMK_ENABLE_EXT_CMAKE
+
+	[[nodiscard]] inline std::string render_link_input(
+		const dag::artifact& artifact,
+		const build::toolchain& tc
+	) {
+		auto name = artifact.path().string();
+
+		if (!artifact.is_system()) {
+			return name;
+		}
+
+		if (name.starts_with("-") || name.starts_with("/")) {
+			return name;
+		}
+
+		if (tc.dialect() == build::toolchain::dialect::msvc) {
+			if (name.ends_with(".lib")) {
+				return name;
+			}
+
+			return name + ".lib";
+		}
+
+		if (name.ends_with(".lib")) {
+			name = name.substr(0, name.size() - 4);
+		}
+
+		return "-l" + name;
+	}
 
 	inline lower::usage context::use_libraries(
 		const std::set<std::string>& libraries,
@@ -484,7 +706,9 @@ namespace mgmake::lower {
 		}
 
 		for (auto link_input : usage.m_link_inputs) {
-			command.m_args.emplace_back(m_emit.path(link_input).string());
+			command.m_args.emplace_back(
+				render_link_input(m_emit.graph().artifact(link_input), tc)
+			);
 		}
 
 		for (const auto& flag : tc.link_flags()) {
@@ -592,33 +816,9 @@ namespace mgmake::lower {
 		}
 
 		for (auto link_input : usage.m_link_inputs) {
-			auto& link_artifact = m_emit.graph().artifact(link_input);
-			auto& link_path = link_artifact.path();
-			if (link_artifact.is_system()) {
-				auto name = link_path.string();
-				auto arg = [&name, &tc] -> std::string {
-					if (name.starts_with("-l")) {
-						return name;
-					}
-
-					if (tc.dialect() == build::toolchain::dialect::msvc) {
-						if (name.ends_with(".lib")) {
-							return name;
-						}
-
-						return name + ".lib";
-					}
-
-					if (name.ends_with(".lib")) {
-						name = name.substr(0, name.size() - 4);
-					}
-
-					return "-l" + name;
-				}();
-				command.m_args.emplace_back(arg);
-			} else {
-				command.m_args.emplace_back(link_path.string());
-			}
+			command.m_args.emplace_back(
+				render_link_input(m_emit.graph().artifact(link_input), tc)
+			);
 		}
 
 		for (const auto& flag : tc.link_flags()) {
@@ -722,9 +922,10 @@ namespace mgmake::lower {
 
 		lower::target lowered{};
 		std::vector<dag::artifact::id> provider_outputs{};
+		std::filesystem::path artifact_path;
 
 		if (lib.m_kind != spec::library::kind::interface) {
-			const auto artifact_path = resolve_provider_library_artifact(
+			artifact_path = resolve_provider_library_artifact(
 				request(),
 				*prepared,
 				provider,
@@ -736,6 +937,42 @@ namespace mgmake::lower {
 			provider_outputs.emplace_back(artifact_id);
 			lowered.m_linkable_artifacts.emplace_back(artifact_id);
 		}
+
+		const ext::cmake::target* cmake_target = prepared->find_target(provider.m_target);
+
+		if (cmake_target == nullptr && !artifact_path.empty()) {
+			cmake_target = prepared->find_target_artifact(artifact_path);
+		}
+
+		mgmkassert(
+			cmake_target != nullptr,
+			"mgmake lower: CMake provider target '" + provider.m_target +
+				"' from project '" + provider.m_project +
+				"' was not found in the CMake File API codemodel"
+		);
+
+		const auto old_linkable_count = lowered.m_linkable_artifacts.size();
+		std::set<std::string> visited_cmake_targets;
+
+		if (!cmake_target->m_id.empty()) {
+			visited_cmake_targets.emplace(cmake_target->m_id);
+		}
+
+		append_cmake_target_link_usage(
+			m_emit,
+			*prepared,
+			*cmake_target,
+			lib.m_kind,
+			lowered.m_linkable_artifacts,
+			provider_outputs,
+			visited_cmake_targets
+		);
+
+		mgmkassert(
+			!cmake_target->has_link_usage() || lowered.m_linkable_artifacts.size() != old_linkable_count,
+			"mgmake lower: CMake provider target '" + provider.m_target +
+				"' was found and has link usage, but no CMake link inputs were imported"
+		);
 
 		// The provider build stamp becomes a usage input so dependents wait for the external target.
 		auto provider_target = lower_provider_build(provider, provider_outputs);

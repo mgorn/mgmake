@@ -10,9 +10,6 @@
 #include "../detail/hashes.hxx"
 #include "../discovery/tool_environment.hxx"
 #include "../sys/command_line.hxx"
-#ifdef MGMK_ENABLE_EXT_CMAKE
-#include "../ext/cmake/file_api.hxx"
-#endif // MGMK_ENABLE_EXT_CMAKE
 
 #include <cstdlib>
 #include <expected>
@@ -162,11 +159,12 @@ namespace mgmake::prep {
 
 #ifdef MGMK_ENABLE_EXT_CMAKE
 		if (!opts.m_dry_run) {
-			for (auto& [name, cmake_project] : result.m_cmake_projects) {
-				ext::cmake::file_api::load_reply_targets(
-					cmake_project.m_codemodel,
-					cmake_project.m_build_dir
-				);
+			const auto loaded_cmake_targets = result.reload_cmake_file_api_replies();
+
+			if (!result.m_cmake_projects.empty() && loaded_cmake_targets == 0) {
+				return std::unexpected{
+					"mgmake prep: CMake File API reload loaded zero targets"
+				};
 			}
 		}
 #endif // MGMK_ENABLE_EXT_CMAKE
