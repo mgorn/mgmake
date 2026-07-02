@@ -163,7 +163,10 @@ namespace mgmake::prep {
 #ifdef MGMK_ENABLE_EXT_CMAKE
 		if (!opts.m_dry_run) {
 			for (auto& [name, cmake_project] : result.m_cmake_projects) {
-				ext::cmake_file_api::load_reply_targets(cmake_project);
+				ext::cmake::file_api::load_reply_targets(
+					cmake_project.m_codemodel,
+					cmake_project.m_build_dir
+				);
 			}
 		}
 #endif // MGMK_ENABLE_EXT_CMAKE

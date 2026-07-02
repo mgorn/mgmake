@@ -5,9 +5,8 @@
 
 #include "fetched.hxx"
 #include "../dag/graph.hxx"
-#include "../ext/provider_ref.hxx"
 #ifdef MGMK_ENABLE_EXT_CMAKE
-#include "../ext/cmake/file_api.hxx"
+#include "cmake_project.hxx"
 #endif // MGMK_ENABLE_EXT_CMAKE
 
 #include <map>
@@ -18,11 +17,6 @@
 // Prep result keeps the preparation DAG and lookup tables consumed by the lower phase.
 
 namespace mgmake::prep {
-#ifdef MGMK_ENABLE_EXT_CMAKE
-	using cmake_target = ext::cmake_file_api::target;
-	using cmake_project = ext::cmake_file_api::project;
-#endif // MGMK_ENABLE_EXT_CMAKE
-
 	struct result {
 		dag::graph m_dag;
 		std::map<std::string, prep::fetched> m_fetches;

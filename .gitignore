@@ -49,3 +49,4 @@
 .ninja_log
 .DS_Store
 /.vscode
+/.cxxmg-cache

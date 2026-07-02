@@ -4,7 +4,8 @@
 #define MGMK_SPEC_LIBRARY_HXX
 
 #include "target.hxx"
-#include "../ext/provider_ref.hxx"
+#include "../ext/provided_target_ref.hxx"
+#include "../ext/rooted_path.hxx"
 
 #include <filesystem>
 #include <optional>
@@ -26,7 +27,7 @@ namespace mgmake::spec {
 			interface
 		} m_kind;
 
-		std::optional<ext::provider_ref> m_provider;
+		std::optional<ext::provided_target_ref> m_provider;
 		std::optional<ext::rooted_path> m_artifact;
 		std::vector<ext::rooted_path> m_external_include_dirs;
 
@@ -51,7 +52,7 @@ namespace mgmake::spec {
 			return *this;
 		}
 
-		inline library& from(const ext::provider_ref& provider) {
+		inline library& from(const ext::provided_target_ref& provider) {
 			mgmkassert(!provider.m_project.empty(), "mgmake spec: provider-backed library has no provider project");
 			mgmkassert(!provider.m_target.empty(), "mgmake spec: provider-backed library has no provider target");
 			m_provider = provider;
@@ -63,11 +64,11 @@ namespace mgmake::spec {
 		}
 
 		inline library& artifact(const std::filesystem::path& path) {
-			return artifact(ext::output_root::install_dir, path);
+			return artifact(ext::path_root::usage, path);
 		}
 
 		inline library& artifact(
-			ext::output_root root,
+			ext::path_root root,
 			const std::filesystem::path& path
 		) {
 			mgmkassert(!path.empty(), "mgmake spec: library '" + m_name + "' has an empty external artifact path");
@@ -77,7 +78,7 @@ namespace mgmake::spec {
 
 		inline library& include_dir(const std::filesystem::path& path) {
 			if (provider_backed()) {
-				return include_dir(m_provider->m_usage_root, path);
+				return include_dir(ext::path_root::usage, path);
 			}
 
 			add_include_dir(path);
@@ -85,7 +86,7 @@ namespace mgmake::spec {
 		}
 
 		inline library& include_dir(
-			ext::output_root root,
+			ext::path_root root,
 			const std::filesystem::path& path
 		) {
 			mgmkassert(!path.empty(), "mgmake spec: library '" + m_name + "' has an empty external include directory");

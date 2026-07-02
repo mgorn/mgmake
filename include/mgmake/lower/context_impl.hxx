@@ -40,37 +40,13 @@ namespace mgmake::lower {
 
 
 #ifdef MGMK_ENABLE_EXT_CMAKE
-	[[nodiscard]] inline std::filesystem::path provider_root(
-		const prep::cmake_project& cmake_project,
-		ext::output_root root
-	) {
-		switch (root) {
-			case ext::output_root::source_dir: return cmake_project.m_source_dir;
-			case ext::output_root::build_dir: return cmake_project.m_build_dir;
-			case ext::output_root::install_dir: return cmake_project.m_install_dir;
-		}
-
-		return cmake_project.m_install_dir;
-	}
-
-	[[nodiscard]] inline std::filesystem::path resolve_rooted_path(
-		const prep::cmake_project& cmake_project,
-		const ext::rooted_path& path
-	) {
-		if (path.m_path.is_absolute()) {
-			return path.m_path;
-		}
-
-		return provider_root(cmake_project, path.m_root) / path.m_path;
-	}
-
 	[[nodiscard]] inline std::filesystem::path conventional_provider_artifact(
 		const build::request& req,
 		const prep::cmake_project& cmake_project,
-		const ext::provider_ref& provider,
+		const ext::provided_target_ref& provider,
 		spec::library::kind kind
 	) {
-		const auto root = provider_root(cmake_project, provider.m_usage_root);
+		const auto root = cmake_project.root(ext::path_root::usage);
 
 		switch (kind) {
 			case spec::library::kind::static_lib:
@@ -99,15 +75,65 @@ namespace mgmake::lower {
 	[[nodiscard]] inline std::filesystem::path conventional_provider_executable(
 		const build::request& req,
 		const prep::cmake_project& cmake_project,
-		const ext::provider_ref& provider
+		const ext::provided_target_ref& provider
 	) {
-		const auto root = provider_root(cmake_project, provider.m_usage_root);
+		const auto root = cmake_project.root(ext::path_root::usage);
 		return root / "bin" / (provider.m_target + std::string{build::executable_extension(req.target_platform())});
+	}
+
+	[[nodiscard]] inline std::filesystem::path resolve_provider_library_artifact(
+		const build::request& req,
+		const prep::cmake_project& cmake_project,
+		const ext::provided_target_ref& provider,
+		const spec::library& lib
+	) {
+		if (lib.m_artifact.has_value()) {
+			return cmake_project.resolve(lib.m_artifact.value());
+		}
+
+		if (cmake_project.m_usage_root == ext::path_root::build) {
+			const auto* target = cmake_project.find_target(provider.m_target);
+
+			if (target != nullptr) {
+				const auto artifact = target->primary_artifact();
+
+				if (!artifact.empty()) {
+					return artifact;
+				}
+			}
+		}
+
+		return conventional_provider_artifact(req, cmake_project, provider, lib.m_kind);
+	}
+
+	[[nodiscard]] inline std::filesystem::path resolve_provider_executable_artifact(
+		const build::request& req,
+		const prep::cmake_project& cmake_project,
+		const ext::provided_target_ref& provider,
+		const spec::executable& exe
+	) {
+		if (exe.m_artifact.has_value()) {
+			return cmake_project.resolve(exe.m_artifact.value());
+		}
+
+		if (cmake_project.m_usage_root == ext::path_root::build) {
+			const auto* target = cmake_project.find_target(provider.m_target);
+
+			if (target != nullptr) {
+				const auto artifact = target->primary_artifact();
+
+				if (!artifact.empty()) {
+					return artifact;
+				}
+			}
+		}
+
+		return conventional_provider_executable(req, cmake_project, provider);
 	}
 
 	[[nodiscard]] inline std::filesystem::path provider_target_stamp(
 		const build::request& req,
-		const ext::provider_ref& provider
+		const ext::provided_target_ref& provider
 	) {
 		return req.build_dir() / "ext" / "stamp" /
 			(provider.m_project + ".cmake.build." + provider.m_target);
@@ -115,9 +141,9 @@ namespace mgmake::lower {
 
 	[[nodiscard]] inline sys::command_line cmake_build_command(
 		const build::request& req,
-		const ext::cmake& cmake_project,
+		const ext::cmake::project& cmake_project,
 		const prep::cmake_project& prepared,
-		const ext::provider_ref& provider
+		const ext::provided_target_ref& provider
 	) {
 		sys::command_line command;
 		command.m_args.emplace_back(req.tool_path(discovery::tool_role::cmake, "cmake").string());
@@ -628,8 +654,8 @@ namespace mgmake::lower {
 	}
 
 #ifdef MGMK_ENABLE_EXT_CMAKE
-	inline lower::cmake_target context::lower_cmake_target(
-		const ext::provider_ref& provider,
+	inline lower::provider_build context::lower_provider_build(
+		const ext::provided_target_ref& provider,
 		std::span<const dag::artifact::id> extra_outputs
 	) {
 		mgmkassert(provider.m_kind == ext::provider_kind::cmake, "mgmake lower: unsupported external provider kind");
@@ -672,7 +698,7 @@ namespace mgmake::lower {
 			{}
 		};
 
-		return lower::cmake_target{
+		return lower::provider_build{
 			.m_dag_target = m_emit.target(dag_target),
 			.m_ready_stamp = stamp_id
 		};
@@ -691,22 +717,19 @@ namespace mgmake::lower {
 		include_dirs.insert_range(usage.m_include_dirs);
 
 		for (const auto& include_dir : lib.m_external_include_dirs) {
-			include_dirs.emplace(resolve_rooted_path(*prepared, include_dir));
+			include_dirs.emplace(prepared->resolve(include_dir));
 		}
 
 		lower::target lowered{};
 		std::vector<dag::artifact::id> provider_outputs{};
 
 		if (lib.m_kind != spec::library::kind::interface) {
-			std::filesystem::path artifact_path;
-
-			if (lib.m_artifact.has_value()) {
-				artifact_path = resolve_rooted_path(*prepared, lib.m_artifact.value());
-			} else if (const auto* target = prepared->find_target(provider.m_target); target != nullptr && !target->m_artifact.empty()) {
-				artifact_path = target->m_artifact;
-			} else {
-				artifact_path = conventional_provider_artifact(request(), *prepared, provider, lib.m_kind);
-			}
+			const auto artifact_path = resolve_provider_library_artifact(
+				request(),
+				*prepared,
+				provider,
+				lib
+			);
 
 			mgmkassert(!artifact_path.empty(), "mgmake lower: unable to resolve artifact for provider-backed library '" + lib.m_name + "'");
 			const auto artifact_id = m_emit.generated(artifact_path);
@@ -715,7 +738,7 @@ namespace mgmake::lower {
 		}
 
 		// The provider build stamp becomes a usage input so dependents wait for the external target.
-		auto provider_target = lower_cmake_target(provider, provider_outputs);
+		auto provider_target = lower_provider_build(provider, provider_outputs);
 		usage.m_dag_dependencies.emplace(provider_target.m_dag_target);
 		usage.m_usage_inputs.emplace_back(provider_target.m_ready_stamp);
 
@@ -750,20 +773,17 @@ namespace mgmake::lower {
 		const auto* prepared = m_prep.find_cmake_project(provider.m_project);
 		mgmkassert(prepared != nullptr, "mgmake lower: CMake project '" + provider.m_project + "' was not prepared");
 
-		std::filesystem::path artifact_path;
-
-		if (exe.m_artifact.has_value()) {
-			artifact_path = resolve_rooted_path(*prepared, exe.m_artifact.value());
-		} else if (const auto* target = prepared->find_target(provider.m_target); target != nullptr && !target->m_artifact.empty()) {
-			artifact_path = target->m_artifact;
-		} else {
-			artifact_path = conventional_provider_executable(request(), *prepared, provider);
-		}
+		const auto artifact_path = resolve_provider_executable_artifact(
+			request(),
+			*prepared,
+			provider,
+			exe
+		);
 
 		mgmkassert(!artifact_path.empty(), "mgmake lower: unable to resolve artifact for provider-backed executable '" + exe.m_name + "'");
 		const auto artifact_id = m_emit.generated(artifact_path);
 		const std::array provider_outputs{artifact_id};
-		auto provider_target = lower_cmake_target(provider, provider_outputs);
+		auto provider_target = lower_provider_build(provider, provider_outputs);
 		usage.m_dag_dependencies.emplace(provider_target.m_dag_target);
 		usage.m_usage_inputs.emplace_back(provider_target.m_ready_stamp);
 

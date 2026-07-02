@@ -5084,81 +5084,62 @@ namespace mgmake::prep {
 // ===== end include/mgmake/prep/fetched.hxx =====
 
 // skipped duplicate include: include/mgmake/dag/graph.hxx
-
-// ===== begin include/mgmake/ext/provider_ref.hxx =====
-#pragma once
-
-#ifndef MGMK_EXT_PROVIDER_REF_HXX
-#define MGMK_EXT_PROVIDER_REF_HXX
-
-#include <filesystem>
-#include <string>
-
-// A provider ref connects a mgmake target to an external project target and the root where its outputs should be read.
-
-namespace mgmake::ext {
-	enum struct provider_kind {
-		cmake
-	};
-
-	enum struct output_root {
-		source_dir,
-		build_dir,
-		install_dir
-	};
-
-	struct provider_ref {
-		provider_kind m_kind = provider_kind::cmake;
-		std::string m_project;
-		std::string m_target;
-		output_root m_usage_root = output_root::install_dir;
-	};
-
-	struct rooted_path {
-		output_root m_root = output_root::install_dir;
-		std::filesystem::path m_path;
-	};
-}
-
-#endif // MGMK_EXT_PROVIDER_REF_HXX
-// ===== end include/mgmake/ext/provider_ref.hxx =====
-
 #ifdef MGMK_ENABLE_EXT_CMAKE
 
-// ===== begin include/mgmake/ext/cmake/file_api.hxx =====
+// ===== begin include/mgmake/prep/cmake_project.hxx =====
 #pragma once
 
-#ifndef MGMK_EXT_CMAKE_FILE_API_HXX
-#define MGMK_EXT_CMAKE_FILE_API_HXX
+#ifndef MGMK_PREP_CMAKE_PROJECT_HXX
+#define MGMK_PREP_CMAKE_PROJECT_HXX
 
-// skipped duplicate include: include/mgmake/ext/json.hxx
-// skipped duplicate include: include/mgmake/ext/provider_ref.hxx
+
+// ===== begin include/mgmake/ext/cmake/codemodel.hxx =====
+#pragma once
+
+#ifndef MGMK_EXT_CMAKE_CODEMODEL_HXX
+#define MGMK_EXT_CMAKE_CODEMODEL_HXX
+
+
+// ===== begin include/mgmake/ext/cmake/target.hxx =====
+#pragma once
+
+#ifndef MGMK_EXT_CMAKE_TARGET_HXX
+#define MGMK_EXT_CMAKE_TARGET_HXX
 
 #include <filesystem>
-#include <fstream>
-#include <iterator>
-#include <map>
-#include <optional>
 #include <string>
-#include <string_view>
-#include <utility>
 #include <vector>
 
-// CMake File API helpers request and parse codemodel replies so mgmake can find external target artifacts.
+// CMake target metadata is parsed from File API replies and used to locate build-tree artifacts.
 
-namespace mgmake::ext::cmake_file_api {
+namespace mgmake::ext::cmake {
 	struct target {
 		std::string m_name;
 		std::string m_type;
-		std::filesystem::path m_artifact;
 		std::vector<std::filesystem::path> m_artifacts;
-	};
 
-	struct project {
-		std::filesystem::path m_source_dir;
-		std::filesystem::path m_build_dir;
-		std::filesystem::path m_install_dir;
-		ext::output_root m_usage_root = ext::output_root::install_dir;
+		[[nodiscard]] std::filesystem::path primary_artifact() const {
+			if (m_artifacts.empty()) {
+				return {};
+			}
+
+			return m_artifacts.front();
+		}
+	};
+}
+
+#endif // MGMK_EXT_CMAKE_TARGET_HXX
+// ===== end include/mgmake/ext/cmake/target.hxx =====
+
+
+#include <map>
+#include <string>
+#include <string_view>
+
+// A CMake codemodel stores the target metadata mgmake needs after CMake configuration.
+
+namespace mgmake::ext::cmake {
+	struct codemodel {
 		std::map<std::string, target> m_targets;
 
 		[[nodiscard]] const target* find_target(std::string_view name) const {
@@ -5166,136 +5147,98 @@ namespace mgmake::ext::cmake_file_api {
 			return found == m_targets.end() ? nullptr : &found->second;
 		}
 	};
-
-	[[nodiscard]] inline std::filesystem::path query_file(
-		const std::filesystem::path& build_dir
-	) {
-		return build_dir / ".cmake" / "api" / "v1" / "query" / "client-mgmake" / "query.json";
-	}
-
-	[[nodiscard]] inline std::filesystem::path reply_dir(
-		const std::filesystem::path& build_dir
-	) {
-		return build_dir / ".cmake" / "api" / "v1" / "reply";
-	}
-
-	[[nodiscard]] inline std::string codemodel_query_text() {
-		return R"({"requests":[{"kind":"codemodel","version":2}]})";
-	}
-
-	[[nodiscard]] inline std::optional<std::string> read_file(
-		const std::filesystem::path& path
-	) {
-		std::ifstream in(path, std::ios::binary);
-
-		if (!in.is_open()) {
-			return std::nullopt;
-		}
-
-		return std::string{
-			std::istreambuf_iterator<char>{in},
-			std::istreambuf_iterator<char>{}
-		};
-	}
-
-	// Only the codemodel fields needed for provider artifact lookup are materialized.
-	[[nodiscard]] inline std::optional<target> parse_target_file(
-		const std::filesystem::path& file,
-		const std::filesystem::path& build_dir
-	) {
-		const auto content = read_file(file);
-
-		if (!content.has_value()) {
-			return std::nullopt;
-		}
-
-		const auto parsed = ext::json::parse(*content);
-
-		if (!parsed.has_value()) {
-			return std::nullopt;
-		}
-
-		const auto name = parsed->get("name");
-
-		if (!name.has_value()) {
-			return std::nullopt;
-		}
-
-		const auto name_text = name->as_string();
-
-		if (!name_text.has_value()) {
-			return std::nullopt;
-		}
-
-		target result{};
-		result.m_name = *name_text;
-
-		if (const auto type = parsed->get("type")) {
-			if (const auto type_text = type->as_string()) {
-				result.m_type = *type_text;
-			}
-		}
-
-		for (const auto& artifact : parsed->array("artifacts")) {
-			const auto path = artifact.get("path");
-
-			if (!path.has_value()) {
-				continue;
-			}
-
-			const auto path_text = path->as_string();
-
-			if (!path_text.has_value()) {
-				continue;
-			}
-
-			result.m_artifacts.emplace_back(*path_text);
-		}
-
-		for (auto& artifact : result.m_artifacts) {
-			if (artifact.is_relative()) {
-				artifact = build_dir / artifact;
-			}
-		}
-
-		if (!result.m_artifacts.empty()) {
-			result.m_artifact = result.m_artifacts.front();
-		}
-
-		return result;
-	}
-
-	inline void load_reply_targets(project& project) {
-		const auto dir = reply_dir(project.m_build_dir);
-
-		if (!std::filesystem::exists(dir)) {
-			return;
-		}
-
-		for (const auto& entry : std::filesystem::directory_iterator{dir}) {
-			if (!entry.is_regular_file()) {
-				continue;
-			}
-
-			const auto filename = entry.path().filename().string();
-
-			if (!filename.starts_with("target-") || entry.path().extension() != ".json") {
-				continue;
-			}
-
-			auto target = parse_target_file(entry.path(), project.m_build_dir);
-
-			if (!target.has_value() || target->m_name.empty()) {
-				continue;
-			}
-
-			project.m_targets.insert_or_assign(target->m_name, std::move(*target));
-		}
-	}
 }
 
-#endif // MGMK_EXT_CMAKE_FILE_API_HXX
-// ===== end include/mgmake/ext/cmake/file_api.hxx =====
+#endif // MGMK_EXT_CMAKE_CODEMODEL_HXX
+// ===== end include/mgmake/ext/cmake/codemodel.hxx =====
+
+
+// ===== begin include/mgmake/ext/path_root.hxx =====
+#pragma once
+
+#ifndef MGMK_EXT_PATH_ROOT_HXX
+#define MGMK_EXT_PATH_ROOT_HXX
+
+// Path roots describe how provider-relative include and artifact paths are resolved.
+
+namespace mgmake::ext {
+	enum struct path_root {
+		usage,
+		source,
+		build,
+		install
+	};
+}
+
+#endif // MGMK_EXT_PATH_ROOT_HXX
+// ===== end include/mgmake/ext/path_root.hxx =====
+
+
+// ===== begin include/mgmake/ext/rooted_path.hxx =====
+#pragma once
+
+#ifndef MGMK_EXT_ROOTED_PATH_HXX
+#define MGMK_EXT_ROOTED_PATH_HXX
+
+// skipped duplicate include: include/mgmake/ext/path_root.hxx
+
+#include <filesystem>
+
+// Rooted paths keep provider-relative paths independent from the final prepared source/build/install directories.
+
+namespace mgmake::ext {
+	struct rooted_path {
+		path_root m_root = path_root::usage;
+		std::filesystem::path m_path;
+	};
+}
+
+#endif // MGMK_EXT_ROOTED_PATH_HXX
+// ===== end include/mgmake/ext/rooted_path.hxx =====
+
+
+#include <filesystem>
+#include <string>
+#include <string_view>
+
+// Prepared CMake projects store mgmake's resolved external project directories and parsed CMake metadata.
+
+namespace mgmake::prep {
+	struct cmake_project {
+		std::string m_name;
+		std::filesystem::path m_source_dir;
+		std::filesystem::path m_build_dir;
+		std::filesystem::path m_install_dir;
+		ext::path_root m_usage_root = ext::path_root::build;
+		ext::cmake::codemodel m_codemodel;
+
+		[[nodiscard]] std::filesystem::path root(ext::path_root root) const {
+			switch (root) {
+				case ext::path_root::usage: return this->root(m_usage_root);
+				case ext::path_root::source: return m_source_dir;
+				case ext::path_root::build: return m_build_dir;
+				case ext::path_root::install: return m_install_dir;
+			}
+
+			return m_build_dir;
+		}
+
+		[[nodiscard]] std::filesystem::path resolve(const ext::rooted_path& path) const {
+			if (path.m_path.is_absolute()) {
+				return path.m_path;
+			}
+
+			return root(path.m_root) / path.m_path;
+		}
+
+		[[nodiscard]] const ext::cmake::target* find_target(std::string_view name) const {
+			return m_codemodel.find_target(name);
+		}
+	};
+}
+
+#endif // MGMK_PREP_CMAKE_PROJECT_HXX
+// ===== end include/mgmake/prep/cmake_project.hxx =====
 
 #endif // MGMK_ENABLE_EXT_CMAKE
 
@@ -5307,11 +5250,6 @@ namespace mgmake::ext::cmake_file_api {
 // Prep result keeps the preparation DAG and lookup tables consumed by the lower phase.
 
 namespace mgmake::prep {
-#ifdef MGMK_ENABLE_EXT_CMAKE
-	using cmake_target = ext::cmake_file_api::target;
-	using cmake_project = ext::cmake_file_api::project;
-#endif // MGMK_ENABLE_EXT_CMAKE
-
 	struct result {
 		dag::graph m_dag;
 		std::map<std::string, prep::fetched> m_fetches;
@@ -5443,7 +5381,48 @@ namespace mgmake::spec {
 #endif // MGMK_SPEC_TARGET_HXX
 // ===== end include/mgmake/spec/target.hxx =====
 
-// skipped duplicate include: include/mgmake/ext/provider_ref.hxx
+
+// ===== begin include/mgmake/ext/provided_target_ref.hxx =====
+#pragma once
+
+#ifndef MGMK_EXT_PROVIDED_TARGET_REF_HXX
+#define MGMK_EXT_PROVIDED_TARGET_REF_HXX
+
+
+// ===== begin include/mgmake/ext/provider_kind.hxx =====
+#pragma once
+
+#ifndef MGMK_EXT_PROVIDER_KIND_HXX
+#define MGMK_EXT_PROVIDER_KIND_HXX
+
+// Provider kinds identify external systems that can supply mgmake targets.
+
+namespace mgmake::ext {
+	enum struct provider_kind {
+		cmake
+	};
+}
+
+#endif // MGMK_EXT_PROVIDER_KIND_HXX
+// ===== end include/mgmake/ext/provider_kind.hxx =====
+
+
+#include <string>
+
+// A provided target ref connects a mgmake target to one target from an external provider project.
+
+namespace mgmake::ext {
+	struct provided_target_ref {
+		provider_kind m_kind = provider_kind::cmake;
+		std::string m_project;
+		std::string m_target;
+	};
+}
+
+#endif // MGMK_EXT_PROVIDED_TARGET_REF_HXX
+// ===== end include/mgmake/ext/provided_target_ref.hxx =====
+
+// skipped duplicate include: include/mgmake/ext/rooted_path.hxx
 
 #include <filesystem>
 #include <optional>
@@ -5457,7 +5436,7 @@ namespace mgmake::spec {
 	struct executable : public target<executable> {
 		using id = std::vector<executable>::size_type;
 
-		std::optional<ext::provider_ref> m_provider;
+		std::optional<ext::provided_target_ref> m_provider;
 		std::optional<ext::rooted_path> m_artifact;
 
 		inline constexpr executable(std::string_view name)
@@ -5465,7 +5444,7 @@ namespace mgmake::spec {
 			mgmkassert(not m_name.empty(), "mgmake spec: executable target has no name");
 		}
 
-		inline executable& from(const ext::provider_ref& provider) {
+		inline executable& from(const ext::provided_target_ref& provider) {
 			mgmkassert(!provider.m_project.empty(), "mgmake spec: provider-backed executable has no provider project");
 			mgmkassert(!provider.m_target.empty(), "mgmake spec: provider-backed executable has no provider target");
 			m_provider = provider;
@@ -5477,11 +5456,11 @@ namespace mgmake::spec {
 		}
 
 		inline executable& artifact(const std::filesystem::path& path) {
-			return artifact(ext::output_root::install_dir, path);
+			return artifact(ext::path_root::usage, path);
 		}
 
 		inline executable& artifact(
-			ext::output_root root,
+			ext::path_root root,
 			const std::filesystem::path& path
 		) {
 			mgmkassert(!path.empty(), "mgmake spec: executable '" + m_name + "' has an empty external artifact path");
@@ -5502,7 +5481,8 @@ namespace mgmake::spec {
 #define MGMK_SPEC_LIBRARY_HXX
 
 // skipped duplicate include: include/mgmake/spec/target.hxx
-// skipped duplicate include: include/mgmake/ext/provider_ref.hxx
+// skipped duplicate include: include/mgmake/ext/provided_target_ref.hxx
+// skipped duplicate include: include/mgmake/ext/rooted_path.hxx
 
 #include <filesystem>
 #include <optional>
@@ -5524,7 +5504,7 @@ namespace mgmake::spec {
 			interface
 		} m_kind;
 
-		std::optional<ext::provider_ref> m_provider;
+		std::optional<ext::provided_target_ref> m_provider;
 		std::optional<ext::rooted_path> m_artifact;
 		std::vector<ext::rooted_path> m_external_include_dirs;
 
@@ -5549,7 +5529,7 @@ namespace mgmake::spec {
 			return *this;
 		}
 
-		inline library& from(const ext::provider_ref& provider) {
+		inline library& from(const ext::provided_target_ref& provider) {
 			mgmkassert(!provider.m_project.empty(), "mgmake spec: provider-backed library has no provider project");
 			mgmkassert(!provider.m_target.empty(), "mgmake spec: provider-backed library has no provider target");
 			m_provider = provider;
@@ -5561,11 +5541,11 @@ namespace mgmake::spec {
 		}
 
 		inline library& artifact(const std::filesystem::path& path) {
-			return artifact(ext::output_root::install_dir, path);
+			return artifact(ext::path_root::usage, path);
 		}
 
 		inline library& artifact(
-			ext::output_root root,
+			ext::path_root root,
 			const std::filesystem::path& path
 		) {
 			mgmkassert(!path.empty(), "mgmake spec: library '" + m_name + "' has an empty external artifact path");
@@ -5575,7 +5555,7 @@ namespace mgmake::spec {
 
 		inline library& include_dir(const std::filesystem::path& path) {
 			if (provider_backed()) {
-				return include_dir(m_provider->m_usage_root, path);
+				return include_dir(ext::path_root::usage, path);
 			}
 
 			add_include_dir(path);
@@ -5583,7 +5563,7 @@ namespace mgmake::spec {
 		}
 
 		inline library& include_dir(
-			ext::output_root root,
+			ext::path_root root,
 			const std::filesystem::path& path
 		) {
 			mgmkassert(!path.empty(), "mgmake spec: library '" + m_name + "' has an empty external include directory");
@@ -5742,17 +5722,19 @@ namespace mgmake::ext {
 #endif // MGMAKE_EXT_FETCH_HXX
 // ===== end include/mgmake/ext/fetch.hxx =====
 
-// skipped duplicate include: include/mgmake/ext/provider_ref.hxx
+// skipped duplicate include: include/mgmake/ext/provided_target_ref.hxx
+// skipped duplicate include: include/mgmake/ext/rooted_path.hxx
 #ifdef MGMK_ENABLE_EXT_CMAKE
 
-// ===== begin include/mgmake/ext/cmake.hxx =====
+// ===== begin include/mgmake/ext/cmake/project.hxx =====
 #pragma once
 
-#ifndef MGMK_EXT_CMAKE_HXX
-#define MGMK_EXT_CMAKE_HXX
+#ifndef MGMK_EXT_CMAKE_PROJECT_HXX
+#define MGMK_EXT_CMAKE_PROJECT_HXX
 
-// skipped duplicate include: include/mgmake/ext/provider_ref.hxx
 // skipped duplicate include: include/mgmake/ext/fetch.hxx
+// skipped duplicate include: include/mgmake/ext/provided_target_ref.hxx
+// skipped duplicate include: include/mgmake/detail/assert.hxx
 // skipped duplicate include: include/mgmake/spec/executable.hxx
 // skipped duplicate include: include/mgmake/spec/library.hxx
 
@@ -5762,105 +5744,112 @@ namespace mgmake::ext {
 #include <utility>
 #include <vector>
 
-// The CMake extension describes an external project and exposes provider-backed mgmake targets for its outputs.
+// The CMake project spec is the user-facing declaration of an external CMake project.
 
-namespace mgmake::ext {
-	struct cmake {
-		using id = std::vector<cmake>::size_type;
+namespace mgmake::ext::cmake {
+	struct project {
+		using id = std::vector<project>::size_type;
 
 		std::string m_name;
 		std::optional<ext::fetch> m_source;
 		std::vector<std::string> m_args;
 		std::vector<std::pair<std::string, std::string>> m_defines;
-		std::vector<std::string> m_build_targets;
 		bool m_install = false;
 		std::string m_install_target = "install";
 		std::string m_generator;
 		std::string m_build_config;
 
-		explicit cmake(std::string_view name)
+		explicit project(std::string_view name)
 			: m_name{name} {
 			mgmkassert(!m_name.empty(), "mgmake ext: CMake project has no name");
 		}
 
-		cmake& source(const ext::fetch& fetch) {
+		project& source(const ext::fetch& fetch) {
 			m_source = fetch;
 			return *this;
 		}
 
-		cmake& arg(std::string_view value) {
+		project& arg(std::string_view value) {
 			mgmkassert(!value.empty(), "mgmake ext: CMake argument is empty");
 			m_args.emplace_back(value);
 			return *this;
 		}
 
-		cmake& define(std::string_view key, std::string_view value) {
+		project& define(std::string_view key, std::string_view value) {
 			mgmkassert(!key.empty(), "mgmake ext: CMake define key is empty");
 			m_defines.emplace_back(std::string{key}, std::string{value});
 			return *this;
 		}
 
-		cmake& build_target(std::string_view target) {
-			mgmkassert(!target.empty(), "mgmake ext: CMake build target is empty");
-			m_build_targets.emplace_back(target);
-			return *this;
-		}
-
-		cmake& install(bool enabled = true) {
+		project& install(bool enabled = true) {
 			m_install = enabled;
 			return *this;
 		}
 
-		cmake& install_target(std::string_view target) {
+		project& install_target(std::string_view target) {
 			mgmkassert(!target.empty(), "mgmake ext: CMake install target is empty");
 			m_install_target = std::string{target};
 			m_install = true;
 			return *this;
 		}
 
-		cmake& generator(std::string_view value) {
+		project& generator(std::string_view value) {
 			mgmkassert(!value.empty(), "mgmake ext: CMake generator is empty");
 			m_generator = std::string{value};
 			return *this;
 		}
 
-		cmake& build_config(std::string_view value) {
+		project& build_config(std::string_view value) {
 			mgmkassert(!value.empty(), "mgmake ext: CMake build configuration is empty");
 			m_build_config = std::string{value};
 			return *this;
 		}
 
-		[[nodiscard]] spec::library library(
-			std::string_view target,
-			spec::library::kind kind
-		) const {
-			mgmkassert(!target.empty(), "mgmake ext: CMake library target is empty");
-			auto result = spec::library{target, kind};
-			result.from(ext::provider_ref{
+		[[nodiscard]] ext::provided_target_ref target(std::string_view cmake_target) const {
+			mgmkassert(!cmake_target.empty(), "mgmake ext: CMake target is empty");
+			return ext::provided_target_ref{
 				.m_kind = ext::provider_kind::cmake,
 				.m_project = m_name,
-				.m_target = std::string{target},
-				.m_usage_root = ext::output_root::install_dir
-			});
+				.m_target = std::string{cmake_target}
+			};
+		}
+
+		[[nodiscard]] spec::library library(
+			std::string_view cmake_target,
+			spec::library::kind kind
+		) const {
+			return library(cmake_target, cmake_target, kind);
+		}
+
+		[[nodiscard]] spec::library library(
+			std::string_view name,
+			std::string_view cmake_target,
+			spec::library::kind kind
+		) const {
+			mgmkassert(!name.empty(), "mgmake ext: CMake library name is empty");
+			auto result = spec::library{name, kind};
+			result.from(target(cmake_target));
 			return result;
 		}
 
-		[[nodiscard]] spec::executable executable(std::string_view target) const {
-			mgmkassert(!target.empty(), "mgmake ext: CMake executable target is empty");
-			auto result = spec::executable{target};
-			result.from(ext::provider_ref{
-				.m_kind = ext::provider_kind::cmake,
-				.m_project = m_name,
-				.m_target = std::string{target},
-				.m_usage_root = ext::output_root::install_dir
-			});
+		[[nodiscard]] spec::executable executable(std::string_view cmake_target) const {
+			return executable(cmake_target, cmake_target);
+		}
+
+		[[nodiscard]] spec::executable executable(
+			std::string_view name,
+			std::string_view cmake_target
+		) const {
+			mgmkassert(!name.empty(), "mgmake ext: CMake executable name is empty");
+			auto result = spec::executable{name};
+			result.from(target(cmake_target));
 			return result;
 		}
 	};
 }
 
-#endif // MGMK_EXT_CMAKE_HXX
-// ===== end include/mgmake/ext/cmake.hxx =====
+#endif // MGMK_EXT_CMAKE_PROJECT_HXX
+// ===== end include/mgmake/ext/cmake/project.hxx =====
 
 #endif // MGMK_ENABLE_EXT_CMAKE
 
@@ -5879,7 +5868,7 @@ namespace mgmake::spec {
 		std::vector<spec::library> m_libraries;
 		std::vector<ext::fetch> m_fetches;
 #ifdef MGMK_ENABLE_EXT_CMAKE
-		std::vector<ext::cmake> m_cmake_projects;
+		std::vector<ext::cmake::project> m_cmake_projects;
 #endif // MGMK_ENABLE_EXT_CMAKE
 
 		inline constexpr project(std::string_view name)
@@ -5959,7 +5948,7 @@ namespace mgmake::spec {
 		}
 
 #ifdef MGMK_ENABLE_EXT_CMAKE
-		inline project& add_ext(const ext::cmake& cmake_project) {
+		inline project& add_ext(const ext::cmake::project& cmake_project) {
 			mgmkassert(!cmake_project.m_name.empty(), "mgmake spec: external CMake project has no name");
 			mgmkassert(!find_cmake(cmake_project.m_name).has_value(), "mgmake spec: external CMake project name conflict '" + cmake_project.m_name + "'");
 			m_cmake_projects.emplace_back(cmake_project);
@@ -6017,8 +6006,8 @@ namespace mgmake::spec {
 		}
 
 #ifdef MGMK_ENABLE_EXT_CMAKE
-		const std::optional<ext::cmake::id> find_cmake(std::string_view name) const {
-			for (ext::cmake::id idx = 0; idx < m_cmake_projects.size(); ++idx) {
+		const std::optional<ext::cmake::project::id> find_cmake(std::string_view name) const {
+			for (ext::cmake::project::id idx = 0; idx < m_cmake_projects.size(); ++idx) {
 				const auto& cmake_project = m_cmake_projects.at(idx);
 				if (cmake_project.m_name == name) {
 					return idx;
@@ -6028,7 +6017,7 @@ namespace mgmake::spec {
 			return std::nullopt;
 		}
 
-		const ext::cmake* get_cmake(const ext::cmake::id idx) const {
+		const ext::cmake::project* get_cmake(const ext::cmake::project::id idx) const {
 			if (idx >= m_cmake_projects.size()) {
 				return nullptr;
 			}
@@ -6048,7 +6037,7 @@ namespace mgmake::spec {
 	private:
 #ifdef MGMK_ENABLE_EXT_CMAKE
 		inline void assert_known_provider_for(
-			const std::optional<ext::provider_ref>& provider,
+			const std::optional<ext::provided_target_ref>& provider,
 			std::string_view owner_name
 		) const {
 			if (!provider.has_value()) {
@@ -11581,6 +11570,30 @@ namespace mgmake::lower {
 #endif // MGMK_LOWER_USAGE_HXX
 // ===== end include/mgmake/lower/usage.hxx =====
 
+#ifdef MGMK_ENABLE_EXT_CMAKE
+
+// ===== begin include/mgmake/lower/provider_build.hxx =====
+#pragma once
+
+#ifndef MGMK_LOWER_PROVIDER_BUILD_HXX
+#define MGMK_LOWER_PROVIDER_BUILD_HXX
+
+// skipped duplicate include: include/mgmake/dag/artifact.hxx
+// skipped duplicate include: include/mgmake/dag/target.hxx
+
+// Provider build results connect an external provider build action to a ready stamp in the lowered DAG.
+
+namespace mgmake::lower {
+	struct provider_build {
+		dag::target::id m_dag_target{};
+		dag::artifact::id m_ready_stamp{};
+	};
+}
+
+#endif // MGMK_LOWER_PROVIDER_BUILD_HXX
+// ===== end include/mgmake/lower/provider_build.hxx =====
+
+#endif // MGMK_ENABLE_EXT_CMAKE
 // skipped duplicate include: include/mgmake/prep/fetched.hxx
 // skipped duplicate include: include/mgmake/prep/result.hxx
 
@@ -11596,7 +11609,7 @@ namespace mgmake::lower {
 // skipped duplicate include: include/mgmake/dag/emitter.hxx
 // skipped duplicate include: include/mgmake/ext/fetch.hxx
 #ifdef MGMK_ENABLE_EXT_CMAKE
-// skipped duplicate include: include/mgmake/ext/cmake.hxx
+// skipped duplicate include: include/mgmake/ext/cmake/project.hxx
 #endif // MGMK_ENABLE_EXT_CMAKE
 
 #include <map>
@@ -11643,7 +11656,7 @@ namespace mgmake::prep {
 		const prep::fetched& fetch(ext::fetch::id id);
 		prep::fetched fetch_value(const ext::fetch& fetch);
 #ifdef MGMK_ENABLE_EXT_CMAKE
-		const prep::cmake_project& cmake(ext::cmake::id id);
+		const prep::cmake_project& cmake(ext::cmake::project::id id);
 #endif // MGMK_ENABLE_EXT_CMAKE
 
 	private:
@@ -11663,7 +11676,7 @@ namespace mgmake::prep {
 		);
 
 #ifdef MGMK_ENABLE_EXT_CMAKE
-		prep::cmake_project cmake_value(const ext::cmake& cmake_project);
+		prep::cmake_project cmake_value(const ext::cmake::project& cmake_project);
 #endif // MGMK_ENABLE_EXT_CMAKE
 
 		std::vector<std::optional<prep::fetched>> m_fetches;
@@ -11693,7 +11706,155 @@ namespace mgmake::prep {
 // skipped duplicate include: include/mgmake/discovery/tool_environment.hxx
 // skipped duplicate include: include/mgmake/sys/command_line.hxx
 #ifdef MGMK_ENABLE_EXT_CMAKE
-// skipped duplicate include: include/mgmake/ext/cmake/file_api.hxx
+
+// ===== begin include/mgmake/ext/cmake/file_api.hxx =====
+#pragma once
+
+#ifndef MGMK_EXT_CMAKE_FILE_API_HXX
+#define MGMK_EXT_CMAKE_FILE_API_HXX
+
+// skipped duplicate include: include/mgmake/ext/cmake/codemodel.hxx
+// skipped duplicate include: include/mgmake/ext/json.hxx
+
+#include <filesystem>
+#include <fstream>
+#include <iterator>
+#include <optional>
+#include <string>
+#include <utility>
+
+// CMake File API helpers request and parse codemodel replies so mgmake can find external target artifacts.
+
+namespace mgmake::ext::cmake::file_api {
+	[[nodiscard]] inline std::filesystem::path query_file(
+		const std::filesystem::path& build_dir
+	) {
+		return build_dir / ".cmake" / "api" / "v1" / "query" / "client-mgmake" / "query.json";
+	}
+
+	[[nodiscard]] inline std::filesystem::path reply_dir(
+		const std::filesystem::path& build_dir
+	) {
+		return build_dir / ".cmake" / "api" / "v1" / "reply";
+	}
+
+	[[nodiscard]] inline std::string codemodel_query_text() {
+		return R"({"requests":[{"kind":"codemodel","version":2}]})";
+	}
+
+	[[nodiscard]] inline std::optional<std::string> read_file(
+		const std::filesystem::path& path
+	) {
+		std::ifstream in(path, std::ios::binary);
+
+		if (!in.is_open()) {
+			return std::nullopt;
+		}
+
+		return std::string{
+			std::istreambuf_iterator<char>{in},
+			std::istreambuf_iterator<char>{}
+		};
+	}
+
+	// Only the codemodel fields needed for provider artifact lookup are materialized.
+	[[nodiscard]] inline std::optional<target> parse_target_file(
+		const std::filesystem::path& file,
+		const std::filesystem::path& build_dir
+	) {
+		const auto content = read_file(file);
+
+		if (!content.has_value()) {
+			return std::nullopt;
+		}
+
+		const auto parsed = ext::json::parse(*content);
+
+		if (!parsed.has_value()) {
+			return std::nullopt;
+		}
+
+		const auto name = parsed->get("name");
+
+		if (!name.has_value()) {
+			return std::nullopt;
+		}
+
+		const auto name_text = name->as_string();
+
+		if (!name_text.has_value()) {
+			return std::nullopt;
+		}
+
+		target result{};
+		result.m_name = *name_text;
+
+		if (const auto type = parsed->get("type")) {
+			if (const auto type_text = type->as_string()) {
+				result.m_type = *type_text;
+			}
+		}
+
+		for (const auto& artifact : parsed->array("artifacts")) {
+			const auto path = artifact.get("path");
+
+			if (!path.has_value()) {
+				continue;
+			}
+
+			const auto path_text = path->as_string();
+
+			if (!path_text.has_value()) {
+				continue;
+			}
+
+			result.m_artifacts.emplace_back(*path_text);
+		}
+
+		for (auto& artifact : result.m_artifacts) {
+			if (artifact.is_relative()) {
+				artifact = build_dir / artifact;
+			}
+		}
+
+		return result;
+	}
+
+	inline void load_reply_targets(
+		codemodel& model,
+		const std::filesystem::path& build_dir
+	) {
+		const auto dir = reply_dir(build_dir);
+
+		if (!std::filesystem::exists(dir)) {
+			return;
+		}
+
+		for (const auto& entry : std::filesystem::directory_iterator{dir}) {
+			if (!entry.is_regular_file()) {
+				continue;
+			}
+
+			const auto filename = entry.path().filename().string();
+
+			if (!filename.starts_with("target-") || entry.path().extension() != ".json") {
+				continue;
+			}
+
+			auto target = parse_target_file(entry.path(), build_dir);
+
+			if (!target.has_value() || target->m_name.empty()) {
+				continue;
+			}
+
+			model.m_targets.insert_or_assign(target->m_name, std::move(*target));
+		}
+	}
+}
+
+#endif // MGMK_EXT_CMAKE_FILE_API_HXX
+// ===== end include/mgmake/ext/cmake/file_api.hxx =====
+
 #endif // MGMK_ENABLE_EXT_CMAKE
 
 #include <cstdlib>
@@ -11845,7 +12006,10 @@ namespace mgmake::prep {
 #ifdef MGMK_ENABLE_EXT_CMAKE
 		if (!opts.m_dry_run) {
 			for (auto& [name, cmake_project] : result.m_cmake_projects) {
-				ext::cmake_file_api::load_reply_targets(cmake_project);
+				ext::cmake::file_api::load_reply_targets(
+					cmake_project.m_codemodel,
+					cmake_project.m_build_dir
+				);
 			}
 		}
 #endif // MGMK_ENABLE_EXT_CMAKE
@@ -11870,7 +12034,7 @@ namespace mgmake::prep {
 // skipped duplicate include: include/mgmake/ext/fetch.hxx
 #ifdef MGMK_ENABLE_EXT_CMAKE
 // skipped duplicate include: include/mgmake/ext/cmake/file_api.hxx
-// skipped duplicate include: include/mgmake/ext/cmake.hxx
+// skipped duplicate include: include/mgmake/ext/cmake/project.hxx
 #endif // MGMK_ENABLE_EXT_CMAKE
 // skipped duplicate include: include/mgmake/spec/project.hxx
 // skipped duplicate include: include/mgmake/sys/command_line.hxx
@@ -11941,7 +12105,7 @@ namespace mgmake::prep {
 		const std::filesystem::path& query_path
 	) {
 		const auto query_dir = query_path.parent_path();
-		const auto query_text = ext::cmake_file_api::codemodel_query_text();
+		const auto query_text = ext::cmake::file_api::codemodel_query_text();
 #if defined(MGMK_PLATFORM_WINDOWS)
 		return sys::shell_command(
 			"if not exist " + sys::shell_path(query_dir) + " mkdir " + sys::shell_path(query_dir) +
@@ -12074,7 +12238,7 @@ namespace mgmake::prep {
 
 	[[nodiscard]] inline sys::command_line cmake_configure_command(
 		const build::request& req,
-		const ext::cmake& cmake_project,
+		const ext::cmake::project& cmake_project,
 		const std::filesystem::path& source_dir,
 		const std::filesystem::path& build_dir,
 		const std::filesystem::path& install_dir
@@ -12346,7 +12510,7 @@ namespace mgmake::prep {
 
 
 #ifdef MGMK_ENABLE_EXT_CMAKE
-	inline const prep::cmake_project& context::cmake(ext::cmake::id id) {
+	inline const prep::cmake_project& context::cmake(ext::cmake::project::id id) {
 		mgmkassert(id < m_project.m_cmake_projects.size(), "mgmake prep: invalid CMake project id");
 
 		if (m_cmake_projects.at(id).has_value()) {
@@ -12359,7 +12523,7 @@ namespace mgmake::prep {
 	}
 
 	inline prep::cmake_project context::cmake_value(
-		const ext::cmake& cmake_project
+		const ext::cmake::project& cmake_project
 	) {
 		mgmkassert(!cmake_project.m_name.empty(), "mgmake prep: CMake project has no name");
 		mgmkassert(cmake_project.m_source.has_value(), "mgmake prep: CMake project '" + cmake_project.m_name + "' has no source");
@@ -12368,7 +12532,7 @@ namespace mgmake::prep {
 		const auto source_dir = fetched.m_source_dir;
 		const auto build_dir = cmake_build_dir(request(), cmake_project.m_name);
 		const auto install_dir = cmake_install_dir(request(), cmake_project.m_name);
-		const auto query_path = ext::cmake_file_api::query_file(build_dir);
+		const auto query_path = ext::cmake::file_api::query_file(build_dir);
 		const auto configure_output = cmake_configure_output(build_dir);
 
 		const auto query_id = m_emit.generated(query_path);
@@ -12409,8 +12573,8 @@ namespace mgmake::prep {
 		result.m_build_dir = build_dir;
 		result.m_install_dir = install_dir;
 		result.m_usage_root = cmake_project.m_install
-			? ext::output_root::install_dir
-			: ext::output_root::build_dir;
+			? ext::path_root::install
+			: ext::path_root::build;
 
 		m_result.m_cmake_projects.insert_or_assign(cmake_project.m_name, result);
 		return result;
@@ -12558,9 +12722,13 @@ namespace mgmake::prep {
 
 // skipped duplicate include: include/mgmake/lower/target.hxx
 // skipped duplicate include: include/mgmake/lower/usage.hxx
+#ifdef MGMK_ENABLE_EXT_CMAKE
+// skipped duplicate include: include/mgmake/lower/provider_build.hxx
+#endif // MGMK_ENABLE_EXT_CMAKE
 // skipped duplicate include: include/mgmake/build/request.hxx
 // skipped duplicate include: include/mgmake/dag/emitter.hxx
 // skipped duplicate include: include/mgmake/dep/database.hxx
+// skipped duplicate include: include/mgmake/ext/provided_target_ref.hxx
 // skipped duplicate include: include/mgmake/prep/result.hxx
 // skipped duplicate include: include/mgmake/spec/executable.hxx
 // skipped duplicate include: include/mgmake/spec/library.hxx
@@ -12579,13 +12747,6 @@ namespace mgmake::spec {
 }
 
 namespace mgmake::lower {
-#ifdef MGMK_ENABLE_EXT_CMAKE
-	struct cmake_target {
-		dag::target::id m_dag_target{};
-		dag::artifact::id m_ready_stamp{};
-	};
-#endif // MGMK_ENABLE_EXT_CMAKE
-
 	struct context {
 		const build::request& m_req;
 		const spec::project& m_project;
@@ -12622,8 +12783,8 @@ namespace mgmake::lower {
 		const lower::target& lower_library(std::string_view lib);
 		void lower_executable(spec::executable::id id);
 #ifdef MGMK_ENABLE_EXT_CMAKE
-		lower::cmake_target lower_cmake_target(
-			const ext::provider_ref& provider,
+		lower::provider_build lower_provider_build(
+			const ext::provided_target_ref& provider,
 			std::span<const dag::artifact::id> outputs
 		);
 #endif // MGMK_ENABLE_EXT_CMAKE
@@ -12979,37 +13140,13 @@ namespace mgmake::lower {
 
 
 #ifdef MGMK_ENABLE_EXT_CMAKE
-	[[nodiscard]] inline std::filesystem::path provider_root(
-		const prep::cmake_project& cmake_project,
-		ext::output_root root
-	) {
-		switch (root) {
-			case ext::output_root::source_dir: return cmake_project.m_source_dir;
-			case ext::output_root::build_dir: return cmake_project.m_build_dir;
-			case ext::output_root::install_dir: return cmake_project.m_install_dir;
-		}
-
-		return cmake_project.m_install_dir;
-	}
-
-	[[nodiscard]] inline std::filesystem::path resolve_rooted_path(
-		const prep::cmake_project& cmake_project,
-		const ext::rooted_path& path
-	) {
-		if (path.m_path.is_absolute()) {
-			return path.m_path;
-		}
-
-		return provider_root(cmake_project, path.m_root) / path.m_path;
-	}
-
 	[[nodiscard]] inline std::filesystem::path conventional_provider_artifact(
 		const build::request& req,
 		const prep::cmake_project& cmake_project,
-		const ext::provider_ref& provider,
+		const ext::provided_target_ref& provider,
 		spec::library::kind kind
 	) {
-		const auto root = provider_root(cmake_project, provider.m_usage_root);
+		const auto root = cmake_project.root(ext::path_root::usage);
 
 		switch (kind) {
 			case spec::library::kind::static_lib:
@@ -13038,15 +13175,65 @@ namespace mgmake::lower {
 	[[nodiscard]] inline std::filesystem::path conventional_provider_executable(
 		const build::request& req,
 		const prep::cmake_project& cmake_project,
-		const ext::provider_ref& provider
+		const ext::provided_target_ref& provider
 	) {
-		const auto root = provider_root(cmake_project, provider.m_usage_root);
+		const auto root = cmake_project.root(ext::path_root::usage);
 		return root / "bin" / (provider.m_target + std::string{build::executable_extension(req.target_platform())});
+	}
+
+	[[nodiscard]] inline std::filesystem::path resolve_provider_library_artifact(
+		const build::request& req,
+		const prep::cmake_project& cmake_project,
+		const ext::provided_target_ref& provider,
+		const spec::library& lib
+	) {
+		if (lib.m_artifact.has_value()) {
+			return cmake_project.resolve(lib.m_artifact.value());
+		}
+
+		if (cmake_project.m_usage_root == ext::path_root::build) {
+			const auto* target = cmake_project.find_target(provider.m_target);
+
+			if (target != nullptr) {
+				const auto artifact = target->primary_artifact();
+
+				if (!artifact.empty()) {
+					return artifact;
+				}
+			}
+		}
+
+		return conventional_provider_artifact(req, cmake_project, provider, lib.m_kind);
+	}
+
+	[[nodiscard]] inline std::filesystem::path resolve_provider_executable_artifact(
+		const build::request& req,
+		const prep::cmake_project& cmake_project,
+		const ext::provided_target_ref& provider,
+		const spec::executable& exe
+	) {
+		if (exe.m_artifact.has_value()) {
+			return cmake_project.resolve(exe.m_artifact.value());
+		}
+
+		if (cmake_project.m_usage_root == ext::path_root::build) {
+			const auto* target = cmake_project.find_target(provider.m_target);
+
+			if (target != nullptr) {
+				const auto artifact = target->primary_artifact();
+
+				if (!artifact.empty()) {
+					return artifact;
+				}
+			}
+		}
+
+		return conventional_provider_executable(req, cmake_project, provider);
 	}
 
 	[[nodiscard]] inline std::filesystem::path provider_target_stamp(
 		const build::request& req,
-		const ext::provider_ref& provider
+		const ext::provided_target_ref& provider
 	) {
 		return req.build_dir() / "ext" / "stamp" /
 			(provider.m_project + ".cmake.build." + provider.m_target);
@@ -13054,9 +13241,9 @@ namespace mgmake::lower {
 
 	[[nodiscard]] inline sys::command_line cmake_build_command(
 		const build::request& req,
-		const ext::cmake& cmake_project,
+		const ext::cmake::project& cmake_project,
 		const prep::cmake_project& prepared,
-		const ext::provider_ref& provider
+		const ext::provided_target_ref& provider
 	) {
 		sys::command_line command;
 		command.m_args.emplace_back(req.tool_path(discovery::tool_role::cmake, "cmake").string());
@@ -13567,8 +13754,8 @@ namespace mgmake::lower {
 	}
 
 #ifdef MGMK_ENABLE_EXT_CMAKE
-	inline lower::cmake_target context::lower_cmake_target(
-		const ext::provider_ref& provider,
+	inline lower::provider_build context::lower_provider_build(
+		const ext::provided_target_ref& provider,
 		std::span<const dag::artifact::id> extra_outputs
 	) {
 		mgmkassert(provider.m_kind == ext::provider_kind::cmake, "mgmake lower: unsupported external provider kind");
@@ -13611,7 +13798,7 @@ namespace mgmake::lower {
 			{}
 		};
 
-		return lower::cmake_target{
+		return lower::provider_build{
 			.m_dag_target = m_emit.target(dag_target),
 			.m_ready_stamp = stamp_id
 		};
@@ -13630,22 +13817,19 @@ namespace mgmake::lower {
 		include_dirs.insert_range(usage.m_include_dirs);
 
 		for (const auto& include_dir : lib.m_external_include_dirs) {
-			include_dirs.emplace(resolve_rooted_path(*prepared, include_dir));
+			include_dirs.emplace(prepared->resolve(include_dir));
 		}
 
 		lower::target lowered{};
 		std::vector<dag::artifact::id> provider_outputs{};
 
 		if (lib.m_kind != spec::library::kind::interface) {
-			std::filesystem::path artifact_path;
-
-			if (lib.m_artifact.has_value()) {
-				artifact_path = resolve_rooted_path(*prepared, lib.m_artifact.value());
-			} else if (const auto* target = prepared->find_target(provider.m_target); target != nullptr && !target->m_artifact.empty()) {
-				artifact_path = target->m_artifact;
-			} else {
-				artifact_path = conventional_provider_artifact(request(), *prepared, provider, lib.m_kind);
-			}
+			const auto artifact_path = resolve_provider_library_artifact(
+				request(),
+				*prepared,
+				provider,
+				lib
+			);
 
 			mgmkassert(!artifact_path.empty(), "mgmake lower: unable to resolve artifact for provider-backed library '" + lib.m_name + "'");
 			const auto artifact_id = m_emit.generated(artifact_path);
@@ -13654,7 +13838,7 @@ namespace mgmake::lower {
 		}
 
 		// The provider build stamp becomes a usage input so dependents wait for the external target.
-		auto provider_target = lower_cmake_target(provider, provider_outputs);
+		auto provider_target = lower_provider_build(provider, provider_outputs);
 		usage.m_dag_dependencies.emplace(provider_target.m_dag_target);
 		usage.m_usage_inputs.emplace_back(provider_target.m_ready_stamp);
 
@@ -13689,20 +13873,17 @@ namespace mgmake::lower {
 		const auto* prepared = m_prep.find_cmake_project(provider.m_project);
 		mgmkassert(prepared != nullptr, "mgmake lower: CMake project '" + provider.m_project + "' was not prepared");
 
-		std::filesystem::path artifact_path;
-
-		if (exe.m_artifact.has_value()) {
-			artifact_path = resolve_rooted_path(*prepared, exe.m_artifact.value());
-		} else if (const auto* target = prepared->find_target(provider.m_target); target != nullptr && !target->m_artifact.empty()) {
-			artifact_path = target->m_artifact;
-		} else {
-			artifact_path = conventional_provider_executable(request(), *prepared, provider);
-		}
+		const auto artifact_path = resolve_provider_executable_artifact(
+			request(),
+			*prepared,
+			provider,
+			exe
+		);
 
 		mgmkassert(!artifact_path.empty(), "mgmake lower: unable to resolve artifact for provider-backed executable '" + exe.m_name + "'");
 		const auto artifact_id = m_emit.generated(artifact_path);
 		const std::array provider_outputs{artifact_id};
-		auto provider_target = lower_cmake_target(provider, provider_outputs);
+		auto provider_target = lower_provider_build(provider, provider_outputs);
 		usage.m_dag_dependencies.emplace(provider_target.m_dag_target);
 		usage.m_usage_inputs.emplace_back(provider_target.m_ready_stamp);
 
@@ -13745,7 +13926,7 @@ namespace mgmake::spec {
 		}
 
 #ifdef MGMK_ENABLE_EXT_CMAKE
-		for (ext::cmake::id id = 0; id < m_cmake_projects.size(); ++id) {
+		for (ext::cmake::project::id id = 0; id < m_cmake_projects.size(); ++id) {
 			ctx.cmake(id);
 		}
 #endif // MGMK_ENABLE_EXT_CMAKE
@@ -14244,12 +14425,14 @@ int main(int argc, char** argv) {                                               
 // ===== end include/mgmake/entry/macro.hxx =====
 
 // Include extensions last
-// skipped duplicate include: include/mgmake/ext/provider_ref.hxx
+// skipped duplicate include: include/mgmake/ext/provider_kind.hxx
+// skipped duplicate include: include/mgmake/ext/path_root.hxx
+// skipped duplicate include: include/mgmake/ext/provided_target_ref.hxx
+// skipped duplicate include: include/mgmake/ext/rooted_path.hxx
 // skipped duplicate include: include/mgmake/ext/fetch.hxx
 #ifdef MGMK_ENABLE_EXT_CMAKE
-// skipped duplicate include: include/mgmake/ext/cmake.hxx
+// skipped duplicate include: include/mgmake/ext/cmake/project.hxx
 
-// Umbrella include for the public single-header-style API; order matters because later phases depend on earlier type declarations.
 #endif // MGMK_ENABLE_EXT_CMAKE
 
 #endif // MGMAKE_MGMAKE_HXX

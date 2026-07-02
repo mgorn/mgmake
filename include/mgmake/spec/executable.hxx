@@ -4,7 +4,8 @@
 #define MGMK_SPEC_EXECUTABLE_HXX
 
 #include "target.hxx"
-#include "../ext/provider_ref.hxx"
+#include "../ext/provided_target_ref.hxx"
+#include "../ext/rooted_path.hxx"
 
 #include <filesystem>
 #include <optional>
@@ -18,7 +19,7 @@ namespace mgmake::spec {
 	struct executable : public target<executable> {
 		using id = std::vector<executable>::size_type;
 
-		std::optional<ext::provider_ref> m_provider;
+		std::optional<ext::provided_target_ref> m_provider;
 		std::optional<ext::rooted_path> m_artifact;
 
 		inline constexpr executable(std::string_view name)
@@ -26,7 +27,7 @@ namespace mgmake::spec {
 			mgmkassert(not m_name.empty(), "mgmake spec: executable target has no name");
 		}
 
-		inline executable& from(const ext::provider_ref& provider) {
+		inline executable& from(const ext::provided_target_ref& provider) {
 			mgmkassert(!provider.m_project.empty(), "mgmake spec: provider-backed executable has no provider project");
 			mgmkassert(!provider.m_target.empty(), "mgmake spec: provider-backed executable has no provider target");
 			m_provider = provider;
@@ -38,11 +39,11 @@ namespace mgmake::spec {
 		}
 
 		inline executable& artifact(const std::filesystem::path& path) {
-			return artifact(ext::output_root::install_dir, path);
+			return artifact(ext::path_root::usage, path);
 		}
 
 		inline executable& artifact(
-			ext::output_root root,
+			ext::path_root root,
 			const std::filesystem::path& path
 		) {
 			mgmkassert(!path.empty(), "mgmake spec: executable '" + m_name + "' has an empty external artifact path");

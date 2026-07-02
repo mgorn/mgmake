@@ -9,7 +9,7 @@
 #include "../ext/fetch.hxx"
 #ifdef MGMK_ENABLE_EXT_CMAKE
 #include "../ext/cmake/file_api.hxx"
-#include "../ext/cmake.hxx"
+#include "../ext/cmake/project.hxx"
 #endif // MGMK_ENABLE_EXT_CMAKE
 #include "../spec/project.hxx"
 #include "../sys/command_line.hxx"
@@ -80,7 +80,7 @@ namespace mgmake::prep {
 		const std::filesystem::path& query_path
 	) {
 		const auto query_dir = query_path.parent_path();
-		const auto query_text = ext::cmake_file_api::codemodel_query_text();
+		const auto query_text = ext::cmake::file_api::codemodel_query_text();
 #if defined(MGMK_PLATFORM_WINDOWS)
 		return sys::shell_command(
 			"if not exist " + sys::shell_path(query_dir) + " mkdir " + sys::shell_path(query_dir) +
@@ -213,7 +213,7 @@ namespace mgmake::prep {
 
 	[[nodiscard]] inline sys::command_line cmake_configure_command(
 		const build::request& req,
-		const ext::cmake& cmake_project,
+		const ext::cmake::project& cmake_project,
 		const std::filesystem::path& source_dir,
 		const std::filesystem::path& build_dir,
 		const std::filesystem::path& install_dir
@@ -485,7 +485,7 @@ namespace mgmake::prep {
 
 
 #ifdef MGMK_ENABLE_EXT_CMAKE
-	inline const prep::cmake_project& context::cmake(ext::cmake::id id) {
+	inline const prep::cmake_project& context::cmake(ext::cmake::project::id id) {
 		mgmkassert(id < m_project.m_cmake_projects.size(), "mgmake prep: invalid CMake project id");
 
 		if (m_cmake_projects.at(id).has_value()) {
@@ -498,7 +498,7 @@ namespace mgmake::prep {
 	}
 
 	inline prep::cmake_project context::cmake_value(
-		const ext::cmake& cmake_project
+		const ext::cmake::project& cmake_project
 	) {
 		mgmkassert(!cmake_project.m_name.empty(), "mgmake prep: CMake project has no name");
 		mgmkassert(cmake_project.m_source.has_value(), "mgmake prep: CMake project '" + cmake_project.m_name + "' has no source");
@@ -507,7 +507,7 @@ namespace mgmake::prep {
 		const auto source_dir = fetched.m_source_dir;
 		const auto build_dir = cmake_build_dir(request(), cmake_project.m_name);
 		const auto install_dir = cmake_install_dir(request(), cmake_project.m_name);
-		const auto query_path = ext::cmake_file_api::query_file(build_dir);
+		const auto query_path = ext::cmake::file_api::query_file(build_dir);
 		const auto configure_output = cmake_configure_output(build_dir);
 
 		const auto query_id = m_emit.generated(query_path);
@@ -548,8 +548,8 @@ namespace mgmake::prep {
 		result.m_build_dir = build_dir;
 		result.m_install_dir = install_dir;
 		result.m_usage_root = cmake_project.m_install
-			? ext::output_root::install_dir
-			: ext::output_root::build_dir;
+			? ext::path_root::install
+			: ext::path_root::build;
 
 		m_result.m_cmake_projects.insert_or_assign(cmake_project.m_name, result);
 		return result;

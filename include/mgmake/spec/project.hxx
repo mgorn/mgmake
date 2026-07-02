@@ -12,9 +12,10 @@
 #include "library.hxx"
 
 #include "../ext/fetch.hxx"
-#include "../ext/provider_ref.hxx"
+#include "../ext/provided_target_ref.hxx"
+#include "../ext/rooted_path.hxx"
 #ifdef MGMK_ENABLE_EXT_CMAKE
-#include "../ext/cmake.hxx"
+#include "../ext/cmake/project.hxx"
 #endif // MGMK_ENABLE_EXT_CMAKE
 
 #include <optional>
@@ -32,7 +33,7 @@ namespace mgmake::spec {
 		std::vector<spec::library> m_libraries;
 		std::vector<ext::fetch> m_fetches;
 #ifdef MGMK_ENABLE_EXT_CMAKE
-		std::vector<ext::cmake> m_cmake_projects;
+		std::vector<ext::cmake::project> m_cmake_projects;
 #endif // MGMK_ENABLE_EXT_CMAKE
 
 		inline constexpr project(std::string_view name)
@@ -112,7 +113,7 @@ namespace mgmake::spec {
 		}
 
 #ifdef MGMK_ENABLE_EXT_CMAKE
-		inline project& add_ext(const ext::cmake& cmake_project) {
+		inline project& add_ext(const ext::cmake::project& cmake_project) {
 			mgmkassert(!cmake_project.m_name.empty(), "mgmake spec: external CMake project has no name");
 			mgmkassert(!find_cmake(cmake_project.m_name).has_value(), "mgmake spec: external CMake project name conflict '" + cmake_project.m_name + "'");
 			m_cmake_projects.emplace_back(cmake_project);
@@ -170,8 +171,8 @@ namespace mgmake::spec {
 		}
 
 #ifdef MGMK_ENABLE_EXT_CMAKE
-		const std::optional<ext::cmake::id> find_cmake(std::string_view name) const {
-			for (ext::cmake::id idx = 0; idx < m_cmake_projects.size(); ++idx) {
+		const std::optional<ext::cmake::project::id> find_cmake(std::string_view name) const {
+			for (ext::cmake::project::id idx = 0; idx < m_cmake_projects.size(); ++idx) {
 				const auto& cmake_project = m_cmake_projects.at(idx);
 				if (cmake_project.m_name == name) {
 					return idx;
@@ -181,7 +182,7 @@ namespace mgmake::spec {
 			return std::nullopt;
 		}
 
-		const ext::cmake* get_cmake(const ext::cmake::id idx) const {
+		const ext::cmake::project* get_cmake(const ext::cmake::project::id idx) const {
 			if (idx >= m_cmake_projects.size()) {
 				return nullptr;
 			}
@@ -201,7 +202,7 @@ namespace mgmake::spec {
 	private:
 #ifdef MGMK_ENABLE_EXT_CMAKE
 		inline void assert_known_provider_for(
-			const std::optional<ext::provider_ref>& provider,
+			const std::optional<ext::provided_target_ref>& provider,
 			std::string_view owner_name
 		) const {
 			if (!provider.has_value()) {

@@ -71,6 +71,9 @@
 #include "discovery/discovery.hxx"
 #include "lower/target.hxx"
 #include "lower/usage.hxx"
+#ifdef MGMK_ENABLE_EXT_CMAKE
+#include "lower/provider_build.hxx"
+#endif // MGMK_ENABLE_EXT_CMAKE
 #include "prep/fetched.hxx"
 #include "prep/result.hxx"
 #include "prep/context.hxx"
@@ -85,12 +88,14 @@
 #include "entry/entry.hxx"
 #include "entry/macro.hxx"
 // Include extensions last
-#include "ext/provider_ref.hxx"
+#include "ext/provider_kind.hxx"
+#include "ext/path_root.hxx"
+#include "ext/provided_target_ref.hxx"
+#include "ext/rooted_path.hxx"
 #include "ext/fetch.hxx"
 #ifdef MGMK_ENABLE_EXT_CMAKE
-#include "ext/cmake.hxx"
+#include "ext/cmake/project.hxx"
 
-// Umbrella include for the public single-header-style API; order matters because later phases depend on earlier type declarations.
 #endif // MGMK_ENABLE_EXT_CMAKE
 
 #endif // MGMAKE_MGMAKE_HXX

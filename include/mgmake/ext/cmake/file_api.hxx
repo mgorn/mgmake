@@ -3,42 +3,19 @@
 #ifndef MGMK_EXT_CMAKE_FILE_API_HXX
 #define MGMK_EXT_CMAKE_FILE_API_HXX
 
+#include "codemodel.hxx"
 #include "../json.hxx"
-#include "../provider_ref.hxx"
 
 #include <filesystem>
 #include <fstream>
 #include <iterator>
-#include <map>
 #include <optional>
 #include <string>
-#include <string_view>
 #include <utility>
-#include <vector>
 
 // CMake File API helpers request and parse codemodel replies so mgmake can find external target artifacts.
 
-namespace mgmake::ext::cmake_file_api {
-	struct target {
-		std::string m_name;
-		std::string m_type;
-		std::filesystem::path m_artifact;
-		std::vector<std::filesystem::path> m_artifacts;
-	};
-
-	struct project {
-		std::filesystem::path m_source_dir;
-		std::filesystem::path m_build_dir;
-		std::filesystem::path m_install_dir;
-		ext::output_root m_usage_root = ext::output_root::install_dir;
-		std::map<std::string, target> m_targets;
-
-		[[nodiscard]] const target* find_target(std::string_view name) const {
-			const auto found = m_targets.find(std::string{name});
-			return found == m_targets.end() ? nullptr : &found->second;
-		}
-	};
-
+namespace mgmake::ext::cmake::file_api {
 	[[nodiscard]] inline std::filesystem::path query_file(
 		const std::filesystem::path& build_dir
 	) {
@@ -130,15 +107,14 @@ namespace mgmake::ext::cmake_file_api {
 			}
 		}
 
-		if (!result.m_artifacts.empty()) {
-			result.m_artifact = result.m_artifacts.front();
-		}
-
 		return result;
 	}
 
-	inline void load_reply_targets(project& project) {
-		const auto dir = reply_dir(project.m_build_dir);
+	inline void load_reply_targets(
+		codemodel& model,
+		const std::filesystem::path& build_dir
+	) {
+		const auto dir = reply_dir(build_dir);
 
 		if (!std::filesystem::exists(dir)) {
 			return;
@@ -155,13 +131,13 @@ namespace mgmake::ext::cmake_file_api {
 				continue;
 			}
 
-			auto target = parse_target_file(entry.path(), project.m_build_dir);
+			auto target = parse_target_file(entry.path(), build_dir);
 
 			if (!target.has_value() || target->m_name.empty()) {
 				continue;
 			}
 
-			project.m_targets.insert_or_assign(target->m_name, std::move(*target));
+			model.m_targets.insert_or_assign(target->m_name, std::move(*target));
 		}
 	}
 }

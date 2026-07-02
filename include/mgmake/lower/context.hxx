@@ -5,9 +5,13 @@
 
 #include "target.hxx"
 #include "usage.hxx"
+#ifdef MGMK_ENABLE_EXT_CMAKE
+#include "provider_build.hxx"
+#endif // MGMK_ENABLE_EXT_CMAKE
 #include "../build/request.hxx"
 #include "../dag/emitter.hxx"
 #include "../dep/database.hxx"
+#include "../ext/provided_target_ref.hxx"
 #include "../prep/result.hxx"
 #include "../spec/executable.hxx"
 #include "../spec/library.hxx"
@@ -26,13 +30,6 @@ namespace mgmake::spec {
 }
 
 namespace mgmake::lower {
-#ifdef MGMK_ENABLE_EXT_CMAKE
-	struct cmake_target {
-		dag::target::id m_dag_target{};
-		dag::artifact::id m_ready_stamp{};
-	};
-#endif // MGMK_ENABLE_EXT_CMAKE
-
 	struct context {
 		const build::request& m_req;
 		const spec::project& m_project;
@@ -69,8 +66,8 @@ namespace mgmake::lower {
 		const lower::target& lower_library(std::string_view lib);
 		void lower_executable(spec::executable::id id);
 #ifdef MGMK_ENABLE_EXT_CMAKE
-		lower::cmake_target lower_cmake_target(
-			const ext::provider_ref& provider,
+		lower::provider_build lower_provider_build(
+			const ext::provided_target_ref& provider,
 			std::span<const dag::artifact::id> outputs
 		);
 #endif // MGMK_ENABLE_EXT_CMAKE

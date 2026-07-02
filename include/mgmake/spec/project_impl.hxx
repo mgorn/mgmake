@@ -21,7 +21,7 @@ namespace mgmake::spec {
 		}
 
 #ifdef MGMK_ENABLE_EXT_CMAKE
-		for (ext::cmake::id id = 0; id < m_cmake_projects.size(); ++id) {
+		for (ext::cmake::project::id id = 0; id < m_cmake_projects.size(); ++id) {
 			ctx.cmake(id);
 		}
 #endif // MGMK_ENABLE_EXT_CMAKE
