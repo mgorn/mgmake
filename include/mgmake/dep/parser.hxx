@@ -176,22 +176,21 @@ namespace mgmake::dep {
 			return result;
 		}
 
-		const auto data = parsed->get("Data");
-
-		if (!data.has_value()) {
+		if (!parsed->has("Data")) {
 			return result;
 		}
+		const auto data = parsed->get("Data");
 
 		// MSVC /sourceDependencies records the primary source separately.
 		// Lowering filters already-explicit action inputs after parsing.
-		if (const auto source = data->get("Source")) {
-			if (const auto path = source->as_string()) {
+		if (const auto source = data.get("Source")) {
+			if (const auto path = source.as_string()) {
 				result.emplace_back(*path);
 			}
 		}
 
 		// Ordinary header dependencies.
-		for (const auto& include : data->array("Includes")) {
+		for (const auto& include : data.array("Includes")) {
 			if (const auto path = include.as_string()) {
 				result.emplace_back(*path);
 			}
@@ -199,14 +198,13 @@ namespace mgmake::dep {
 
 		// Header units can name real header files as well. Capture the known
 		// Header field, but avoid recursively treating arbitrary strings as paths.
-		for (const auto& header_unit : data->array("ImportedHeaderUnits")) {
-			const auto header = header_unit.get("Header");
-
-			if (!header.has_value()) {
+		for (const auto& header_unit : data.array("ImportedHeaderUnits")) {
+			if (!header_unit.has("Header")) {
 				continue;
 			}
 
-			if (const auto path = header->as_string()) {
+			const auto header = header_unit.get("Header");
+			if (const auto path = header.as_string()) {
 				result.emplace_back(*path);
 			}
 		}

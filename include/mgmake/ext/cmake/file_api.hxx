@@ -163,14 +163,12 @@ namespace mgmake::ext::cmake::file_api {
 		const ext::json& value,
 		std::string_view expected_kind
 	) {
-		const auto kind = value.get("kind");
-
-		if (!kind.has_value()) {
+		if (!value.has("kind")) {
 			return false;
 		}
 
-		const auto text = kind->as_string();
-		return text.has_value() && *text == expected_kind;
+		const auto kind = value.get("kind").as_string();
+		return kind.has_value() && *kind == expected_kind;
 	}
 
 	[[nodiscard]] inline std::expected<std::filesystem::path, std::string> codemodel_file_from_index(
@@ -178,27 +176,27 @@ namespace mgmake::ext::cmake::file_api {
 		const std::filesystem::path& dir,
 		const std::filesystem::path& index_file
 	) {
-		const auto reply = index.get("reply");
+		if (index.has("reply")) {
+			const auto reply = index.get("reply");
 
-		if (reply.has_value()) {
-			const auto client = reply->get("client-mgmake");
-
-			if (client.has_value()) {
-				const auto query = client->get("query.json");
-
-				if (query.has_value()) {
-					for (const auto& response : query->array("responses")) {
+			if (reply.has("client-mgmake")) {
+				const auto client = reply.get("client-mgmake");
+				if (client.has("query.json")) {
+					const auto query = client.get("query.json");
+					mgmkassert(query.has("responses"), "Query doesn't have responses");
+					auto responses = query.get("responses");
+					for (const auto& response : query.array("responses")) {
 						if (!kind_is(response, "codemodel")) {
 							continue;
 						}
 
-						const auto json_file = response.get("jsonFile");
-
-						if (!json_file.has_value()) {
+						if (!response.has("jsonFile")) {
 							return std::unexpected{"codemodel response in '" + index_file.string() + "' is missing 'jsonFile'"};
 						}
 
-						const auto json_file_text = json_file->as_string();
+						const auto json_file = response.get("jsonFile");
+
+						const auto json_file_text = json_file.as_string();
 
 						if (!json_file_text.has_value() || json_file_text->empty()) {
 							return std::unexpected{"codemodel response in '" + index_file.string() + "' has non-string 'jsonFile'"};
@@ -221,13 +219,13 @@ namespace mgmake::ext::cmake::file_api {
 				continue;
 			}
 
-			const auto json_file = object.get("jsonFile");
-
-			if (!json_file.has_value()) {
+			if (!object.has("jsonFile")) {
 				return std::unexpected{"codemodel object in '" + index_file.string() + "' is missing 'jsonFile'"};
 			}
 
-			const auto json_file_text = json_file->as_string();
+			const auto json_file = object.get("jsonFile");
+
+			const auto json_file_text = json_file.as_string();
 
 			if (!json_file_text.has_value() || json_file_text->empty()) {
 				return std::unexpected{"codemodel object in '" + index_file.string() + "' has non-string 'jsonFile'"};
@@ -284,14 +282,14 @@ namespace mgmake::ext::cmake::file_api {
 
 		for (const auto& configuration : codemodel_json.array("configurations")) {
 			for (std::string_view key : {std::string_view{"targets"}, std::string_view{"abstractTargets"}}) {
-				for (const auto& target_ref : configuration.array(key)) {
-					const auto json_file = target_ref.get("jsonFile");
+				for (const auto& target_ref : configuration.array(std::string{key})) {
 
-					if (!json_file.has_value()) {
+					if (!target_ref.has("jsonFile")) {
 						return std::unexpected{"target reference in '" + codemodel_file.string() + "' is missing 'jsonFile'"};
 					}
 
-					const auto json_file_text = json_file->as_string();
+					const auto json_file = target_ref.get("jsonFile");
+					const auto json_file_text = json_file.as_string();
 
 					if (!json_file_text.has_value() || json_file_text->empty()) {
 						return std::unexpected{"target reference in '" + codemodel_file.string() + "' has non-string 'jsonFile'"};

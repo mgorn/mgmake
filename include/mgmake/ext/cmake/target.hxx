@@ -53,13 +53,11 @@ namespace mgmake::ext::cmake {
 				return std::unexpected{target_parse_error(source_file, "target JSON root is not an object")};
 			}
 
-			const auto name = parsed.get("name");
-
-			if (!name.has_value()) {
+			if (!parsed.has("name")) {
 				return std::unexpected{target_parse_error(source_file, "missing string member 'name'")};
 			}
-
-			const auto name_text = name->as_string();
+			const auto name = parsed.get("name");
+			const auto name_text = name.as_string();
 
 			if (!name_text.has_value() || name_text->empty()) {
 				return std::unexpected{target_parse_error(source_file, "member 'name' is not a non-empty string")};
@@ -68,8 +66,9 @@ namespace mgmake::ext::cmake {
 			target result{};
 			result.m_name = *name_text;
 
-			if (const auto id = parsed.get("id")) {
-				const auto id_text = id->as_string();
+			if (parsed.has("id")) {
+				const auto id = parsed.get("id");
+				const auto id_text = id.as_string();
 
 				if (!id_text.has_value()) {
 					return std::unexpected{target_parse_error(source_file, "member 'id' is present but is not a string")};
@@ -78,8 +77,9 @@ namespace mgmake::ext::cmake {
 				result.m_id = *id_text;
 			}
 
-			if (const auto type = parsed.get("type")) {
-				const auto type_text = type->as_string();
+			if (parsed.has("type")) {
+				const auto type = parsed.get("type");
+				const auto type_text = type.as_string();
 
 				if (!type_text.has_value()) {
 					return std::unexpected{target_parse_error(source_file, "member 'type' is present but is not a string")};
@@ -88,74 +88,80 @@ namespace mgmake::ext::cmake {
 				result.m_type = *type_text;
 			}
 
-			for (const auto& artifact : parsed.array("artifacts")) {
-				const auto path = artifact.get("path");
+			if (parsed.has("artifacts")) {
+				for (const auto& artifact : parsed.array("artifacts")) {
+					if (!artifact.has("path")) {
+						continue;
+					}
+					const auto path = artifact.get("path");
+					const auto path_text = path.as_string();
 
-				if (!path.has_value()) {
-					continue;
+					if (!path_text.has_value() || path_text->empty()) {
+						return std::unexpected{target_parse_error(source_file, "artifact path is not a non-empty string")};
+					}
+
+					std::filesystem::path artifact_path{*path_text};
+
+					if (artifact_path.is_relative()) {
+						artifact_path = build_dir / artifact_path;
+					}
+
+					result.m_artifacts.emplace_back(std::move(artifact_path));
 				}
+			}
+			
 
-				const auto path_text = path->as_string();
+			if (parsed.has("linkLibraries")) {
+				const auto links = append_file_api_link_entries(
+					parsed,
+					"linkLibraries",
+					result.m_link_entries,
+					source_file
+				);
 
-				if (!path_text.has_value() || path_text->empty()) {
-					return std::unexpected{target_parse_error(source_file, "artifact path is not a non-empty string")};
+				if (!links.has_value()) {
+					return std::unexpected{links.error()};
 				}
+			}
+			
+			if (parsed.has("interfaceLinkLibraries")) {
+				const auto interface_links = append_file_api_link_entries(
+					parsed,
+					"interfaceLinkLibraries",
+					result.m_interface_link_entries,
+					source_file
+				);
 
-				std::filesystem::path artifact_path{*path_text};
-
-				if (artifact_path.is_relative()) {
-					artifact_path = build_dir / artifact_path;
+				if (!interface_links.has_value()) {
+					return std::unexpected{interface_links.error()};
 				}
-
-				result.m_artifacts.emplace_back(std::move(artifact_path));
 			}
-
-			const auto links = append_file_api_link_entries(
-				parsed,
-				"linkLibraries",
-				result.m_link_entries,
-				source_file
-			);
-
-			if (!links.has_value()) {
-				return std::unexpected{links.error()};
-			}
-
-			const auto interface_links = append_file_api_link_entries(
-				parsed,
-				"interfaceLinkLibraries",
-				result.m_interface_link_entries,
-				source_file
-			);
-
-			if (!interface_links.has_value()) {
-				return std::unexpected{interface_links.error()};
-			}
-
+			
 			return result;
 		}
 
 	private:
 		[[nodiscard]] static std::string target_parse_error(
 			const std::filesystem::path& source_file,
-			std::string_view message
+			const std::string& message
 		) {
 			if (source_file.empty()) {
-				return std::string{message};
+				return message;
 			}
 
-			return "failed to parse CMake File API target '" + source_file.string() + "': " + std::string{message};
+			return "failed to parse CMake File API target '" + source_file.string() + "': " + message;
 		}
 
 		[[nodiscard]] static std::expected<void, std::string> append_file_api_link_entries(
 			const ext::json& parsed,
-			std::string_view key,
+			const std::string& key,
 			std::vector<link_entry>& out,
 			const std::filesystem::path& source_file
 		) {
 			for (const auto& item : parsed.array(key)) {
-				if (const auto fragment = item.get("fragment")) {
-					const auto text = fragment->as_string();
+				if (item.has("fragment")) {
+					const auto fragment = item.get("fragment");
+					const auto text = fragment.as_string();
 
 					if (!text.has_value() || text->empty()) {
 						return std::unexpected{target_parse_error(source_file, "link fragment is not a non-empty string")};
@@ -167,8 +173,9 @@ namespace mgmake::ext::cmake {
 					});
 				}
 
-				if (const auto id = item.get("id")) {
-					const auto text = id->as_string();
+				if (item.has("id")) {
+					const auto id = item.get("id");
+					const auto text = id.as_string();
 
 					if (!text.has_value() || text->empty()) {
 						return std::unexpected{target_parse_error(source_file, "link target id is not a non-empty string")};

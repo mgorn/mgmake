@@ -29,7 +29,7 @@ namespace mgmake::ext {
 		json_value() = default;
 
 		explicit json_value(native_type value)
-			: m_value{std::move(value)} {}
+			: m_value(std::move(value)) {}
 
 		[[nodiscard]] static std::optional<json_value> parse(std::string_view text) {
 			auto parsed = native_type::parse(
@@ -43,7 +43,11 @@ namespace mgmake::ext {
 				return std::nullopt;
 			}
 
-			return json_value{std::move(parsed)};
+			return json_value(parsed);
+		}
+
+		operator bool() const {
+			return not is_null();
 		}
 
 		[[nodiscard]] bool is_null() const noexcept {
@@ -74,38 +78,30 @@ namespace mgmake::ext {
 			return m_value.is_number_integer();
 		}
 
-		[[nodiscard]] bool has(std::string_view key) const {
-			if (!m_value.is_object()) {
-				return false;
-			}
-
-			return m_value.contains(std::string{key});
+		[[nodiscard]] bool has(const std::string& key) const {
+			mgmkassert(m_value.is_object(), "json_value::has can only be used on objects");
+			return m_value.contains(key);
 		}
 
-		[[nodiscard]] std::optional<json_value> get(std::string_view key) const {
-			if (!m_value.is_object()) {
-				return std::nullopt;
-			}
+		[[nodiscard]] json_value get(const std::string& key) const {
+			mgmkassert(m_value.is_object(), "json_value::get can only be used on objects");
 
-			const auto found = m_value.find(std::string{key});
+			mgmkassert(has(key), std::format("json_value::get member '{}' doesn't exist", key));
+			const auto found = m_value.find(key);
+			mgmkassert(found != m_value.end(), std::format("json_value::get failed to get member '{}'", key));
 
-			if (found == m_value.end()) {
-				return std::nullopt;
-			}
-
-			return json_value{*found};
+			return json_value(*found);
 		}
 
-		[[nodiscard]] std::optional<json_value> operator[](std::string_view key) const {
+		[[nodiscard]] std::optional<json_value> operator[](const std::string& key) const {
 			return get(key);
 		}
 
-		[[nodiscard]] std::vector<json_value> array(std::string_view key) const {
+		[[nodiscard]] std::vector<json_value> array(const std::string& key) const {
 			std::vector<json_value> result;
 			const auto value = get(key);
-			mgmkassert(value.has_value(), "get(key) failed (check for presence with has before calling json_value::array)");
-			mgmkassert(value->is_array(), std::format("Requested key: '{}' is not an array", key));
-			return value->items();
+			mgmkassert(value.is_array(), std::format("Requested key: '{}' is not an array", key));
+			return value.items();
 		}
 
 		[[nodiscard]] std::vector<json_value> items() const {
@@ -115,7 +111,7 @@ namespace mgmake::ext {
 
 			// store each array item in the result
 			for (const auto& item : m_value) {
-				result.emplace_back(json_value{item});
+				result.emplace_back(json_value(item));
 			}
 
 			return result;

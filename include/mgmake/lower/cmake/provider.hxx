@@ -228,7 +228,7 @@ namespace mgmake::lower::cmake {
 	inline void append_link_fragment(
 		dag::emitter& emit,
 		const prep::cmake::project& prepared,
-		std::string_view fragment,
+		const std::string& fragment,
 		translated_link_usage& usage
 	) {
 		if (fragment.empty()) {
@@ -244,7 +244,7 @@ namespace mgmake::lower::cmake {
 
 		const auto artifact = emit.file_artifact(
 			dag::artifact::kind::system,
-			std::filesystem::path{std::string{fragment}}
+			std::filesystem::path{fragment}
 		);
 
 		append_artifact_once(usage.m_link_inputs, artifact);
