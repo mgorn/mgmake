@@ -63,10 +63,8 @@ namespace mgmake::configure {
 		const auto install_dir = configure::cmake::install_dir(request(), cmake_project.m_name);
 		const auto query_path = ext::cmake::file_api::query_file(build_dir);
 		const auto configure_output = configure::cmake::configure_output(build_dir);
-		const auto source_stamp = m_acquired.m_graph.artifact(fetched->m_stamp).path();
 
 		const auto query_id = m_emit.generated(query_path);
-		const auto source_stamp_id = m_emit.generated(source_stamp);
 		const auto configure_id = m_emit.generated(configure_output);
 
 		// CMake must see the query file before configure so it writes codemodel replies.
@@ -80,7 +78,7 @@ namespace mgmake::configure {
 		m_emit.action(
 			"Configure CMake project " + cmake_project.m_name,
 			"Configures CMake project '" + cmake_project.m_name + "'.",
-			{source_stamp_id, query_id},
+			{query_id},
 			{configure_id},
 			configure::cmake::configure_command(
 				request(),

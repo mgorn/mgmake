@@ -171,6 +171,15 @@ namespace mgmake::lower::cmake {
 		}
 	}
 
+	struct translated_link_usage {
+		// Translating CMake usage yields two related outputs: link inputs consumers
+		// inherit, and concrete provider-produced files that should be attached to
+		// the CMake build action. Keeping them together avoids multi-vector out-params.
+		std::vector<dag::artifact::id> m_link_inputs;
+		std::vector<dag::artifact::id> m_provider_outputs;
+		std::set<std::string> m_visited_targets;
+	};
+
 	[[nodiscard]] inline bool target_is_static(
 		const ext::cmake::target& target,
 		spec::library::kind fallback_kind
@@ -213,17 +222,14 @@ namespace mgmake::lower::cmake {
 		const prep::cmake::project& prepared,
 		const ext::cmake::target& target,
 		spec::library::kind fallback_kind,
-		std::vector<dag::artifact::id>& linkable_artifacts,
-		std::vector<dag::artifact::id>& provider_outputs,
-		std::set<std::string>& visited_targets
+		translated_link_usage& usage
 	);
 
 	inline void append_link_fragment(
 		dag::emitter& emit,
 		const prep::cmake::project& prepared,
 		std::string_view fragment,
-		std::vector<dag::artifact::id>& linkable_artifacts,
-		std::vector<dag::artifact::id>& provider_outputs
+		translated_link_usage& usage
 	) {
 		if (fragment.empty()) {
 			return;
@@ -231,8 +237,8 @@ namespace mgmake::lower::cmake {
 
 		if (link_fragment_is_path(fragment)) {
 			const auto artifact = emit.generated(resolve_link_fragment_path(prepared, fragment));
-			append_artifact_once(linkable_artifacts, artifact);
-			append_artifact_once(provider_outputs, artifact);
+			append_artifact_once(usage.m_link_inputs, artifact);
+			append_artifact_once(usage.m_provider_outputs, artifact);
 			return;
 		}
 
@@ -241,16 +247,14 @@ namespace mgmake::lower::cmake {
 			std::filesystem::path{std::string{fragment}}
 		);
 
-		append_artifact_once(linkable_artifacts, artifact);
+		append_artifact_once(usage.m_link_inputs, artifact);
 	}
 
 	inline void append_target_ref(
 		dag::emitter& emit,
 		const prep::cmake::project& prepared,
 		std::string_view target_id,
-		std::vector<dag::artifact::id>& linkable_artifacts,
-		std::vector<dag::artifact::id>& provider_outputs,
-		std::set<std::string>& visited_targets
+		translated_link_usage& usage
 	) {
 		if (target_id.empty()) {
 			return;
@@ -258,25 +262,27 @@ namespace mgmake::lower::cmake {
 
 		const auto target_id_text = std::string{target_id};
 
-		if (visited_targets.contains(target_id_text)) {
+		if (usage.m_visited_targets.contains(target_id_text)) {
 			return;
 		}
 
-		visited_targets.emplace(target_id_text);
+		usage.m_visited_targets.emplace(target_id_text);
 
 		const auto* target = prepared.find_target_id(target_id_text);
 
-		if (target == nullptr) {
-			return;
-		}
+		mgmkassert(
+			target != nullptr,
+			"mgmake lower: CMake target link reference '" + target_id_text +
+				"' was not found in prepared project '" + prepared.m_name + "'"
+		);
 
 		if (prepared.m_usage_root == ext::path_root::build) {
 			const auto artifact_path = target->primary_artifact();
 
 			if (!artifact_path.empty()) {
 				const auto artifact = emit.generated(artifact_path);
-				append_artifact_once(linkable_artifacts, artifact);
-				append_artifact_once(provider_outputs, artifact);
+				append_artifact_once(usage.m_link_inputs, artifact);
+				append_artifact_once(usage.m_provider_outputs, artifact);
 			}
 		}
 
@@ -285,9 +291,7 @@ namespace mgmake::lower::cmake {
 			prepared,
 			*target,
 			spec::library::kind::interface,
-			linkable_artifacts,
-			provider_outputs,
-			visited_targets
+			usage
 		);
 	}
 
@@ -295,9 +299,7 @@ namespace mgmake::lower::cmake {
 		dag::emitter& emit,
 		const prep::cmake::project& prepared,
 		const std::vector<ext::cmake::link_entry>& entries,
-		std::vector<dag::artifact::id>& linkable_artifacts,
-		std::vector<dag::artifact::id>& provider_outputs,
-		std::set<std::string>& visited_targets
+		translated_link_usage& usage
 	) {
 		for (const auto& entry : entries) {
 			switch (entry.m_kind) {
@@ -306,8 +308,7 @@ namespace mgmake::lower::cmake {
 						emit,
 						prepared,
 						entry.m_value,
-						linkable_artifacts,
-						provider_outputs
+						usage
 					);
 					break;
 
@@ -316,9 +317,7 @@ namespace mgmake::lower::cmake {
 						emit,
 						prepared,
 						entry.m_value,
-						linkable_artifacts,
-						provider_outputs,
-						visited_targets
+						usage
 					);
 					break;
 			}
@@ -330,18 +329,14 @@ namespace mgmake::lower::cmake {
 		const prep::cmake::project& prepared,
 		const ext::cmake::target& target,
 		spec::library::kind fallback_kind,
-		std::vector<dag::artifact::id>& linkable_artifacts,
-		std::vector<dag::artifact::id>& provider_outputs,
-		std::set<std::string>& visited_targets
+		translated_link_usage& usage
 	) {
 		if (target_is_static(target, fallback_kind)) {
 			append_link_entries(
 				emit,
 				prepared,
 				target.m_link_entries,
-				linkable_artifacts,
-				provider_outputs,
-				visited_targets
+				usage
 			);
 		}
 
@@ -349,9 +344,7 @@ namespace mgmake::lower::cmake {
 			emit,
 			prepared,
 			target.m_interface_link_entries,
-			linkable_artifacts,
-			provider_outputs,
-			visited_targets
+			usage
 		);
 	}
 
@@ -445,6 +438,10 @@ namespace mgmake::lower::cmake {
 
 		const ext::cmake::target* cmake_target = prepared->find_target(provider.m_target);
 
+		if (cmake_target == nullptr) {
+			cmake_target = prepared->find_target_name_or_unqualified_alias(provider.m_target);
+		}
+
 		if (cmake_target == nullptr && !artifact_path.empty()) {
 			cmake_target = prepared->find_target_artifact(artifact_path);
 		}
@@ -456,11 +453,10 @@ namespace mgmake::lower::cmake {
 				"' was not found in the CMake File API codemodel"
 		);
 
-		const auto old_linkable_count = lowered.m_linkable_artifacts.size();
-		std::set<std::string> visited_cmake_targets;
+		translated_link_usage cmake_usage{};
 
 		if (!cmake_target->m_id.empty()) {
-			visited_cmake_targets.emplace(cmake_target->m_id);
+			cmake_usage.m_visited_targets.emplace(cmake_target->m_id);
 		}
 
 		append_target_link_usage(
@@ -468,16 +464,16 @@ namespace mgmake::lower::cmake {
 			*prepared,
 			*cmake_target,
 			lib.m_kind,
-			lowered.m_linkable_artifacts,
-			provider_outputs,
-			visited_cmake_targets
+			cmake_usage
 		);
 
-		mgmkassert(
-			!cmake_target->has_link_usage() || lowered.m_linkable_artifacts.size() != old_linkable_count,
-			"mgmake lower: CMake provider target '" + provider.m_target +
-				"' was found and has link usage, but no CMake link inputs were imported"
-		);
+		for (const auto artifact : cmake_usage.m_link_inputs) {
+			append_artifact_once(lowered.m_linkable_artifacts, artifact);
+		}
+
+		for (const auto artifact : cmake_usage.m_provider_outputs) {
+			append_artifact_once(provider_outputs, artifact);
+		}
 
 		// The provider build stamp becomes a usage input so dependents wait for the CMake target.
 		auto provider_target = lower_provider_build(ctx, provider, provider_outputs);

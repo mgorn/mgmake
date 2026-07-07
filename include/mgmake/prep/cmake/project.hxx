@@ -45,6 +45,10 @@ namespace mgmake::prep::cmake {
 			return m_codemodel.find_target(name);
 		}
 
+		[[nodiscard]] const ext::cmake::target* find_target_name_or_unqualified_alias(std::string_view name) const {
+			return m_codemodel.find_target_name_or_unqualified_alias(name);
+		}
+
 		[[nodiscard]] const ext::cmake::target* find_target_id(std::string_view id) const {
 			return m_codemodel.find_target_id(id);
 		}

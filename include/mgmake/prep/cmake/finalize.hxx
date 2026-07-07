@@ -9,6 +9,7 @@
 
 #include <expected>
 #include <string>
+#include <utility>
 
 namespace mgmake::prep::cmake {
 	[[nodiscard]] inline std::expected<prep::cmake::project, std::string> finalize_project(
@@ -28,19 +29,16 @@ namespace mgmake::prep::cmake {
 			};
 		}
 
-		const auto loaded_targets = ext::cmake::file_api::load_reply_targets(
-			result.m_codemodel,
-			configured.m_build_dir
-		);
+		auto model = ext::cmake::codemodel::from_file_api_reply(configured.m_build_dir);
 
-		if (loaded_targets == 0) {
+		if (!model.has_value()) {
 			return std::unexpected{
-				"mgmake prep: CMake project '" + configured.m_name +
-				"' loaded zero File API targets from '" +
-				configured.m_build_dir.string() + "'"
+				"mgmake prep: failed to load CMake File API metadata for project '" + configured.m_name +
+				"': " + model.error()
 			};
 		}
 
+		result.m_codemodel = std::move(*model);
 		return result;
 	}
 }
