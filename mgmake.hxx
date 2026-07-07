@@ -11392,6 +11392,7 @@ namespace mgmake::backend {
 // skipped duplicate include: include/mgmake/ext/cmake/codemodel.hxx
 // skipped duplicate include: include/mgmake/ext/json.hxx
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
@@ -11468,15 +11469,14 @@ namespace mgmake::ext::cmake::file_api {
 		return ext::json::parse(*content);
 	}
 
-	[[nodiscard]] inline std::optional<std::filesystem::path> latest_index_file(
+	[[nodiscard]] inline std::vector<std::filesystem::path> index_files_newest_first(
 		const std::filesystem::path& dir
 	) {
-		if (!std::filesystem::exists(dir)) {
-			return std::nullopt;
-		}
+		std::vector<std::filesystem::path> result;
 
-		std::optional<std::filesystem::path> result;
-		std::optional<std::filesystem::file_time_type> result_time;
+		if (!std::filesystem::exists(dir)) {
+			return result;
+		}
 
 		for (const auto& entry : std::filesystem::directory_iterator{dir}) {
 			if (!entry.is_regular_file()) {
@@ -11489,13 +11489,52 @@ namespace mgmake::ext::cmake::file_api {
 				continue;
 			}
 
-			const auto write_time = entry.last_write_time();
-
-			if (!result.has_value() || write_time > result_time.value()) {
-				result = entry.path();
-				result_time = write_time;
-			}
+			result.emplace_back(entry.path());
 		}
+
+		std::ranges::sort(result, [](const auto& lhs, const auto& rhs) {
+			// CMake embeds an ISO-like timestamp in File API reply filenames. Prefer
+			// that stable timestamp over filesystem mtimes so copied/restored build
+			// directories still select the newest reply deterministically.
+			return lhs.filename().string() > rhs.filename().string();
+		});
+
+		return result;
+	}
+
+	[[nodiscard]] inline std::vector<std::filesystem::path> codemodel_files_newest_first(
+		const std::filesystem::path& dir
+	) {
+		std::vector<std::filesystem::path> result;
+
+		if (!std::filesystem::exists(dir)) {
+			return result;
+		}
+
+		for (const auto& entry : std::filesystem::directory_iterator{dir}) {
+			if (!entry.is_regular_file()) {
+				continue;
+			}
+
+			const auto filename = entry.path().filename().string();
+
+			if (!filename.starts_with("codemodel-v2") || entry.path().extension() != ".json") {
+				continue;
+			}
+
+			result.emplace_back(entry.path());
+		}
+
+		std::ranges::sort(result, [](const auto& lhs, const auto& rhs) {
+			const auto lhs_time = std::filesystem::last_write_time(lhs);
+			const auto rhs_time = std::filesystem::last_write_time(rhs);
+
+			if (lhs_time != rhs_time) {
+				return lhs_time > rhs_time;
+			}
+
+			return lhs.filename().string() > rhs.filename().string();
+		});
 
 		return result;
 	}
@@ -11585,6 +11624,25 @@ namespace mgmake::ext::cmake::file_api {
 		return codemodel_file_from_objects(index);
 	}
 
+	inline void append_target_files_from_array(
+		const ext::json& object,
+		std::string_view key,
+		std::vector<std::string>& out,
+		std::set<std::string>& seen
+	) {
+		for (const auto& target_ref : object.array(key)) {
+			const auto json_file = json_string_member(target_ref, "jsonFile");
+
+			if (!json_file.has_value() || json_file->empty()) {
+				continue;
+			}
+
+			if (seen.emplace(*json_file).second) {
+				out.emplace_back(*json_file);
+			}
+		}
+	}
+
 	[[nodiscard]] inline std::vector<std::string> target_files_from_codemodel(
 		const ext::json& codemodel_json
 	) {
@@ -11592,19 +11650,35 @@ namespace mgmake::ext::cmake::file_api {
 		std::set<std::string> seen;
 
 		for (const auto& configuration : codemodel_json.array("configurations")) {
-			for (const auto& target_ref : configuration.array("targets")) {
-				const auto json_file = json_string_member(target_ref, "jsonFile");
+			append_target_files_from_array(configuration, "targets", result, seen);
+			append_target_files_from_array(configuration, "abstractTargets", result, seen);
+		}
 
-				if (!json_file.has_value() || json_file->empty()) {
-					continue;
-				}
+		return result;
+	}
 
-				if (seen.emplace(*json_file).second) {
-					result.emplace_back(*json_file);
-				}
+	[[nodiscard]] inline std::vector<std::string> target_files_from_reply_dir(
+		const std::filesystem::path& dir
+	) {
+		std::vector<std::string> result;
+
+		if (!std::filesystem::exists(dir)) {
+			return result;
+		}
+
+		for (const auto& entry : std::filesystem::directory_iterator{dir}) {
+			if (!entry.is_regular_file()) {
+				continue;
+			}
+
+			const auto filename = entry.path().filename().string();
+
+			if (filename.starts_with("target-") && entry.path().extension() == ".json") {
+				result.emplace_back(filename);
 			}
 		}
 
+		std::ranges::sort(result);
 		return result;
 	}
 
@@ -11684,49 +11758,78 @@ namespace mgmake::ext::cmake::file_api {
 		return result;
 	}
 
+	[[nodiscard]] inline std::optional<std::filesystem::path> codemodel_file_from_reply(
+		const std::filesystem::path& dir
+	) {
+		for (const auto& index_path : index_files_newest_first(dir)) {
+			const auto index = parse_json_file(index_path);
+
+			if (!index.has_value()) {
+				continue;
+			}
+
+			const auto codemodel_file = codemodel_file_from_index(*index);
+
+			if (!codemodel_file.has_value() || codemodel_file->empty()) {
+				continue;
+			}
+
+			const auto path = dir / *codemodel_file;
+
+			if (std::filesystem::exists(path)) {
+				return path;
+			}
+		}
+
+		for (const auto& path : codemodel_files_newest_first(dir)) {
+			return path;
+		}
+
+		return std::nullopt;
+	}
+
 	inline std::size_t load_reply_targets(
 		codemodel& model,
 		const std::filesystem::path& build_dir
 	) {
 		const auto dir = reply_dir(build_dir);
-		const auto index_file = latest_index_file(dir);
+		const auto codemodel_file = codemodel_file_from_reply(dir);
 
-		if (!index_file.has_value()) {
+		if (!codemodel_file.has_value()) {
 			model = codemodel{};
 			return 0;
 		}
 
-		const auto index = parse_json_file(*index_file);
-
-		if (!index.has_value()) {
-			model = codemodel{};
-			return 0;
-		}
-
-		const auto codemodel_file = codemodel_file_from_index(*index);
-
-		if (!codemodel_file.has_value() || codemodel_file->empty()) {
-			model = codemodel{};
-			return 0;
-		}
-
-		const auto codemodel_json = parse_json_file(dir / *codemodel_file);
+		const auto codemodel_json = parse_json_file(*codemodel_file);
 
 		if (!codemodel_json.has_value()) {
 			model = codemodel{};
 			return 0;
 		}
 
-		codemodel loaded{};
+		auto load_target_files = [&](const std::vector<std::string>& target_files) {
+			codemodel loaded{};
 
-		for (const auto& target_file : target_files_from_codemodel(*codemodel_json)) {
-			auto target = parse_target_file(dir / target_file, build_dir);
+			for (const auto& target_file : target_files) {
+				auto target = parse_target_file(dir / target_file, build_dir);
 
-			if (!target.has_value() || target->m_name.empty()) {
-				continue;
+				if (!target.has_value() || target->m_name.empty()) {
+					continue;
+				}
+
+				loaded.add_target(std::move(*target));
 			}
 
-			loaded.add_target(std::move(*target));
+			return loaded;
+		};
+
+		auto loaded = load_target_files(target_files_from_codemodel(*codemodel_json));
+
+		if (loaded.empty()) {
+			// If the codemodel-to-target reference path fails, still try the reply
+			// directory before reporting zero targets. The index/codemodel path remains
+			// primary so stale target files are only considered when loading would fail.
+			loaded = load_target_files(target_files_from_reply_dir(dir));
 		}
 
 		model = std::move(loaded);
