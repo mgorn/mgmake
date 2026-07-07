@@ -7,6 +7,8 @@
 #include "../dag/graph.hxx"
 #include "../dep/database.hxx"
 #include "../detail/assert.hxx"
+#include "../acquire/result.hxx"
+#include "../configure/result.hxx"
 #include "../prep/result.hxx"
 #include "executable.hxx"
 #include "library.hxx"
@@ -18,6 +20,7 @@
 #include "../ext/cmake/project.hxx"
 #endif // MGMK_ENABLE_EXT_CMAKE
 
+#include <expected>
 #include <optional>
 #include <set>
 #include <string>
@@ -191,11 +194,22 @@ namespace mgmake::spec {
 		}
 #endif // MGMK_ENABLE_EXT_CMAKE
 
-		prep::result prepare(const build::request& req) const;
+		mgmake::acquire::result acquire(const build::request& req) const;
 
-		dag::graph build(
+		mgmake::configure::result configure(
 			const build::request& req,
-			const prep::result& prepared,
+			const mgmake::acquire::result& acquired
+		) const;
+
+		std::expected<mgmake::prep::result, std::string> prepare(
+			const build::request& req,
+			const mgmake::acquire::result& acquired,
+			const mgmake::configure::result& configured
+		) const;
+
+		dag::graph lower(
+			const build::request& req,
+			const mgmake::prep::result& prepared,
 			dep::database& deps
 		) const;
 

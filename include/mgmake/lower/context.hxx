@@ -5,13 +5,9 @@
 
 #include "target.hxx"
 #include "usage.hxx"
-#ifdef MGMK_ENABLE_EXT_CMAKE
-#include "provider_build.hxx"
-#endif // MGMK_ENABLE_EXT_CMAKE
 #include "../build/request.hxx"
 #include "../dag/emitter.hxx"
 #include "../dep/database.hxx"
-#include "../ext/provided_target_ref.hxx"
 #include "../prep/result.hxx"
 #include "../spec/executable.hxx"
 #include "../spec/library.hxx"
@@ -19,8 +15,8 @@
 #include <filesystem>
 #include <optional>
 #include <set>
-#include <string_view>
 #include <span>
+#include <string_view>
 #include <vector>
 
 // Lowering context converts validated project specs plus prep results into a DAG of artifacts, actions, and targets.
@@ -65,13 +61,6 @@ namespace mgmake::lower {
 		// Lowering a library by name is reserved for external/system libraries
 		const lower::target& lower_library(std::string_view lib);
 		void lower_executable(spec::executable::id id);
-#ifdef MGMK_ENABLE_EXT_CMAKE
-		lower::provider_build lower_provider_build(
-			const ext::provided_target_ref& provider,
-			std::span<const dag::artifact::id> outputs
-		);
-#endif // MGMK_ENABLE_EXT_CMAKE
-
 		lower::usage use_libraries(
 			const std::set<std::string>& libraries,
 			std::string_view owner_name
@@ -103,18 +92,6 @@ namespace mgmake::lower {
 		lower::target lower_system_library(
 			std::string_view lib
 		);
-
-#ifdef MGMK_ENABLE_EXT_CMAKE
-		lower::target lower_provider_library(
-			const spec::library& lib,
-			lower::usage usage
-		);
-
-		void lower_provider_executable(
-			const spec::executable& exe,
-			lower::usage usage
-		);
-#endif // MGMK_ENABLE_EXT_CMAKE
 
 		std::vector<std::optional<lower::target>> m_libraries;
 		std::set<spec::library::id> m_active_libraries;

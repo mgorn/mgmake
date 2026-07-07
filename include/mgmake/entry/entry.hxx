@@ -4,7 +4,7 @@
 #define MGMAKE_ENTRY_ENTRY_HXX
 
 #include "../backend/execute.hxx"
-#include "../prep/executor.hxx"
+#include "../dag/execute.hxx"
 #include "../build/clean.hxx"
 #include "../build/request_from_options.hxx"
 #include "../build/run.hxx"
@@ -24,7 +24,7 @@
 #include <type_traits>
 #include <utility>
 
-// The entry point owns program flow: parse CLI, build a request, resolve tools, prepare externals, lower the DAG, then dispatch the action.
+// The entry point owns program flow: parse CLI, build a request, resolve tools, build phase graphs, prepare metadata, lower the DAG, then dispatch the action.
 
 namespace mgmake {
 	template <build::toolchain_registry_like Toolchains>
@@ -168,73 +168,105 @@ namespace mgmake {
 
 		auto resolved_req = std::move(*resolved_req_result);
 		auto hashes = detail::hashes::load(resolved_req);
-		// Preparation creates a small DAG for external fetch/configure steps before build lowering.
-		auto prep_result = proj.prepare(resolved_req);
 
-		if (opts.m_action == cli::action_kind::graph) {
-			const std::string graph_kind = opts.m_targets.empty()
-				? std::string{"build"}
-				: opts.m_targets.front();
+		const bool graph_action = opts.m_action == cli::action_kind::graph;
+		const std::string graph_kind = graph_action
+			? (opts.m_targets.empty() ? std::string{"build"} : opts.m_targets.front())
+			: std::string{};
 
-			const auto graph_dir = resolved_req.build_dir() / "graph";
-
-			if (graph_kind == "discovery" || graph_kind == "prep") {
-				detail::write_graphviz_dot_file(
-					prep_result.m_dag,
-					graph_dir / "discovery.dot"
-				);
-				return detail::entry_exit_success;
-			}
-		}
-
-		auto prep_execute_result = prep::execute(
-			opts,
-			resolved_req,
-			prep_result,
-			hashes
-		);
-
-		if (!prep_execute_result) {
-			std::println(stderr, "{}", prep_execute_result.error());
-			return detail::entry_exit_action_failure;
-		}
-
-		if (opts.m_action == cli::action_kind::graph) {
-			const std::string graph_kind = opts.m_targets.empty()
-				? std::string{"build"}
-				: opts.m_targets.front();
-
-			const auto graph_dir = resolved_req.build_dir() / "graph";
-
-			if (graph_kind == "all") {
-				detail::write_graphviz_dot_file(
-					prep_result.m_dag,
-					graph_dir / "discovery.dot"
-				);
-			}
-
-			if (graph_kind == "build" || graph_kind == "all") {
-				dep::database deps{};
-				auto build_graph = proj.build(resolved_req, prep_result, deps);
-				detail::write_graphviz_dot_file(
-					build_graph,
-					graph_dir / "build.dot"
-				);
-
-				return detail::entry_exit_success;
-			}
-
+		if (graph_action &&
+			graph_kind != "acquire" &&
+			graph_kind != "configure" &&
+			graph_kind != "build" &&
+			graph_kind != "all"
+		) {
 			std::println(
 				stderr,
-				"mgmake: unknown graph kind '{}'; expected discovery, build, or all",
+				"mgmake: unknown graph kind '{}'; expected acquire, configure, build, or all",
 				graph_kind
 			);
 			return detail::entry_exit_usage_error;
 		}
 
-		// Build lowering consumes any dependency side files already on disk and emits the main DAG.
+		const auto graph_dir = resolved_req.build_dir() / "graph";
+
+		auto acquired = proj.acquire(resolved_req);
+
+		if (graph_action && (graph_kind == "acquire" || graph_kind == "all")) {
+			detail::write_graphviz_dot_file(
+				acquired.m_graph,
+				graph_dir / "acquire.dot"
+			);
+
+			if (graph_kind == "acquire") {
+				return detail::entry_exit_success;
+			}
+		}
+
+		auto configured = proj.configure(resolved_req, acquired);
+
+		if (graph_action && (graph_kind == "configure" || graph_kind == "all")) {
+			detail::write_graphviz_dot_file(
+				configured.m_graph,
+				graph_dir / "configure.dot"
+			);
+
+			if (graph_kind == "configure") {
+				return detail::entry_exit_success;
+			}
+		}
+
+		auto acquire_execute_result = dag::execute(
+			"acquire",
+			opts,
+			resolved_req,
+			acquired.m_graph,
+			hashes
+		);
+
+		if (!acquire_execute_result) {
+			std::println(stderr, "{}", acquire_execute_result.error());
+			return detail::entry_exit_action_failure;
+		}
+
+		auto configure_execute_result = dag::execute(
+			"configure",
+			opts,
+			resolved_req,
+			configured.m_graph,
+			hashes
+		);
+
+		if (!configure_execute_result) {
+			std::println(stderr, "{}", configure_execute_result.error());
+			return detail::entry_exit_action_failure;
+		}
+
+		auto prepared_result = proj.prepare(
+			resolved_req,
+			acquired,
+			configured
+		);
+
+		if (!prepared_result) {
+			std::println(stderr, "{}", prepared_result.error());
+			return detail::entry_exit_action_failure;
+		}
+
+		// Build lowering consumes finalized metadata and any dependency side files already on disk.
 		dep::database deps{};
-		auto graph = proj.build(resolved_req, prep_result, deps);
+		auto graph = proj.lower(resolved_req, *prepared_result, deps);
+
+		if (graph_action) {
+			if (graph_kind == "build" || graph_kind == "all") {
+				detail::write_graphviz_dot_file(
+					graph,
+					graph_dir / "build.dot"
+				);
+
+				return detail::entry_exit_success;
+			}
+		}
 
 		if (opts.m_action == cli::action_kind::run) {
 			const auto run_target = build::resolve_run_target_name(opts, proj);
@@ -304,6 +336,7 @@ namespace mgmake {
 		}
 
 		return detail::entry_exit_success;
+
 	}
 
 	template <typename ProjectFactory>

@@ -4,48 +4,42 @@
 #define MGMK_SPEC_PROJECT_IMPL_HXX
 
 #include "project.hxx"
-#include "../lower/context_impl.hxx"
-#include "../prep/context_impl.hxx"
+#include "../acquire/plan.hxx"
+#include "../configure/plan.hxx"
+#include "../lower/project_impl.hxx"
+#include "../prep/finalize.hxx"
 
-#include <utility>
-
-// Project implementation is the phase boundary from spec to prep DAG and final build DAG.
+// Project wrappers keep custom entrypoints simple while the free phase functions
+// remain the canonical implementations.
 
 namespace mgmake::spec {
-	inline prep::result project::prepare(const build::request& req) const {
-		prep::result result{};
-		prep::context ctx{result, req, *this};
-
-		for (ext::fetch::id id = 0; id < m_fetches.size(); ++id) {
-			ctx.fetch(id);
-		}
-
-#ifdef MGMK_ENABLE_EXT_CMAKE
-		for (ext::cmake::project::id id = 0; id < m_cmake_projects.size(); ++id) {
-			ctx.cmake(id);
-		}
-#endif // MGMK_ENABLE_EXT_CMAKE
-
-		return result;
+	inline mgmake::acquire::result project::acquire(
+		const build::request& req
+	) const {
+		return mgmake::acquire::plan(*this, req);
 	}
 
-	inline dag::graph project::build(
+	inline mgmake::configure::result project::configure(
 		const build::request& req,
-		const prep::result& prepared,
+		const mgmake::acquire::result& acquired
+	) const {
+		return mgmake::configure::plan(*this, req, acquired);
+	}
+
+	inline std::expected<mgmake::prep::result, std::string> project::prepare(
+		const build::request& req,
+		const mgmake::acquire::result& acquired,
+		const mgmake::configure::result& configured
+	) const {
+		return mgmake::prep::finalize(*this, req, acquired, configured);
+	}
+
+	inline dag::graph project::lower(
+		const build::request& req,
+		const mgmake::prep::result& prepared,
 		dep::database& deps
 	) const {
-		dag::graph result{};
-		lower::context ctx{result, req, *this, prepared, deps};
-
-		for (spec::library::id id = 0; id < m_libraries.size(); ++id) {
-			ctx.lower_library(id);
-		}
-
-		for (spec::executable::id id = 0; id < m_executables.size(); ++id) {
-			ctx.lower_executable(id);
-		}
-
-		return result;
+		return mgmake::lower::project(*this, req, prepared, deps);
 	}
 }
 

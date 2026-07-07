@@ -1,12 +1,11 @@
 #pragma once
 
-#ifndef MGMK_PREP_EXECUTOR_HXX
-#define MGMK_PREP_EXECUTOR_HXX
+#ifndef MGMK_DAG_EXECUTE_HXX
+#define MGMK_DAG_EXECUTE_HXX
 
-#include "result.hxx"
+#include "graph.hxx"
 #include "../build/request.hxx"
 #include "../cli/options.hxx"
-#include "../dag/graph.hxx"
 #include "../detail/hashes.hxx"
 #include "../discovery/tool_environment.hxx"
 #include "../sys/command_line.hxx"
@@ -16,12 +15,11 @@
 #include <filesystem>
 #include <print>
 #include <string>
-#include <utility>
+#include <string_view>
 
+// Generic DAG executor for pre-backend phase graphs such as acquisition and configuration.
 
-// The prep executor runs preparation DAG actions directly and uses hashes to skip actions that are already up to date.
-
-namespace mgmake::prep {
+namespace mgmake::dag {
 	[[nodiscard]] inline bool action_is_up_to_date(
 		const dag::graph& graph,
 		const dag::action& action,
@@ -107,14 +105,14 @@ namespace mgmake::prep {
 	}
 
 	[[nodiscard]] inline std::expected<void, std::string> execute(
+		std::string_view phase_name,
 		const cli::options& opts,
 		const build::request& req,
-		prep::result& result,
+		const dag::graph& graph,
 		detail::hashes& hashes
 	) {
-		const auto& graph = result.m_dag;
-
-		// Prep actions run directly in DAG order because they produce inputs needed before backend generation.
+		// Pre-backend phase actions run directly in DAG insertion order because each phase
+		// produces filesystem state required before the next phase can be planned/finalized.
 		for (std::size_t i = 0; i < graph.m_actions.size(); ++i) {
 			const auto& action = graph.action(i);
 
@@ -147,7 +145,7 @@ namespace mgmake::prep {
 
 			if (exit_code != 0) {
 				return std::unexpected{
-					"mgmake prep: action '" + action.m_name +
+					"mgmake " + std::string{phase_name} + ": action '" + action.m_name +
 					"' failed with exit code " + std::to_string(exit_code)
 				};
 			}
@@ -157,20 +155,8 @@ namespace mgmake::prep {
 			}
 		}
 
-#ifdef MGMK_ENABLE_EXT_CMAKE
-		if (!opts.m_dry_run) {
-			const auto loaded_cmake_targets = result.reload_cmake_file_api_replies();
-
-			if (!result.m_cmake_projects.empty() && loaded_cmake_targets == 0) {
-				return std::unexpected{
-					"mgmake prep: CMake File API reload loaded zero targets"
-				};
-			}
-		}
-#endif // MGMK_ENABLE_EXT_CMAKE
-
 		return {};
 	}
 }
 
-#endif // MGMK_PREP_EXECUTOR_HXX
+#endif // MGMK_DAG_EXECUTE_HXX

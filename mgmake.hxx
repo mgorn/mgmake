@@ -5052,41 +5052,161 @@ namespace mgmake::build {
 // skipped duplicate include: include/mgmake/dep/database.hxx
 // skipped duplicate include: include/mgmake/detail/assert.hxx
 
-// ===== begin include/mgmake/prep/result.hxx =====
+// ===== begin include/mgmake/acquire/result.hxx =====
 #pragma once
 
-#ifndef MGMK_PREP_RESULT_HXX
-#define MGMK_PREP_RESULT_HXX
+#ifndef MGMK_ACQUIRE_RESULT_HXX
+#define MGMK_ACQUIRE_RESULT_HXX
 
 
-// ===== begin include/mgmake/prep/fetched.hxx =====
+// ===== begin include/mgmake/acquire/fetched.hxx =====
 #pragma once
 
-#ifndef MGMAKE_PREP_FETCHED_HXX
-#define MGMAKE_PREP_FETCHED_HXX
+#ifndef MGMK_ACQUIRE_FETCHED_HXX
+#define MGMK_ACQUIRE_FETCHED_HXX
 
 // skipped duplicate include: include/mgmake/dag/artifact.hxx
 // skipped duplicate include: include/mgmake/dag/target.hxx
 
 #include <filesystem>
 
-// A fetched source records the DAG target, readiness stamp, and local source directory for an external input.
-
-namespace mgmake::prep {
+namespace mgmake::acquire {
 	struct fetched {
+		// Graph-local acquisition target and stamp plus the resulting source directory.
+		// This is more than a source-dir wrapper: the ids are useful for graph output
+		// and for relating acquisition actions to their filesystem result.
 		dag::target::id m_target{};
 		dag::artifact::id m_stamp{};
 		std::filesystem::path m_source_dir;
 	};
 }
 
-#endif // MGMAKE_PREP_FETCHED_HXX
-// ===== end include/mgmake/prep/fetched.hxx =====
+#endif // MGMK_ACQUIRE_FETCHED_HXX
+// ===== end include/mgmake/acquire/fetched.hxx =====
+
+// skipped duplicate include: include/mgmake/dag/graph.hxx
+
+#include <filesystem>
+#include <map>
+#include <string>
+#include <string_view>
+
+namespace mgmake::acquire {
+	struct result {
+		dag::graph m_graph;
+
+		// Maps source names to acquisition results. Example: "sdl-src" points at
+		// the source tree made available by the acquisition graph.
+		std::map<std::string, acquire::fetched> m_fetches;
+
+		[[nodiscard]] const acquire::fetched* find_fetch(std::string_view name) const {
+			const auto found = m_fetches.find(std::string{name});
+			return found == m_fetches.end() ? nullptr : &found->second;
+		}
+
+		[[nodiscard]] const std::filesystem::path* find_source_dir(std::string_view name) const {
+			const auto* fetched = find_fetch(name);
+			return fetched == nullptr ? nullptr : &fetched->m_source_dir;
+		}
+	};
+}
+
+#endif // MGMK_ACQUIRE_RESULT_HXX
+// ===== end include/mgmake/acquire/result.hxx =====
+
+
+// ===== begin include/mgmake/configure/result.hxx =====
+#pragma once
+
+#ifndef MGMK_CONFIGURE_RESULT_HXX
+#define MGMK_CONFIGURE_RESULT_HXX
 
 // skipped duplicate include: include/mgmake/dag/graph.hxx
 #ifdef MGMK_ENABLE_EXT_CMAKE
 
-// ===== begin include/mgmake/prep/cmake_project.hxx =====
+// ===== begin include/mgmake/configure/cmake/project.hxx =====
+#pragma once
+
+#ifndef MGMK_CONFIGURE_CMAKE_PROJECT_HXX
+#define MGMK_CONFIGURE_CMAKE_PROJECT_HXX
+
+
+// ===== begin include/mgmake/ext/path_root.hxx =====
+#pragma once
+
+#ifndef MGMK_EXT_PATH_ROOT_HXX
+#define MGMK_EXT_PATH_ROOT_HXX
+
+// Path roots describe how provider-relative include and artifact paths are resolved.
+
+namespace mgmake::ext {
+	enum struct path_root {
+		usage,
+		source,
+		build,
+		install
+	};
+}
+
+#endif // MGMK_EXT_PATH_ROOT_HXX
+// ===== end include/mgmake/ext/path_root.hxx =====
+
+
+#include <filesystem>
+#include <string>
+
+namespace mgmake::configure::cmake {
+	struct project {
+		// Configured CMake project state needed by prep and lower. This bundles
+		// source/build/install dirs with the root policy used later to resolve
+		// provider-relative paths.
+		std::string m_name;
+		std::filesystem::path m_source_dir;
+		std::filesystem::path m_build_dir;
+		std::filesystem::path m_install_dir;
+		ext::path_root m_usage_root = ext::path_root::build;
+	};
+}
+
+#endif // MGMK_CONFIGURE_CMAKE_PROJECT_HXX
+// ===== end include/mgmake/configure/cmake/project.hxx =====
+
+#endif // MGMK_ENABLE_EXT_CMAKE
+
+#include <map>
+#include <string>
+#include <string_view>
+
+namespace mgmake::configure {
+	struct result {
+		dag::graph m_graph;
+
+#ifdef MGMK_ENABLE_EXT_CMAKE
+		std::map<std::string, configure::cmake::project> m_cmake_projects;
+
+		[[nodiscard]] const configure::cmake::project* find_cmake_project(
+			std::string_view name
+		) const {
+			const auto found = m_cmake_projects.find(std::string{name});
+			return found == m_cmake_projects.end() ? nullptr : &found->second;
+		}
+#endif // MGMK_ENABLE_EXT_CMAKE
+	};
+}
+
+#endif // MGMK_CONFIGURE_RESULT_HXX
+// ===== end include/mgmake/configure/result.hxx =====
+
+
+// ===== begin include/mgmake/prep/result.hxx =====
+#pragma once
+
+#ifndef MGMK_PREP_RESULT_HXX
+#define MGMK_PREP_RESULT_HXX
+
+#ifdef MGMK_ENABLE_EXT_CMAKE
+
+// ===== begin include/mgmake/prep/cmake/project.hxx =====
 #pragma once
 
 #ifndef MGMK_PREP_CMAKE_PROJECT_HXX
@@ -5246,382 +5366,7 @@ namespace mgmake::ext::cmake {
 #endif // MGMK_EXT_CMAKE_CODEMODEL_HXX
 // ===== end include/mgmake/ext/cmake/codemodel.hxx =====
 
-
-// ===== begin include/mgmake/ext/cmake/file_api.hxx =====
-#pragma once
-
-#ifndef MGMK_EXT_CMAKE_FILE_API_HXX
-#define MGMK_EXT_CMAKE_FILE_API_HXX
-
-// skipped duplicate include: include/mgmake/ext/cmake/codemodel.hxx
-// skipped duplicate include: include/mgmake/ext/json.hxx
-
-#include <filesystem>
-#include <fstream>
-#include <iterator>
-#include <optional>
-#include <set>
-#include <string>
-#include <string_view>
-#include <utility>
-#include <vector>
-
-// CMake File API helpers request and parse codemodel replies so mgmake can import external target artifacts and link usage.
-
-namespace mgmake::ext::cmake::file_api {
-	[[nodiscard]] inline std::filesystem::path query_file(
-		const std::filesystem::path& build_dir
-	) {
-		return build_dir / ".cmake" / "api" / "v1" / "query" / "client-mgmake" / "query.json";
-	}
-
-	[[nodiscard]] inline std::filesystem::path reply_dir(
-		const std::filesystem::path& build_dir
-	) {
-		return build_dir / ".cmake" / "api" / "v1" / "reply";
-	}
-
-	[[nodiscard]] inline std::string codemodel_query_text() {
-		return R"({"requests":[{"kind":"codemodel","version":{"major":2,"minor":9}}]})";
-	}
-
-	[[nodiscard]] inline bool write_query_file(
-		const std::filesystem::path& build_dir
-	) {
-		const auto path = query_file(build_dir);
-		const auto dir = path.parent_path();
-
-		if (!dir.empty()) {
-			std::filesystem::create_directories(dir);
-		}
-
-		std::ofstream out{path, std::ios::binary | std::ios::trunc};
-
-		if (!out.is_open()) {
-			return false;
-		}
-
-		out << codemodel_query_text();
-		return out.good();
-	}
-
-	[[nodiscard]] inline std::optional<std::string> read_file(
-		const std::filesystem::path& path
-	) {
-		std::ifstream in(path, std::ios::binary);
-
-		if (!in.is_open()) {
-			return std::nullopt;
-		}
-
-		return std::string{
-			std::istreambuf_iterator<char>{in},
-			std::istreambuf_iterator<char>{}
-		};
-	}
-
-	[[nodiscard]] inline std::optional<ext::json> parse_json_file(
-		const std::filesystem::path& path
-	) {
-		const auto content = read_file(path);
-
-		if (!content.has_value()) {
-			return std::nullopt;
-		}
-
-		return ext::json::parse(*content);
-	}
-
-	[[nodiscard]] inline std::optional<std::filesystem::path> latest_index_file(
-		const std::filesystem::path& dir
-	) {
-		if (!std::filesystem::exists(dir)) {
-			return std::nullopt;
-		}
-
-		std::optional<std::filesystem::path> result;
-		std::optional<std::filesystem::file_time_type> result_time;
-
-		for (const auto& entry : std::filesystem::directory_iterator{dir}) {
-			if (!entry.is_regular_file()) {
-				continue;
-			}
-
-			const auto filename = entry.path().filename().string();
-
-			if (!filename.starts_with("index-") || entry.path().extension() != ".json") {
-				continue;
-			}
-
-			const auto write_time = entry.last_write_time();
-
-			if (!result.has_value() || write_time > result_time.value()) {
-				result = entry.path();
-				result_time = write_time;
-			}
-		}
-
-		return result;
-	}
-
-	[[nodiscard]] inline std::optional<std::string> json_string_member(
-		const ext::json& value,
-		std::string_view key
-	) {
-		const auto member = value.get(key);
-
-		if (!member.has_value()) {
-			return std::nullopt;
-		}
-
-		return member->as_string();
-	}
-
-	[[nodiscard]] inline bool json_kind_is(
-		const ext::json& value,
-		std::string_view expected_kind
-	) {
-		const auto kind = json_string_member(value, "kind");
-		return kind.has_value() && *kind == expected_kind;
-	}
-
-	[[nodiscard]] inline std::optional<std::string> codemodel_file_from_client_reply(
-		const ext::json& index
-	) {
-		const auto reply = index.get("reply");
-
-		if (!reply.has_value()) {
-			return std::nullopt;
-		}
-
-		const auto client = reply->get("client-mgmake");
-
-		if (!client.has_value()) {
-			return std::nullopt;
-		}
-
-		const auto query = client->get("query.json");
-
-		if (!query.has_value()) {
-			return std::nullopt;
-		}
-
-		for (const auto& response : query->array("responses")) {
-			if (!json_kind_is(response, "codemodel")) {
-				continue;
-			}
-
-			const auto json_file = json_string_member(response, "jsonFile");
-
-			if (json_file.has_value()) {
-				return json_file;
-			}
-		}
-
-		return std::nullopt;
-	}
-
-	[[nodiscard]] inline std::optional<std::string> codemodel_file_from_objects(
-		const ext::json& index
-	) {
-		for (const auto& object : index.array("objects")) {
-			if (!json_kind_is(object, "codemodel")) {
-				continue;
-			}
-
-			const auto json_file = json_string_member(object, "jsonFile");
-
-			if (json_file.has_value()) {
-				return json_file;
-			}
-		}
-
-		return std::nullopt;
-	}
-
-	[[nodiscard]] inline std::optional<std::string> codemodel_file_from_index(
-		const ext::json& index
-	) {
-		if (const auto client_reply = codemodel_file_from_client_reply(index)) {
-			return client_reply;
-		}
-
-		return codemodel_file_from_objects(index);
-	}
-
-	[[nodiscard]] inline std::vector<std::string> target_files_from_codemodel(
-		const ext::json& codemodel_json
-	) {
-		std::vector<std::string> result;
-		std::set<std::string> seen;
-
-		for (const auto& configuration : codemodel_json.array("configurations")) {
-			for (const auto& target_ref : configuration.array("targets")) {
-				const auto json_file = json_string_member(target_ref, "jsonFile");
-
-				if (!json_file.has_value() || json_file->empty()) {
-					continue;
-				}
-
-				if (seen.emplace(*json_file).second) {
-					result.emplace_back(*json_file);
-				}
-			}
-		}
-
-		return result;
-	}
-
-	inline void parse_link_entries(
-		const ext::json& parsed,
-		std::string_view key,
-		std::vector<link_entry>& out
-	) {
-		for (const auto& item : parsed.array(key)) {
-			if (const auto fragment = item.get("fragment")) {
-				if (const auto text = fragment->as_string()) {
-					out.emplace_back(link_entry{
-						.m_kind = link_entry_kind::fragment,
-						.m_value = *text
-					});
-				}
-			}
-
-			if (const auto id = item.get("id")) {
-				if (const auto text = id->as_string()) {
-					out.emplace_back(link_entry{
-						.m_kind = link_entry_kind::target_id,
-						.m_value = *text
-					});
-				}
-			}
-		}
-	}
-
-	// Only the codemodel fields needed for provider artifact and link-usage lookup are materialized.
-	[[nodiscard]] inline std::optional<target> parse_target_file(
-		const std::filesystem::path& file,
-		const std::filesystem::path& build_dir
-	) {
-		const auto parsed = parse_json_file(file);
-
-		if (!parsed.has_value()) {
-			return std::nullopt;
-		}
-
-		const auto name_text = json_string_member(*parsed, "name");
-
-		if (!name_text.has_value()) {
-			return std::nullopt;
-		}
-
-		target result{};
-		result.m_name = *name_text;
-
-		if (const auto id_text = json_string_member(*parsed, "id")) {
-			result.m_id = *id_text;
-		}
-
-		if (const auto type_text = json_string_member(*parsed, "type")) {
-			result.m_type = *type_text;
-		}
-
-		for (const auto& artifact : parsed->array("artifacts")) {
-			const auto path_text = json_string_member(artifact, "path");
-
-			if (!path_text.has_value()) {
-				continue;
-			}
-
-			result.m_artifacts.emplace_back(*path_text);
-		}
-
-		for (auto& artifact : result.m_artifacts) {
-			if (artifact.is_relative()) {
-				artifact = build_dir / artifact;
-			}
-		}
-
-		parse_link_entries(*parsed, "linkLibraries", result.m_link_entries);
-		parse_link_entries(*parsed, "interfaceLinkLibraries", result.m_interface_link_entries);
-
-		return result;
-	}
-
-	inline std::size_t load_reply_targets(
-		codemodel& model,
-		const std::filesystem::path& build_dir
-	) {
-		const auto dir = reply_dir(build_dir);
-		const auto index_file = latest_index_file(dir);
-
-		if (!index_file.has_value()) {
-			model = codemodel{};
-			return 0;
-		}
-
-		const auto index = parse_json_file(*index_file);
-
-		if (!index.has_value()) {
-			model = codemodel{};
-			return 0;
-		}
-
-		const auto codemodel_file = codemodel_file_from_index(*index);
-
-		if (!codemodel_file.has_value() || codemodel_file->empty()) {
-			model = codemodel{};
-			return 0;
-		}
-
-		const auto codemodel_json = parse_json_file(dir / *codemodel_file);
-
-		if (!codemodel_json.has_value()) {
-			model = codemodel{};
-			return 0;
-		}
-
-		codemodel loaded{};
-
-		for (const auto& target_file : target_files_from_codemodel(*codemodel_json)) {
-			auto target = parse_target_file(dir / target_file, build_dir);
-
-			if (!target.has_value() || target->m_name.empty()) {
-				continue;
-			}
-
-			loaded.add_target(std::move(*target));
-		}
-
-		model = std::move(loaded);
-		return model.size();
-	}
-}
-
-#endif // MGMK_EXT_CMAKE_FILE_API_HXX
-// ===== end include/mgmake/ext/cmake/file_api.hxx =====
-
-
-// ===== begin include/mgmake/ext/path_root.hxx =====
-#pragma once
-
-#ifndef MGMK_EXT_PATH_ROOT_HXX
-#define MGMK_EXT_PATH_ROOT_HXX
-
-// Path roots describe how provider-relative include and artifact paths are resolved.
-
-namespace mgmake::ext {
-	enum struct path_root {
-		usage,
-		source,
-		build,
-		install
-	};
-}
-
-#endif // MGMK_EXT_PATH_ROOT_HXX
-// ===== end include/mgmake/ext/path_root.hxx =====
-
+// skipped duplicate include: include/mgmake/ext/path_root.hxx
 
 // ===== begin include/mgmake/ext/rooted_path.hxx =====
 #pragma once
@@ -5650,10 +5395,10 @@ namespace mgmake::ext {
 #include <string>
 #include <string_view>
 
-// Prepared CMake projects store mgmake's resolved external project directories and parsed CMake metadata.
-
-namespace mgmake::prep {
-	struct cmake_project {
+namespace mgmake::prep::cmake {
+	struct project {
+		// Finalized CMake metadata consumed by lowering. Lowering should not inspect
+		// CMake reply files; it should only consume this prepared model.
 		std::string m_name;
 		std::filesystem::path m_source_dir;
 		std::filesystem::path m_build_dir;
@@ -5691,58 +5436,31 @@ namespace mgmake::prep {
 		[[nodiscard]] const ext::cmake::target* find_target_artifact(const std::filesystem::path& artifact) const {
 			return m_codemodel.find_target_artifact(artifact);
 		}
-
-		std::size_t reload_file_api_reply() {
-			return ext::cmake::file_api::load_reply_targets(m_codemodel, m_build_dir);
-		}
 	};
 }
 
 #endif // MGMK_PREP_CMAKE_PROJECT_HXX
-// ===== end include/mgmake/prep/cmake_project.hxx =====
+// ===== end include/mgmake/prep/cmake/project.hxx =====
 
 #endif // MGMK_ENABLE_EXT_CMAKE
 
-#include <cstddef>
 #include <map>
-#include <optional>
 #include <string>
 #include <string_view>
 
-// Prep result keeps the preparation DAG and lookup tables consumed by the lower phase.
-
 namespace mgmake::prep {
 	struct result {
-		dag::graph m_dag;
-		std::map<std::string, prep::fetched> m_fetches;
 #ifdef MGMK_ENABLE_EXT_CMAKE
-		std::map<std::string, prep::cmake_project> m_cmake_projects;
-#endif // MGMK_ENABLE_EXT_CMAKE
+		std::map<std::string, prep::cmake::project> m_cmake_projects;
 
-		[[nodiscard]] const prep::fetched* find_fetch(std::string_view name) const {
-			const auto found = m_fetches.find(std::string{name});
-			return found == m_fetches.end() ? nullptr : &found->second;
-		}
-
-#ifdef MGMK_ENABLE_EXT_CMAKE
-		[[nodiscard]] prep::cmake_project* find_cmake_project(std::string_view name) {
+		[[nodiscard]] prep::cmake::project* find_cmake_project(std::string_view name) {
 			const auto found = m_cmake_projects.find(std::string{name});
 			return found == m_cmake_projects.end() ? nullptr : &found->second;
 		}
 
-		[[nodiscard]] const prep::cmake_project* find_cmake_project(std::string_view name) const {
+		[[nodiscard]] const prep::cmake::project* find_cmake_project(std::string_view name) const {
 			const auto found = m_cmake_projects.find(std::string{name});
 			return found == m_cmake_projects.end() ? nullptr : &found->second;
-		}
-
-		std::size_t reload_cmake_file_api_replies() {
-			std::size_t loaded_targets = 0;
-
-			for (auto& [name, project] : m_cmake_projects) {
-				loaded_targets += project.reload_file_api_reply();
-			}
-
-			return loaded_targets;
 		}
 #endif // MGMK_ENABLE_EXT_CMAKE
 	};
@@ -6325,6 +6043,7 @@ namespace mgmake::ext::cmake {
 
 #endif // MGMK_ENABLE_EXT_CMAKE
 
+#include <expected>
 #include <optional>
 #include <set>
 #include <string>
@@ -6498,11 +6217,22 @@ namespace mgmake::spec {
 		}
 #endif // MGMK_ENABLE_EXT_CMAKE
 
-		prep::result prepare(const build::request& req) const;
+		mgmake::acquire::result acquire(const build::request& req) const;
 
-		dag::graph build(
+		mgmake::configure::result configure(
 			const build::request& req,
-			const prep::result& prepared,
+			const mgmake::acquire::result& acquired
+		) const;
+
+		std::expected<mgmake::prep::result, std::string> prepare(
+			const build::request& req,
+			const mgmake::acquire::result& acquired,
+			const mgmake::configure::result& configured
+		) const;
+
+		dag::graph lower(
+			const build::request& req,
+			const mgmake::prep::result& prepared,
 			dep::database& deps
 		) const;
 
@@ -8337,6 +8067,172 @@ namespace mgmake::dag {
 
 #endif // MGMK_DAG_EMITTER_HXX
 // ===== end include/mgmake/dag/emitter.hxx =====
+
+
+// ===== begin include/mgmake/dag/execute.hxx =====
+#pragma once
+
+#ifndef MGMK_DAG_EXECUTE_HXX
+#define MGMK_DAG_EXECUTE_HXX
+
+// skipped duplicate include: include/mgmake/dag/graph.hxx
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/cli/options.hxx
+// skipped duplicate include: include/mgmake/detail/hashes.hxx
+// skipped duplicate include: include/mgmake/discovery/tool_environment.hxx
+// skipped duplicate include: include/mgmake/sys/command_line.hxx
+
+#include <cstdlib>
+#include <expected>
+#include <filesystem>
+#include <print>
+#include <string>
+#include <string_view>
+
+// Generic DAG executor for pre-backend phase graphs such as acquisition and configuration.
+
+namespace mgmake::dag {
+	[[nodiscard]] inline bool action_is_up_to_date(
+		const dag::graph& graph,
+		const dag::action& action,
+		detail::hashes& hashes
+	) {
+		if (action.m_always_run || action.m_outputs.empty()) {
+			return false;
+		}
+
+		bool dirty = false;
+
+		for (const auto input : action.m_inputs) {
+			if (graph.artifact(input).check(hashes)) {
+				dirty = true;
+			}
+		}
+
+		for (const auto output : action.m_outputs) {
+			if (graph.artifact(output).check(hashes)) {
+				dirty = true;
+			}
+		}
+
+		return !dirty;
+	}
+
+	inline void update_action_hashes(
+		const dag::graph& graph,
+		const dag::action& action,
+		detail::hashes& hashes
+	) {
+		for (const auto input : action.m_inputs) {
+			graph.artifact(input).update(hashes);
+		}
+
+		for (const auto output : action.m_outputs) {
+			graph.artifact(output).update(hashes);
+		}
+	}
+
+	inline void create_output_directories(
+		const dag::graph& graph,
+		const dag::action& action
+	) {
+		for (const auto output_id : action.m_outputs) {
+			const auto& output = graph.artifact(output_id);
+
+			if (output.m_kind == dag::artifact::kind::phony) {
+				continue;
+			}
+
+			const auto parent = output.m_path.parent_path();
+
+			if (!parent.empty()) {
+				std::filesystem::create_directories(parent);
+			}
+		}
+	}
+
+	[[nodiscard]] inline int invoke_env_command(
+		const build::request& req,
+		const sys::command_line& command,
+		sys::command_run_options opts = {}
+	) {
+		if (req.tool_environment().empty()) {
+			return command.invoke(opts);
+		}
+
+		auto command_text = discovery::wrap_command_for_environment(
+			req.tool_environment(),
+			command.full_command()
+		);
+
+		if (opts.m_verbose || opts.m_dry_run) {
+			std::println("{}", command_text);
+		}
+
+		if (opts.m_dry_run) {
+			return 0;
+		}
+
+		return std::system(command_text.c_str());
+	}
+
+	[[nodiscard]] inline std::expected<void, std::string> execute(
+		std::string_view phase_name,
+		const cli::options& opts,
+		const build::request& req,
+		const dag::graph& graph,
+		detail::hashes& hashes
+	) {
+		// Pre-backend phase actions run directly in DAG insertion order because each phase
+		// produces filesystem state required before the next phase can be planned/finalized.
+		for (std::size_t i = 0; i < graph.m_actions.size(); ++i) {
+			const auto& action = graph.action(i);
+
+			if (action_is_up_to_date(graph, action, hashes)) {
+				continue;
+			}
+
+			if (!opts.m_dry_run) {
+				create_output_directories(graph, action);
+			}
+
+			const auto old_cwd = std::filesystem::current_path();
+
+			if (!action.m_working_directory.empty() && !opts.m_dry_run) {
+				std::filesystem::current_path(action.m_working_directory);
+			}
+
+			const int exit_code = invoke_env_command(
+				req,
+				action.m_command,
+				{
+					.m_verbose = opts.m_verbose || opts.m_dry_run,
+					.m_dry_run = opts.m_dry_run
+				}
+			);
+
+			if (!action.m_working_directory.empty() && !opts.m_dry_run) {
+				std::filesystem::current_path(old_cwd);
+			}
+
+			if (exit_code != 0) {
+				return std::unexpected{
+					"mgmake " + std::string{phase_name} + ": action '" + action.m_name +
+					"' failed with exit code " + std::to_string(exit_code)
+				};
+			}
+
+			if (!opts.m_dry_run) {
+				update_action_hashes(graph, action, hashes);
+			}
+		}
+
+		return {};
+	}
+}
+
+#endif // MGMK_DAG_EXECUTE_HXX
+// ===== end include/mgmake/dag/execute.hxx =====
 
 
 // ===== begin include/mgmake/backend/ninja.hxx =====
@@ -11476,6 +11372,372 @@ namespace mgmake::backend {
 #endif // MGMAKE_BACKEND_EXECUTE_HXX
 // ===== end include/mgmake/backend/execute.hxx =====
 
+// Include extensions before specs that reference provider/fetch types.
+// skipped duplicate include: include/mgmake/ext/provider_kind.hxx
+// skipped duplicate include: include/mgmake/ext/path_root.hxx
+// skipped duplicate include: include/mgmake/ext/provided_target_ref.hxx
+// skipped duplicate include: include/mgmake/ext/rooted_path.hxx
+// skipped duplicate include: include/mgmake/ext/fetch.hxx
+#ifdef MGMK_ENABLE_EXT_CMAKE
+// skipped duplicate include: include/mgmake/ext/cmake/project.hxx
+// skipped duplicate include: include/mgmake/ext/cmake/target.hxx
+// skipped duplicate include: include/mgmake/ext/cmake/codemodel.hxx
+
+// ===== begin include/mgmake/ext/cmake/file_api.hxx =====
+#pragma once
+
+#ifndef MGMK_EXT_CMAKE_FILE_API_HXX
+#define MGMK_EXT_CMAKE_FILE_API_HXX
+
+// skipped duplicate include: include/mgmake/ext/cmake/codemodel.hxx
+// skipped duplicate include: include/mgmake/ext/json.hxx
+
+#include <filesystem>
+#include <fstream>
+#include <iterator>
+#include <optional>
+#include <set>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+// CMake File API helpers request and parse codemodel replies so mgmake can import external target artifacts and link usage.
+
+namespace mgmake::ext::cmake::file_api {
+	[[nodiscard]] inline std::filesystem::path query_file(
+		const std::filesystem::path& build_dir
+	) {
+		return build_dir / ".cmake" / "api" / "v1" / "query" / "client-mgmake" / "query.json";
+	}
+
+	[[nodiscard]] inline std::filesystem::path reply_dir(
+		const std::filesystem::path& build_dir
+	) {
+		return build_dir / ".cmake" / "api" / "v1" / "reply";
+	}
+
+	[[nodiscard]] inline std::string codemodel_query_text() {
+		return R"({"requests":[{"kind":"codemodel","version":{"major":2,"minor":9}}]})";
+	}
+
+	[[nodiscard]] inline bool write_query_file(
+		const std::filesystem::path& build_dir
+	) {
+		const auto path = query_file(build_dir);
+		const auto dir = path.parent_path();
+
+		if (!dir.empty()) {
+			std::filesystem::create_directories(dir);
+		}
+
+		std::ofstream out{path, std::ios::binary | std::ios::trunc};
+
+		if (!out.is_open()) {
+			return false;
+		}
+
+		out << codemodel_query_text();
+		return out.good();
+	}
+
+	[[nodiscard]] inline std::optional<std::string> read_file(
+		const std::filesystem::path& path
+	) {
+		std::ifstream in(path, std::ios::binary);
+
+		if (!in.is_open()) {
+			return std::nullopt;
+		}
+
+		return std::string{
+			std::istreambuf_iterator<char>{in},
+			std::istreambuf_iterator<char>{}
+		};
+	}
+
+	[[nodiscard]] inline std::optional<ext::json> parse_json_file(
+		const std::filesystem::path& path
+	) {
+		const auto content = read_file(path);
+
+		if (!content.has_value()) {
+			return std::nullopt;
+		}
+
+		return ext::json::parse(*content);
+	}
+
+	[[nodiscard]] inline std::optional<std::filesystem::path> latest_index_file(
+		const std::filesystem::path& dir
+	) {
+		if (!std::filesystem::exists(dir)) {
+			return std::nullopt;
+		}
+
+		std::optional<std::filesystem::path> result;
+		std::optional<std::filesystem::file_time_type> result_time;
+
+		for (const auto& entry : std::filesystem::directory_iterator{dir}) {
+			if (!entry.is_regular_file()) {
+				continue;
+			}
+
+			const auto filename = entry.path().filename().string();
+
+			if (!filename.starts_with("index-") || entry.path().extension() != ".json") {
+				continue;
+			}
+
+			const auto write_time = entry.last_write_time();
+
+			if (!result.has_value() || write_time > result_time.value()) {
+				result = entry.path();
+				result_time = write_time;
+			}
+		}
+
+		return result;
+	}
+
+	[[nodiscard]] inline std::optional<std::string> json_string_member(
+		const ext::json& value,
+		std::string_view key
+	) {
+		const auto member = value.get(key);
+
+		if (!member.has_value()) {
+			return std::nullopt;
+		}
+
+		return member->as_string();
+	}
+
+	[[nodiscard]] inline bool json_kind_is(
+		const ext::json& value,
+		std::string_view expected_kind
+	) {
+		const auto kind = json_string_member(value, "kind");
+		return kind.has_value() && *kind == expected_kind;
+	}
+
+	[[nodiscard]] inline std::optional<std::string> codemodel_file_from_client_reply(
+		const ext::json& index
+	) {
+		const auto reply = index.get("reply");
+
+		if (!reply.has_value()) {
+			return std::nullopt;
+		}
+
+		const auto client = reply->get("client-mgmake");
+
+		if (!client.has_value()) {
+			return std::nullopt;
+		}
+
+		const auto query = client->get("query.json");
+
+		if (!query.has_value()) {
+			return std::nullopt;
+		}
+
+		for (const auto& response : query->array("responses")) {
+			if (!json_kind_is(response, "codemodel")) {
+				continue;
+			}
+
+			const auto json_file = json_string_member(response, "jsonFile");
+
+			if (json_file.has_value()) {
+				return json_file;
+			}
+		}
+
+		return std::nullopt;
+	}
+
+	[[nodiscard]] inline std::optional<std::string> codemodel_file_from_objects(
+		const ext::json& index
+	) {
+		for (const auto& object : index.array("objects")) {
+			if (!json_kind_is(object, "codemodel")) {
+				continue;
+			}
+
+			const auto json_file = json_string_member(object, "jsonFile");
+
+			if (json_file.has_value()) {
+				return json_file;
+			}
+		}
+
+		return std::nullopt;
+	}
+
+	[[nodiscard]] inline std::optional<std::string> codemodel_file_from_index(
+		const ext::json& index
+	) {
+		if (const auto client_reply = codemodel_file_from_client_reply(index)) {
+			return client_reply;
+		}
+
+		return codemodel_file_from_objects(index);
+	}
+
+	[[nodiscard]] inline std::vector<std::string> target_files_from_codemodel(
+		const ext::json& codemodel_json
+	) {
+		std::vector<std::string> result;
+		std::set<std::string> seen;
+
+		for (const auto& configuration : codemodel_json.array("configurations")) {
+			for (const auto& target_ref : configuration.array("targets")) {
+				const auto json_file = json_string_member(target_ref, "jsonFile");
+
+				if (!json_file.has_value() || json_file->empty()) {
+					continue;
+				}
+
+				if (seen.emplace(*json_file).second) {
+					result.emplace_back(*json_file);
+				}
+			}
+		}
+
+		return result;
+	}
+
+	inline void parse_link_entries(
+		const ext::json& parsed,
+		std::string_view key,
+		std::vector<link_entry>& out
+	) {
+		for (const auto& item : parsed.array(key)) {
+			if (const auto fragment = item.get("fragment")) {
+				if (const auto text = fragment->as_string()) {
+					out.emplace_back(link_entry{
+						.m_kind = link_entry_kind::fragment,
+						.m_value = *text
+					});
+				}
+			}
+
+			if (const auto id = item.get("id")) {
+				if (const auto text = id->as_string()) {
+					out.emplace_back(link_entry{
+						.m_kind = link_entry_kind::target_id,
+						.m_value = *text
+					});
+				}
+			}
+		}
+	}
+
+	// Only the codemodel fields needed for provider artifact and link-usage lookup are materialized.
+	[[nodiscard]] inline std::optional<target> parse_target_file(
+		const std::filesystem::path& file,
+		const std::filesystem::path& build_dir
+	) {
+		const auto parsed = parse_json_file(file);
+
+		if (!parsed.has_value()) {
+			return std::nullopt;
+		}
+
+		const auto name_text = json_string_member(*parsed, "name");
+
+		if (!name_text.has_value()) {
+			return std::nullopt;
+		}
+
+		target result{};
+		result.m_name = *name_text;
+
+		if (const auto id_text = json_string_member(*parsed, "id")) {
+			result.m_id = *id_text;
+		}
+
+		if (const auto type_text = json_string_member(*parsed, "type")) {
+			result.m_type = *type_text;
+		}
+
+		for (const auto& artifact : parsed->array("artifacts")) {
+			const auto path_text = json_string_member(artifact, "path");
+
+			if (!path_text.has_value()) {
+				continue;
+			}
+
+			result.m_artifacts.emplace_back(*path_text);
+		}
+
+		for (auto& artifact : result.m_artifacts) {
+			if (artifact.is_relative()) {
+				artifact = build_dir / artifact;
+			}
+		}
+
+		parse_link_entries(*parsed, "linkLibraries", result.m_link_entries);
+		parse_link_entries(*parsed, "interfaceLinkLibraries", result.m_interface_link_entries);
+
+		return result;
+	}
+
+	inline std::size_t load_reply_targets(
+		codemodel& model,
+		const std::filesystem::path& build_dir
+	) {
+		const auto dir = reply_dir(build_dir);
+		const auto index_file = latest_index_file(dir);
+
+		if (!index_file.has_value()) {
+			model = codemodel{};
+			return 0;
+		}
+
+		const auto index = parse_json_file(*index_file);
+
+		if (!index.has_value()) {
+			model = codemodel{};
+			return 0;
+		}
+
+		const auto codemodel_file = codemodel_file_from_index(*index);
+
+		if (!codemodel_file.has_value() || codemodel_file->empty()) {
+			model = codemodel{};
+			return 0;
+		}
+
+		const auto codemodel_json = parse_json_file(dir / *codemodel_file);
+
+		if (!codemodel_json.has_value()) {
+			model = codemodel{};
+			return 0;
+		}
+
+		codemodel loaded{};
+
+		for (const auto& target_file : target_files_from_codemodel(*codemodel_json)) {
+			auto target = parse_target_file(dir / target_file, build_dir);
+
+			if (!target.has_value() || target->m_name.empty()) {
+				continue;
+			}
+
+			loaded.add_target(std::move(*target));
+		}
+
+		model = std::move(loaded);
+		return model.size();
+	}
+}
+
+#endif // MGMK_EXT_CMAKE_FILE_API_HXX
+// ===== end include/mgmake/ext/cmake/file_api.hxx =====
+
+#endif // MGMK_ENABLE_EXT_CMAKE
 // skipped duplicate include: include/mgmake/spec/executable.hxx
 
 // ===== begin include/mgmake/spec/executable_impl.hxx =====
@@ -11505,6 +11767,1080 @@ namespace mgmake::backend {
 
 #endif // MGMK_SPEC_LIBRARY_IMPL_HXX
 // ===== end include/mgmake/spec/library_impl.hxx =====
+
+// skipped duplicate include: include/mgmake/acquire/fetched.hxx
+// skipped duplicate include: include/mgmake/acquire/result.hxx
+
+// ===== begin include/mgmake/acquire/context.hxx =====
+#pragma once
+
+#ifndef MGMK_ACQUIRE_CONTEXT_HXX
+#define MGMK_ACQUIRE_CONTEXT_HXX
+
+// skipped duplicate include: include/mgmake/acquire/fetched.hxx
+// skipped duplicate include: include/mgmake/acquire/result.hxx
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/dag/emitter.hxx
+// skipped duplicate include: include/mgmake/ext/fetch.hxx
+
+#include <map>
+#include <optional>
+#include <set>
+#include <string>
+#include <vector>
+
+// Acquire context builds a DAG that makes source trees available and memoizes repeated fetch specs by name.
+
+namespace mgmake::spec {
+	struct project;
+}
+
+namespace mgmake::acquire {
+	struct context {
+		acquire::result& m_result;
+		const build::request& m_req;
+		const spec::project& m_project;
+		dag::emitter m_emit;
+
+		context(
+			acquire::result& result,
+			const build::request& req,
+			const spec::project& project
+		);
+
+		dag::emitter& emit() {
+			return m_emit;
+		}
+
+		const dag::emitter& emit() const {
+			return m_emit;
+		}
+
+		const build::request& request() const {
+			return m_req;
+		}
+
+		const build::toolchain& toolchain() const {
+			return m_req.toolchain();
+		}
+
+		const acquire::fetched& fetch(ext::fetch::id id);
+		acquire::fetched fetch_value(const ext::fetch& fetch);
+
+	private:
+		acquire::fetched git_fetch(
+			const ext::fetch& fetch,
+			const ext::git_fetch& git
+		);
+
+		acquire::fetched archive_fetch(
+			const ext::fetch& fetch,
+			const ext::archive_fetch& archive
+		);
+
+		acquire::fetched local_fetch(
+			const ext::fetch& fetch,
+			const ext::local_fetch& local
+		);
+
+		std::vector<std::optional<acquire::fetched>> m_fetches;
+		std::set<std::string> m_active_fetches;
+		std::map<std::string, acquire::fetched> m_named_fetches;
+	};
+}
+
+#endif // MGMK_ACQUIRE_CONTEXT_HXX
+// ===== end include/mgmake/acquire/context.hxx =====
+
+
+// ===== begin include/mgmake/acquire/context_impl.hxx =====
+#pragma once
+
+#ifndef MGMK_ACQUIRE_CONTEXT_IMPL_HXX
+#define MGMK_ACQUIRE_CONTEXT_IMPL_HXX
+
+// skipped duplicate include: include/mgmake/acquire/context.hxx
+// skipped duplicate include: include/mgmake/detail/assert.hxx
+// skipped duplicate include: include/mgmake/discovery/tool_role.hxx
+// skipped duplicate include: include/mgmake/spec/project.hxx
+// skipped duplicate include: include/mgmake/sys/command_line.hxx
+// skipped duplicate include: include/mgmake/sys/file_command.hxx
+
+#include <algorithm>
+#include <cctype>
+#include <filesystem>
+#include <ranges>
+#include <string>
+#include <string_view>
+
+// Acquire emits actions that make source trees available before project configuration.
+
+namespace mgmake::acquire {
+	[[nodiscard]] inline std::filesystem::path root(const build::request& req) {
+		return req.build_dir() / "ext";
+	}
+
+	[[nodiscard]] inline std::filesystem::path source_dir(
+		const build::request& req,
+		std::string_view name
+	) {
+		return root(req) / "src" / std::string{name};
+	}
+
+	[[nodiscard]] inline std::filesystem::path tmp_dir(
+		const build::request& req,
+		std::string_view name
+	) {
+		return root(req) / "tmp" / std::string{name};
+	}
+
+	[[nodiscard]] inline std::filesystem::path stamp(
+		const build::request& req,
+		std::string_view name,
+		std::string_view suffix
+	) {
+		return root(req) / "stamp" / (std::string{name} + "." + std::string{suffix});
+	}
+
+	[[nodiscard]] inline std::filesystem::path archive_extension(ext::archive_format format) {
+		switch (format) {
+			case ext::archive_format::zip: return ".zip";
+			case ext::archive_format::tar: return ".tar";
+			case ext::archive_format::tar_gz: return ".tar.gz";
+			case ext::archive_format::tar_xz: return ".tar.xz";
+			case ext::archive_format::auto_detect: return ".archive";
+		}
+
+		return ".archive";
+	}
+
+	[[nodiscard]] inline std::filesystem::path archive_path(
+		const build::request& req,
+		std::string_view name,
+		ext::archive_format format
+	) {
+		return root(req) / "archive" / (std::string{name} + archive_extension(format).string());
+	}
+
+	[[nodiscard]] inline bool string_ends_with(std::string_view text, std::string_view suffix) noexcept {
+		return text.size() >= suffix.size() && text.substr(text.size() - suffix.size()) == suffix;
+	}
+
+	[[nodiscard]] inline ext::archive_format resolve_archive_format(
+		const ext::archive_fetch& archive
+	) {
+		if (archive.m_format != ext::archive_format::auto_detect) {
+			return archive.m_format;
+		}
+
+		std::string url = archive.m_url;
+		std::ranges::transform(url, url.begin(), [](unsigned char ch) {
+			return static_cast<char>(std::tolower(ch));
+		});
+
+		if (string_ends_with(url, ".zip")) {
+			return ext::archive_format::zip;
+		}
+
+		if (string_ends_with(url, ".tar")) {
+			return ext::archive_format::tar;
+		}
+
+		if (string_ends_with(url, ".tar.gz") || string_ends_with(url, ".tgz")) {
+			return ext::archive_format::tar_gz;
+		}
+
+		if (string_ends_with(url, ".tar.xz") || string_ends_with(url, ".txz")) {
+			return ext::archive_format::tar_xz;
+		}
+
+		mgmkassert(false, "mgmake acquire: archive format auto-detect could not infer archive type from URL '" + archive.m_url + "'");
+		return ext::archive_format::auto_detect;
+	}
+
+	[[nodiscard]] inline sys::command_line archive_download_command(
+		const build::request& req,
+		const std::filesystem::path& archive_path,
+		std::string_view url
+	) {
+		const auto* downloader = req.discovered_tool_any({
+			discovery::tool_role::curl,
+			discovery::tool_role::wget
+		});
+
+		mgmkassert(downloader != nullptr, "mgmake acquire: archive fetch requires curl or wget");
+
+		sys::command_line command{};
+		command.m_args.emplace_back(downloader->path_string());
+
+		switch (downloader->m_role) {
+			case discovery::tool_role::curl:
+				command.m_args.emplace_back("-L");
+				command.m_args.emplace_back("-o");
+				command.m_args.emplace_back(archive_path.string());
+				command.m_args.emplace_back(std::string{url});
+				break;
+
+			case discovery::tool_role::wget:
+				command.m_args.emplace_back("-O");
+				command.m_args.emplace_back(archive_path.string());
+				command.m_args.emplace_back(std::string{url});
+				break;
+
+			default:
+				mgmkassert(false, "mgmake acquire: unsupported archive downloader");
+				break;
+		}
+
+		return command;
+	}
+
+	[[nodiscard]] inline std::filesystem::path git_fetch_complete_marker(
+		const std::filesystem::path& source_dir
+	) {
+		return source_dir / ".git";
+	}
+
+	[[nodiscard]] inline sys::command_line git_clone_command(
+		const std::string& git_path,
+		const ext::git_fetch& git,
+		const std::filesystem::path& source_dir
+	) {
+		sys::command_line command{};
+		command.m_args.emplace_back(git_path);
+		command.m_args.emplace_back("clone");
+
+		if (git.m_shallow) {
+			command.m_args.emplace_back("--depth");
+			command.m_args.emplace_back("1");
+		}
+
+		if (git.m_submodules) {
+			command.m_args.emplace_back("--recurse-submodules");
+		}
+
+		if (!git.m_ref.empty()) {
+			command.m_args.emplace_back("--branch");
+			command.m_args.emplace_back(git.m_ref);
+		}
+
+		command.m_args.emplace_back(git.m_url);
+		command.m_args.emplace_back(source_dir.string());
+		return command;
+	}
+
+	[[nodiscard]] inline sys::command_line archive_extract_command(
+		const build::request& req,
+		ext::archive_format format,
+		const std::filesystem::path& archive_path,
+		const std::filesystem::path& tmp_dir
+	) {
+		sys::command_line command{};
+
+		switch (format) {
+			case ext::archive_format::zip: {
+				const auto unzip = req.tool_path(discovery::tool_role::unzip, "unzip");
+				command.m_args.emplace_back(unzip.string());
+				command.m_args.emplace_back(archive_path.string());
+				command.m_args.emplace_back("-d");
+				command.m_args.emplace_back(tmp_dir.string());
+				break;
+			}
+
+			case ext::archive_format::tar:
+			case ext::archive_format::tar_gz:
+			case ext::archive_format::tar_xz: {
+				const auto tar = req.tool_path(discovery::tool_role::tar, "tar");
+				command.m_args.emplace_back(tar.string());
+
+				switch (format) {
+					case ext::archive_format::tar: command.m_args.emplace_back("-xf"); break;
+					case ext::archive_format::tar_gz: command.m_args.emplace_back("-xzf"); break;
+					case ext::archive_format::tar_xz: command.m_args.emplace_back("-xJf"); break;
+					default: break;
+				}
+
+				command.m_args.emplace_back(archive_path.string());
+				command.m_args.emplace_back("-C");
+				command.m_args.emplace_back(tmp_dir.string());
+				break;
+			}
+
+			case ext::archive_format::auto_detect:
+				mgmkassert(false, "mgmake acquire: archive format auto-detect must be resolved before extraction");
+				break;
+		}
+
+		return command;
+	}
+
+	inline context::context(
+		acquire::result& result,
+		const build::request& req,
+		const spec::project& project
+	)
+		: m_result{result}
+		, m_req{req}
+		, m_project{project}
+		, m_emit{result.m_graph}
+		, m_fetches(project.m_fetches.size())
+	{}
+
+	inline const acquire::fetched& context::fetch(ext::fetch::id id) {
+		mgmkassert(id < m_project.m_fetches.size(), "mgmake acquire: invalid fetch id");
+
+		if (m_fetches.at(id).has_value()) {
+			return m_fetches.at(id).value();
+		}
+
+		const auto& fetch = m_project.m_fetches.at(id);
+		m_fetches.at(id) = fetch_value(fetch);
+		return m_fetches.at(id).value();
+	}
+
+	inline acquire::fetched context::fetch_value(const ext::fetch& fetch) {
+		mgmkassert(!fetch.m_name.empty(), "mgmake acquire: fetch has no name");
+
+		// Fetches are keyed by name so repeated provider references share one source tree.
+		if (auto existing = m_named_fetches.find(fetch.m_name); existing != m_named_fetches.end()) {
+			return existing->second;
+		}
+
+		mgmkassert(
+			!m_active_fetches.contains(fetch.m_name),
+			"mgmake acquire: cyclic fetch dependency involving '" + fetch.m_name + "'"
+		);
+		m_active_fetches.emplace(fetch.m_name);
+
+		acquire::fetched result{};
+
+		if (const auto* git = std::get_if<ext::git_fetch>(&fetch.m_data)) {
+			result = git_fetch(fetch, *git);
+		} else if (const auto* archive = std::get_if<ext::archive_fetch>(&fetch.m_data)) {
+			result = archive_fetch(fetch, *archive);
+		} else if (const auto* local = std::get_if<ext::local_fetch>(&fetch.m_data)) {
+			result = local_fetch(fetch, *local);
+		} else {
+			mgmkassert(false, "mgmake acquire: unsupported fetch kind for '" + fetch.m_name + "'");
+		}
+
+		m_active_fetches.erase(fetch.m_name);
+		m_named_fetches.emplace(fetch.m_name, result);
+		m_result.m_fetches.insert_or_assign(fetch.m_name, result);
+		return result;
+	}
+
+	inline acquire::fetched context::git_fetch(
+		const ext::fetch& fetch,
+		const ext::git_fetch& git
+	) {
+		const auto src_dir = source_dir(request(), fetch.m_name);
+		const auto complete_marker = git_fetch_complete_marker(src_dir);
+		const auto stamp_id = m_emit.generated(complete_marker);
+
+		const auto* git_tool = request().discovered_tool(discovery::tool_role::git);
+		const auto git_path = git_tool ? git_tool->path_string() : std::string{"git"};
+
+		m_emit.action(
+			"Clone fetch " + fetch.m_name,
+			"Clones git source '" + fetch.m_name + "'.",
+			{},
+			{stamp_id},
+			git_clone_command(git_path, git, src_dir)
+		);
+
+		dag::target dag_target{
+			"acquire:fetch:" + fetch.m_name,
+			{stamp_id},
+			{}
+		};
+
+		return acquire::fetched{
+			.m_target = m_emit.target(dag_target),
+			.m_stamp = stamp_id,
+			.m_source_dir = src_dir
+		};
+	}
+
+	inline acquire::fetched context::archive_fetch(
+		const ext::fetch& fetch,
+		const ext::archive_fetch& archive
+	) {
+		const auto format = resolve_archive_format(archive);
+		const auto src_dir = source_dir(request(), fetch.m_name);
+		const auto tmp = tmp_dir(request(), fetch.m_name);
+		const auto archive_file = archive_path(request(), fetch.m_name, format);
+		const auto prepare_stamp = stamp(request(), fetch.m_name, "prepare");
+		const auto final_stamp = stamp(request(), fetch.m_name, "fetch");
+
+		const auto prepare_id = m_emit.generated(prepare_stamp);
+		const auto archive_id = m_emit.generated(archive_file);
+		const auto tmp_id = m_emit.generated(tmp);
+		const auto stamp_id = m_emit.generated(final_stamp);
+
+		m_emit.action(
+			"Prepare fetch " + fetch.m_name,
+			"Prepares archive fetch '" + fetch.m_name + "'.",
+			{},
+			{prepare_id},
+			sys::reset_directory_stamp_command(tmp, prepare_stamp)
+		);
+
+		m_emit.action(
+			"Download fetch " + fetch.m_name,
+			"Downloads archive source '" + fetch.m_name + "'.",
+			{prepare_id},
+			{archive_id},
+			archive_download_command(request(), archive_file, archive.m_url)
+		);
+
+		m_emit.action(
+			"Extract fetch " + fetch.m_name,
+			"Extracts archive source '" + fetch.m_name + "'.",
+			{archive_id, prepare_id},
+			{tmp_id},
+			archive_extract_command(request(), format, archive_file, tmp)
+		);
+
+		// Archives often contain a top-level directory; normalization gives dependents a stable source root.
+		const auto normalized_from = archive.m_strip_prefix.empty()
+			? tmp
+			: tmp / archive.m_strip_prefix;
+
+		m_emit.action(
+			"Normalize fetch " + fetch.m_name,
+			"Normalizes archive source '" + fetch.m_name + "'.",
+			{tmp_id},
+			{stamp_id},
+			sys::normalize_directory_stamp_command(normalized_from, src_dir, final_stamp)
+		);
+
+		dag::target dag_target{
+			"acquire:fetch:" + fetch.m_name,
+			{stamp_id},
+			{}
+		};
+
+		return acquire::fetched{
+			.m_target = m_emit.target(dag_target),
+			.m_stamp = stamp_id,
+			.m_source_dir = src_dir
+		};
+	}
+
+	inline acquire::fetched context::local_fetch(
+		const ext::fetch& fetch,
+		const ext::local_fetch& local
+	) {
+		const auto stamp_path = stamp(request(), fetch.m_name, "fetch");
+		const auto stamp_id = m_emit.generated(stamp_path);
+
+		m_emit.action(
+			"Validate fetch " + fetch.m_name,
+			"Validates local source '" + fetch.m_name + "'.",
+			{},
+			{stamp_id},
+			sys::validate_path_command(local.m_path, stamp_path)
+		);
+
+		dag::target dag_target{
+			"acquire:fetch:" + fetch.m_name,
+			{stamp_id},
+			{}
+		};
+
+		return acquire::fetched{
+			.m_target = m_emit.target(dag_target),
+			.m_stamp = stamp_id,
+			.m_source_dir = local.m_path
+		};
+	}
+}
+
+#endif // MGMK_ACQUIRE_CONTEXT_IMPL_HXX
+// ===== end include/mgmake/acquire/context_impl.hxx =====
+
+
+// ===== begin include/mgmake/acquire/plan.hxx =====
+#pragma once
+
+#ifndef MGMK_ACQUIRE_PLAN_HXX
+#define MGMK_ACQUIRE_PLAN_HXX
+
+// skipped duplicate include: include/mgmake/acquire/context_impl.hxx
+// skipped duplicate include: include/mgmake/acquire/result.hxx
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/spec/project.hxx
+
+namespace mgmake::acquire {
+	[[nodiscard]] inline acquire::result plan(
+		const spec::project& project,
+		const build::request& req
+	) {
+		acquire::result result{};
+		acquire::context ctx{result, req, project};
+
+		for (ext::fetch::id id = 0; id < project.m_fetches.size(); ++id) {
+			ctx.fetch(id);
+		}
+
+#ifdef MGMK_ENABLE_EXT_CMAKE
+		for (const auto& cmake_project : project.m_cmake_projects) {
+			if (cmake_project.m_source.has_value()) {
+				ctx.fetch_value(cmake_project.m_source.value());
+			}
+		}
+#endif // MGMK_ENABLE_EXT_CMAKE
+
+		return result;
+	}
+}
+
+#endif // MGMK_ACQUIRE_PLAN_HXX
+// ===== end include/mgmake/acquire/plan.hxx =====
+
+// skipped duplicate include: include/mgmake/configure/result.hxx
+
+// ===== begin include/mgmake/configure/context.hxx =====
+#pragma once
+
+#ifndef MGMK_CONFIGURE_CONTEXT_HXX
+#define MGMK_CONFIGURE_CONTEXT_HXX
+
+// skipped duplicate include: include/mgmake/configure/result.hxx
+// skipped duplicate include: include/mgmake/acquire/result.hxx
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/dag/emitter.hxx
+#ifdef MGMK_ENABLE_EXT_CMAKE
+// skipped duplicate include: include/mgmake/ext/cmake/project.hxx
+#endif // MGMK_ENABLE_EXT_CMAKE
+
+#include <optional>
+#include <vector>
+
+namespace mgmake::spec {
+	struct project;
+}
+
+namespace mgmake::configure {
+	struct context {
+		configure::result& m_result;
+		const build::request& m_req;
+		const spec::project& m_project;
+		const acquire::result& m_acquired;
+		dag::emitter m_emit;
+
+		context(
+			configure::result& result,
+			const build::request& req,
+			const spec::project& project,
+			const acquire::result& acquired
+		);
+
+		dag::emitter& emit() {
+			return m_emit;
+		}
+
+		const dag::emitter& emit() const {
+			return m_emit;
+		}
+
+		const build::request& request() const {
+			return m_req;
+		}
+
+#ifdef MGMK_ENABLE_EXT_CMAKE
+		const configure::cmake::project& cmake(ext::cmake::project::id id);
+
+	private:
+		configure::cmake::project cmake_value(const ext::cmake::project& cmake_project);
+
+		std::vector<std::optional<configure::cmake::project>> m_cmake_projects;
+#endif // MGMK_ENABLE_EXT_CMAKE
+	};
+}
+
+#endif // MGMK_CONFIGURE_CONTEXT_HXX
+// ===== end include/mgmake/configure/context.hxx =====
+
+
+// ===== begin include/mgmake/configure/context_impl.hxx =====
+#pragma once
+
+#ifndef MGMK_CONFIGURE_CONTEXT_IMPL_HXX
+#define MGMK_CONFIGURE_CONTEXT_IMPL_HXX
+
+// skipped duplicate include: include/mgmake/configure/context.hxx
+// skipped duplicate include: include/mgmake/detail/assert.hxx
+#ifdef MGMK_ENABLE_EXT_CMAKE
+
+// ===== begin include/mgmake/configure/cmake/command.hxx =====
+#pragma once
+
+#ifndef MGMK_CONFIGURE_CMAKE_COMMAND_HXX
+#define MGMK_CONFIGURE_CMAKE_COMMAND_HXX
+
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/cli/backend.hxx
+// skipped duplicate include: include/mgmake/discovery/tool_role.hxx
+// skipped duplicate include: include/mgmake/ext/cmake/project.hxx
+// skipped duplicate include: include/mgmake/sys/command_line.hxx
+
+#include <filesystem>
+#include <string>
+#include <string_view>
+
+namespace mgmake::configure::cmake {
+	inline void append_tool_if_discovered(
+		sys::command_line& command,
+		const build::request& req,
+		discovery::tool_role role,
+		std::string_view cmake_variable
+	) {
+		const auto* tool = req.discovered_tool(role);
+
+		if (tool == nullptr) {
+			return;
+		}
+
+		command.m_args.emplace_back(
+			"-D" + std::string{cmake_variable} + "=" + tool->path_string()
+		);
+	}
+
+	inline void append_archive_tool_if_discovered(
+		sys::command_line& command,
+		const build::request& req
+	) {
+		if (const auto* tool = req.discovered_tool(discovery::tool_role::archiver)) {
+			command.m_args.emplace_back(
+				"-DCMAKE_AR=" + tool->path_string()
+			);
+			return;
+		}
+
+		if (const auto* tool = req.discovered_tool(discovery::tool_role::librarian)) {
+			command.m_args.emplace_back(
+				"-DCMAKE_AR=" + tool->path_string()
+			);
+		}
+	}
+
+	[[nodiscard]] inline std::string_view generator_for_backend(
+		cli::backend_kind backend
+	) noexcept {
+		switch (backend) {
+			case cli::backend_kind::automatic:
+			case cli::backend_kind::ninja:
+				return "Ninja";
+
+			case cli::backend_kind::make:
+			case cli::backend_kind::direct:
+			case cli::backend_kind::count:
+				return {};
+		}
+
+		return {};
+	}
+
+	inline void append_backend_generator_args(
+		sys::command_line& command,
+		const build::request& req
+	) {
+		const auto generator = generator_for_backend(req.backend());
+
+		if (generator.empty()) {
+			return;
+		}
+
+		command.m_args.emplace_back("-G");
+		command.m_args.emplace_back(std::string{generator});
+
+		if (generator == "Ninja") {
+			if (const auto* ninja = req.discovered_tool(discovery::tool_role::generator_ninja)) {
+				command.m_args.emplace_back(
+					"-DCMAKE_MAKE_PROGRAM=" + ninja->path_string()
+				);
+			}
+		}
+	}
+
+	inline void append_discovered_toolchain_args(
+		sys::command_line& command,
+		const build::request& req
+	) {
+		append_tool_if_discovered(
+			command,
+			req,
+			discovery::tool_role::c_compiler,
+			"CMAKE_C_COMPILER"
+		);
+
+		append_tool_if_discovered(
+			command,
+			req,
+			discovery::tool_role::cxx_compiler,
+			"CMAKE_CXX_COMPILER"
+		);
+
+		append_archive_tool_if_discovered(command, req);
+
+		append_tool_if_discovered(
+			command,
+			req,
+			discovery::tool_role::ranlib,
+			"CMAKE_RANLIB"
+		);
+
+		append_tool_if_discovered(
+			command,
+			req,
+			discovery::tool_role::resource_compiler,
+			"CMAKE_RC_COMPILER"
+		);
+	}
+
+	[[nodiscard]] inline sys::command_line configure_command(
+		const build::request& req,
+		const ext::cmake::project& cmake_project,
+		const std::filesystem::path& source_dir,
+		const std::filesystem::path& build_dir,
+		const std::filesystem::path& install_dir
+	) {
+		sys::command_line command;
+		command.m_args.emplace_back(req.tool_path(discovery::tool_role::cmake, "cmake").string());
+		command.m_args.emplace_back("-S");
+		command.m_args.emplace_back(source_dir.string());
+		command.m_args.emplace_back("-B");
+		command.m_args.emplace_back(build_dir.string());
+		command.m_args.emplace_back("-DCMAKE_INSTALL_PREFIX=" + install_dir.string());
+
+		if (!cmake_project.m_generator.empty()) {
+			command.m_args.emplace_back("-G");
+			command.m_args.emplace_back(cmake_project.m_generator);
+		} else {
+			append_backend_generator_args(command, req);
+		}
+
+		append_discovered_toolchain_args(command, req);
+
+		if (!cmake_project.m_build_config.empty()) {
+			command.m_args.emplace_back("-DCMAKE_BUILD_TYPE=" + cmake_project.m_build_config);
+		}
+
+		for (const auto& [key, value] : cmake_project.m_defines) {
+			command.m_args.emplace_back("-D" + key + "=" + value);
+		}
+
+		for (const auto& arg : cmake_project.m_args) {
+			command.m_args.emplace_back(arg);
+		}
+
+		return command;
+	}
+}
+
+#endif // MGMK_CONFIGURE_CMAKE_COMMAND_HXX
+// ===== end include/mgmake/configure/cmake/command.hxx =====
+
+
+// ===== begin include/mgmake/configure/cmake/paths.hxx =====
+#pragma once
+
+#ifndef MGMK_CONFIGURE_CMAKE_PATHS_HXX
+#define MGMK_CONFIGURE_CMAKE_PATHS_HXX
+
+// skipped duplicate include: include/mgmake/build/request.hxx
+
+#include <filesystem>
+#include <string>
+#include <string_view>
+
+namespace mgmake::configure::cmake {
+	[[nodiscard]] inline std::filesystem::path root(const build::request& req) {
+		return req.build_dir() / "ext";
+	}
+
+	[[nodiscard]] inline std::filesystem::path build_dir(
+		const build::request& req,
+		std::string_view name
+	) {
+		return root(req) / "build" / std::string{name};
+	}
+
+	[[nodiscard]] inline std::filesystem::path install_dir(
+		const build::request& req,
+		std::string_view name
+	) {
+		return root(req) / "install" / std::string{name};
+	}
+
+	[[nodiscard]] inline std::filesystem::path configure_output(
+		const std::filesystem::path& build_dir
+	) {
+		return build_dir / "CMakeCache.txt";
+	}
+}
+
+#endif // MGMK_CONFIGURE_CMAKE_PATHS_HXX
+// ===== end include/mgmake/configure/cmake/paths.hxx =====
+
+// skipped duplicate include: include/mgmake/ext/cmake/file_api.hxx
+#endif // MGMK_ENABLE_EXT_CMAKE
+// skipped duplicate include: include/mgmake/spec/project.hxx
+
+// Configure emits actions that configure projects enough to produce metadata for prep.
+
+namespace mgmake::configure {
+	inline context::context(
+		configure::result& result,
+		const build::request& req,
+		const spec::project& project,
+		const acquire::result& acquired
+	)
+		: m_result{result}
+		, m_req{req}
+		, m_project{project}
+		, m_acquired{acquired}
+		, m_emit{result.m_graph}
+#ifdef MGMK_ENABLE_EXT_CMAKE
+		, m_cmake_projects(project.m_cmake_projects.size())
+#endif // MGMK_ENABLE_EXT_CMAKE
+	{}
+
+#ifdef MGMK_ENABLE_EXT_CMAKE
+	inline const configure::cmake::project& context::cmake(ext::cmake::project::id id) {
+		mgmkassert(id < m_project.m_cmake_projects.size(), "mgmake configure: invalid CMake project id");
+
+		if (m_cmake_projects.at(id).has_value()) {
+			return m_cmake_projects.at(id).value();
+		}
+
+		const auto& cmake_project = m_project.m_cmake_projects.at(id);
+		m_cmake_projects.at(id) = cmake_value(cmake_project);
+		return m_cmake_projects.at(id).value();
+	}
+
+	inline configure::cmake::project context::cmake_value(
+		const ext::cmake::project& cmake_project
+	) {
+		mgmkassert(!cmake_project.m_name.empty(), "mgmake configure: CMake project has no name");
+		mgmkassert(cmake_project.m_source.has_value(), "mgmake configure: CMake project '" + cmake_project.m_name + "' has no source");
+
+		const auto* fetched = m_acquired.find_fetch(cmake_project.m_source->m_name);
+
+		mgmkassert(
+			fetched != nullptr,
+			"mgmake configure: source '" + cmake_project.m_source->m_name +
+				"' for CMake project '" + cmake_project.m_name + "' was not acquired"
+		);
+
+		const auto source_dir = fetched->m_source_dir;
+		const auto build_dir = configure::cmake::build_dir(request(), cmake_project.m_name);
+		const auto install_dir = configure::cmake::install_dir(request(), cmake_project.m_name);
+		const auto query_path = ext::cmake::file_api::query_file(build_dir);
+		const auto configure_output = configure::cmake::configure_output(build_dir);
+		const auto source_stamp = m_acquired.m_graph.artifact(fetched->m_stamp).path();
+
+		const auto query_id = m_emit.generated(query_path);
+		const auto source_stamp_id = m_emit.generated(source_stamp);
+		const auto configure_id = m_emit.generated(configure_output);
+
+		// CMake must see the query file before configure so it writes codemodel replies.
+		// This is a plan-time side effect for now; a later native write-file DAG action
+		// can make this purely graph-driven.
+		mgmkassert(
+			ext::cmake::file_api::write_query_file(build_dir),
+			"mgmake configure: failed to write CMake File API query for project '" + cmake_project.m_name + "'"
+		);
+
+		m_emit.action(
+			"Configure CMake project " + cmake_project.m_name,
+			"Configures CMake project '" + cmake_project.m_name + "'.",
+			{source_stamp_id, query_id},
+			{configure_id},
+			configure::cmake::configure_command(
+				request(),
+				cmake_project,
+				source_dir,
+				build_dir,
+				install_dir
+			)
+		);
+
+		dag::target dag_target{
+			"configure:cmake:" + cmake_project.m_name,
+			{configure_id},
+			{}
+		};
+		m_emit.target(dag_target);
+
+		configure::cmake::project result{};
+		result.m_name = cmake_project.m_name;
+		result.m_source_dir = source_dir;
+		result.m_build_dir = build_dir;
+		result.m_install_dir = install_dir;
+		result.m_usage_root = cmake_project.m_install
+			? ext::path_root::install
+			: ext::path_root::build;
+
+		m_result.m_cmake_projects.insert_or_assign(cmake_project.m_name, result);
+		return result;
+	}
+#endif // MGMK_ENABLE_EXT_CMAKE
+}
+
+#endif // MGMK_CONFIGURE_CONTEXT_IMPL_HXX
+// ===== end include/mgmake/configure/context_impl.hxx =====
+
+#ifdef MGMK_ENABLE_EXT_CMAKE
+// skipped duplicate include: include/mgmake/configure/cmake/project.hxx
+// skipped duplicate include: include/mgmake/configure/cmake/paths.hxx
+// skipped duplicate include: include/mgmake/configure/cmake/command.hxx
+#endif // MGMK_ENABLE_EXT_CMAKE
+
+// ===== begin include/mgmake/configure/plan.hxx =====
+#pragma once
+
+#ifndef MGMK_CONFIGURE_PLAN_HXX
+#define MGMK_CONFIGURE_PLAN_HXX
+
+// skipped duplicate include: include/mgmake/configure/context_impl.hxx
+// skipped duplicate include: include/mgmake/configure/result.hxx
+// skipped duplicate include: include/mgmake/acquire/result.hxx
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/spec/project.hxx
+
+namespace mgmake::configure {
+	[[nodiscard]] inline configure::result plan(
+		const spec::project& project,
+		const build::request& req,
+		const acquire::result& acquired
+	) {
+		configure::result result{};
+		configure::context ctx{result, req, project, acquired};
+
+#ifdef MGMK_ENABLE_EXT_CMAKE
+		for (ext::cmake::project::id id = 0; id < project.m_cmake_projects.size(); ++id) {
+			ctx.cmake(id);
+		}
+#endif // MGMK_ENABLE_EXT_CMAKE
+
+		return result;
+	}
+}
+
+#endif // MGMK_CONFIGURE_PLAN_HXX
+// ===== end include/mgmake/configure/plan.hxx =====
+
+#ifdef MGMK_ENABLE_EXT_CMAKE
+// skipped duplicate include: include/mgmake/prep/cmake/project.hxx
+
+// ===== begin include/mgmake/prep/cmake/finalize.hxx =====
+#pragma once
+
+#ifndef MGMK_PREP_CMAKE_FINALIZE_HXX
+#define MGMK_PREP_CMAKE_FINALIZE_HXX
+
+// skipped duplicate include: include/mgmake/prep/cmake/project.hxx
+// skipped duplicate include: include/mgmake/configure/cmake/project.hxx
+// skipped duplicate include: include/mgmake/ext/cmake/file_api.hxx
+
+#include <expected>
+#include <string>
+
+namespace mgmake::prep::cmake {
+	[[nodiscard]] inline std::expected<prep::cmake::project, std::string> finalize_project(
+		const configure::cmake::project& configured
+	) {
+		prep::cmake::project result{};
+		result.m_name = configured.m_name;
+		result.m_source_dir = configured.m_source_dir;
+		result.m_build_dir = configured.m_build_dir;
+		result.m_install_dir = configured.m_install_dir;
+		result.m_usage_root = configured.m_usage_root;
+
+		if constexpr (!ext::has_json_backend) {
+			return std::unexpected{
+				"mgmake prep: CMake File API metadata for project '" + configured.m_name +
+				"' requires a JSON backend. Define MGMK_JSON_BACKEND_HEADER or enable #urlinclude support."
+			};
+		}
+
+		const auto loaded_targets = ext::cmake::file_api::load_reply_targets(
+			result.m_codemodel,
+			configured.m_build_dir
+		);
+
+		if (loaded_targets == 0) {
+			return std::unexpected{
+				"mgmake prep: CMake project '" + configured.m_name +
+				"' loaded zero File API targets from '" +
+				configured.m_build_dir.string() + "'"
+			};
+		}
+
+		return result;
+	}
+}
+
+#endif // MGMK_PREP_CMAKE_FINALIZE_HXX
+// ===== end include/mgmake/prep/cmake/finalize.hxx =====
+
+#endif // MGMK_ENABLE_EXT_CMAKE
+// skipped duplicate include: include/mgmake/prep/result.hxx
+
+// ===== begin include/mgmake/prep/finalize.hxx =====
+#pragma once
+
+#ifndef MGMK_PREP_FINALIZE_HXX
+#define MGMK_PREP_FINALIZE_HXX
+
+// skipped duplicate include: include/mgmake/prep/result.hxx
+// skipped duplicate include: include/mgmake/acquire/result.hxx
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/configure/result.hxx
+#ifdef MGMK_ENABLE_EXT_CMAKE
+// skipped duplicate include: include/mgmake/prep/cmake/finalize.hxx
+#endif // MGMK_ENABLE_EXT_CMAKE
+// skipped duplicate include: include/mgmake/spec/project.hxx
+
+#include <expected>
+#include <string>
+#include <utility>
+#include <utility>
+
+namespace mgmake::prep {
+	[[nodiscard]] inline std::expected<prep::result, std::string> finalize(
+		const spec::project& project,
+		const build::request& req,
+		const acquire::result& acquired,
+		const configure::result& configured
+	) {
+		(void)project;
+		(void)req;
+		(void)acquired;
+
+		prep::result result{};
+
+#ifdef MGMK_ENABLE_EXT_CMAKE
+		for (const auto& [name, configured_cmake] : configured.m_cmake_projects) {
+			auto prepared = prep::cmake::finalize_project(configured_cmake);
+
+			if (!prepared) {
+				return std::unexpected{prepared.error()};
+			}
+
+			result.m_cmake_projects.insert_or_assign(name, std::move(*prepared));
+		}
+#endif // MGMK_ENABLE_EXT_CMAKE
+
+		return result;
+	}
+}
+
+#endif // MGMK_PREP_FINALIZE_HXX
+// ===== end include/mgmake/prep/finalize.hxx =====
 
 // skipped duplicate include: include/mgmake/spec/project.hxx
 
@@ -12066,955 +13402,6 @@ namespace mgmake::lower {
 // ===== end include/mgmake/lower/provider_build.hxx =====
 
 #endif // MGMK_ENABLE_EXT_CMAKE
-// skipped duplicate include: include/mgmake/prep/fetched.hxx
-// skipped duplicate include: include/mgmake/prep/result.hxx
-
-// ===== begin include/mgmake/prep/context.hxx =====
-#pragma once
-
-#ifndef MGMK_PREP_CONTEXT_HXX
-#define MGMK_PREP_CONTEXT_HXX
-
-// skipped duplicate include: include/mgmake/prep/fetched.hxx
-// skipped duplicate include: include/mgmake/prep/result.hxx
-// skipped duplicate include: include/mgmake/build/request.hxx
-// skipped duplicate include: include/mgmake/dag/emitter.hxx
-// skipped duplicate include: include/mgmake/ext/fetch.hxx
-#ifdef MGMK_ENABLE_EXT_CMAKE
-// skipped duplicate include: include/mgmake/ext/cmake/project.hxx
-#endif // MGMK_ENABLE_EXT_CMAKE
-
-#include <map>
-#include <optional>
-#include <set>
-#include <string>
-#include <vector>
-
-// Prep context builds a DAG for external fetch/configure work and memoizes fetched/provider project results by name.
-
-namespace mgmake::spec {
-	struct project;
-}
-
-namespace mgmake::prep {
-	struct context {
-		prep::result& m_result;
-		const build::request& m_req;
-		const spec::project& m_project;
-		dag::emitter m_emit;
-
-		context(
-			prep::result& result,
-			const build::request& req,
-			const spec::project& project
-		);
-
-		dag::emitter& emit() {
-			return m_emit;
-		}
-
-		const dag::emitter& emit() const {
-			return m_emit;
-		}
-
-		const build::request& request() const {
-			return m_req;
-		}
-
-		const build::toolchain& toolchain() const {
-			return m_req.toolchain();
-		}
-
-		const prep::fetched& fetch(ext::fetch::id id);
-		prep::fetched fetch_value(const ext::fetch& fetch);
-#ifdef MGMK_ENABLE_EXT_CMAKE
-		const prep::cmake_project& cmake(ext::cmake::project::id id);
-#endif // MGMK_ENABLE_EXT_CMAKE
-
-	private:
-		prep::fetched git_fetch(
-			const ext::fetch& fetch,
-			const ext::git_fetch& git
-		);
-
-		prep::fetched archive_fetch(
-			const ext::fetch& fetch,
-			const ext::archive_fetch& archive
-		);
-
-		prep::fetched local_fetch(
-			const ext::fetch& fetch,
-			const ext::local_fetch& local
-		);
-
-#ifdef MGMK_ENABLE_EXT_CMAKE
-		prep::cmake_project cmake_value(const ext::cmake::project& cmake_project);
-#endif // MGMK_ENABLE_EXT_CMAKE
-
-		std::vector<std::optional<prep::fetched>> m_fetches;
-#ifdef MGMK_ENABLE_EXT_CMAKE
-		std::vector<std::optional<prep::cmake_project>> m_cmake_projects;
-#endif // MGMK_ENABLE_EXT_CMAKE
-		std::set<std::string> m_active_fetches;
-		std::map<std::string, prep::fetched> m_named_fetches;
-	};
-}
-
-#endif // MGMK_PREP_CONTEXT_HXX
-// ===== end include/mgmake/prep/context.hxx =====
-
-
-// ===== begin include/mgmake/prep/executor.hxx =====
-#pragma once
-
-#ifndef MGMK_PREP_EXECUTOR_HXX
-#define MGMK_PREP_EXECUTOR_HXX
-
-// skipped duplicate include: include/mgmake/prep/result.hxx
-// skipped duplicate include: include/mgmake/build/request.hxx
-// skipped duplicate include: include/mgmake/cli/options.hxx
-// skipped duplicate include: include/mgmake/dag/graph.hxx
-// skipped duplicate include: include/mgmake/detail/hashes.hxx
-// skipped duplicate include: include/mgmake/discovery/tool_environment.hxx
-// skipped duplicate include: include/mgmake/sys/command_line.hxx
-
-#include <cstdlib>
-#include <expected>
-#include <filesystem>
-#include <print>
-#include <string>
-#include <utility>
-
-
-// The prep executor runs preparation DAG actions directly and uses hashes to skip actions that are already up to date.
-
-namespace mgmake::prep {
-	[[nodiscard]] inline bool action_is_up_to_date(
-		const dag::graph& graph,
-		const dag::action& action,
-		detail::hashes& hashes
-	) {
-		if (action.m_always_run || action.m_outputs.empty()) {
-			return false;
-		}
-
-		bool dirty = false;
-
-		for (const auto input : action.m_inputs) {
-			if (graph.artifact(input).check(hashes)) {
-				dirty = true;
-			}
-		}
-
-		for (const auto output : action.m_outputs) {
-			if (graph.artifact(output).check(hashes)) {
-				dirty = true;
-			}
-		}
-
-		return !dirty;
-	}
-
-	inline void update_action_hashes(
-		const dag::graph& graph,
-		const dag::action& action,
-		detail::hashes& hashes
-	) {
-		for (const auto input : action.m_inputs) {
-			graph.artifact(input).update(hashes);
-		}
-
-		for (const auto output : action.m_outputs) {
-			graph.artifact(output).update(hashes);
-		}
-	}
-
-	inline void create_output_directories(
-		const dag::graph& graph,
-		const dag::action& action
-	) {
-		for (const auto output_id : action.m_outputs) {
-			const auto& output = graph.artifact(output_id);
-
-			if (output.m_kind == dag::artifact::kind::phony) {
-				continue;
-			}
-
-			const auto parent = output.m_path.parent_path();
-
-			if (!parent.empty()) {
-				std::filesystem::create_directories(parent);
-			}
-		}
-	}
-
-	[[nodiscard]] inline int invoke_env_command(
-		const build::request& req,
-		const sys::command_line& command,
-		sys::command_run_options opts = {}
-	) {
-		if (req.tool_environment().empty()) {
-			return command.invoke(opts);
-		}
-
-		auto command_text = discovery::wrap_command_for_environment(
-			req.tool_environment(),
-			command.full_command()
-		);
-
-		if (opts.m_verbose || opts.m_dry_run) {
-			std::println("{}", command_text);
-		}
-
-		if (opts.m_dry_run) {
-			return 0;
-		}
-
-		return std::system(command_text.c_str());
-	}
-
-	[[nodiscard]] inline std::expected<void, std::string> execute(
-		const cli::options& opts,
-		const build::request& req,
-		prep::result& result,
-		detail::hashes& hashes
-	) {
-		const auto& graph = result.m_dag;
-
-		// Prep actions run directly in DAG order because they produce inputs needed before backend generation.
-		for (std::size_t i = 0; i < graph.m_actions.size(); ++i) {
-			const auto& action = graph.action(i);
-
-			if (action_is_up_to_date(graph, action, hashes)) {
-				continue;
-			}
-
-			if (!opts.m_dry_run) {
-				create_output_directories(graph, action);
-			}
-
-			const auto old_cwd = std::filesystem::current_path();
-
-			if (!action.m_working_directory.empty() && !opts.m_dry_run) {
-				std::filesystem::current_path(action.m_working_directory);
-			}
-
-			const int exit_code = invoke_env_command(
-				req,
-				action.m_command,
-				{
-					.m_verbose = opts.m_verbose || opts.m_dry_run,
-					.m_dry_run = opts.m_dry_run
-				}
-			);
-
-			if (!action.m_working_directory.empty() && !opts.m_dry_run) {
-				std::filesystem::current_path(old_cwd);
-			}
-
-			if (exit_code != 0) {
-				return std::unexpected{
-					"mgmake prep: action '" + action.m_name +
-					"' failed with exit code " + std::to_string(exit_code)
-				};
-			}
-
-			if (!opts.m_dry_run) {
-				update_action_hashes(graph, action, hashes);
-			}
-		}
-
-#ifdef MGMK_ENABLE_EXT_CMAKE
-		if (!opts.m_dry_run) {
-			const auto loaded_cmake_targets = result.reload_cmake_file_api_replies();
-
-			if (!result.m_cmake_projects.empty() && loaded_cmake_targets == 0) {
-				return std::unexpected{
-					"mgmake prep: CMake File API reload loaded zero targets"
-				};
-			}
-		}
-#endif // MGMK_ENABLE_EXT_CMAKE
-
-		return {};
-	}
-}
-
-#endif // MGMK_PREP_EXECUTOR_HXX
-// ===== end include/mgmake/prep/executor.hxx =====
-
-
-// ===== begin include/mgmake/prep/context_impl.hxx =====
-#pragma once
-
-#ifndef MGMK_PREP_CONTEXT_IMPL_HXX
-#define MGMK_PREP_CONTEXT_IMPL_HXX
-
-// skipped duplicate include: include/mgmake/prep/context.hxx
-// skipped duplicate include: include/mgmake/detail/assert.hxx
-// skipped duplicate include: include/mgmake/discovery/tool_role.hxx
-// skipped duplicate include: include/mgmake/ext/fetch.hxx
-#ifdef MGMK_ENABLE_EXT_CMAKE
-// skipped duplicate include: include/mgmake/ext/cmake/file_api.hxx
-// skipped duplicate include: include/mgmake/ext/cmake/project.hxx
-#endif // MGMK_ENABLE_EXT_CMAKE
-// skipped duplicate include: include/mgmake/spec/project.hxx
-// skipped duplicate include: include/mgmake/sys/command_line.hxx
-// skipped duplicate include: include/mgmake/sys/file_command.hxx
-
-#include <algorithm>
-#include <cctype>
-#include <filesystem>
-#include <ranges>
-#include <set>
-#include <string>
-#include <string_view>
-#include <utility>
-#include <vector>
-
-// Prep emits actions that make external inputs available before the main build graph is lowered.
-
-namespace mgmake::prep {
-	[[nodiscard]] inline std::filesystem::path fetch_root(const build::request& req) {
-		return req.build_dir() / "ext";
-	}
-
-	[[nodiscard]] inline std::filesystem::path fetch_source_dir(
-		const build::request& req,
-		std::string_view name
-	) {
-		return fetch_root(req) / "src" / std::string{name};
-	}
-
-	[[nodiscard]] inline std::filesystem::path fetch_tmp_dir(
-		const build::request& req,
-		std::string_view name
-	) {
-		return fetch_root(req) / "tmp" / std::string{name};
-	}
-
-	[[nodiscard]] inline std::filesystem::path fetch_stamp(
-		const build::request& req,
-		std::string_view name,
-		std::string_view suffix
-	) {
-		return fetch_root(req) / "stamp" / (std::string{name} + "." + std::string{suffix});
-	}
-
-#ifdef MGMK_ENABLE_EXT_CMAKE
-	[[nodiscard]] inline std::filesystem::path cmake_source_dir(
-		const build::request& req,
-		std::string_view name
-	) {
-		return fetch_root(req) / "src" / std::string{name};
-	}
-
-	[[nodiscard]] inline std::filesystem::path cmake_build_dir(
-		const build::request& req,
-		std::string_view name
-	) {
-		return fetch_root(req) / "build" / std::string{name};
-	}
-
-	[[nodiscard]] inline std::filesystem::path cmake_install_dir(
-		const build::request& req,
-		std::string_view name
-	) {
-		return fetch_root(req) / "install" / std::string{name};
-	}
-
-	[[nodiscard]] inline std::filesystem::path cmake_configure_output(
-		const std::filesystem::path& build_dir
-	) {
-		return build_dir / "CMakeCache.txt";
-	}
-
-	inline void append_cmake_tool_if_discovered(
-		sys::command_line& command,
-		const build::request& req,
-		discovery::tool_role role,
-		std::string_view cmake_variable
-	) {
-		const auto* tool = req.discovered_tool(role);
-
-		if (tool == nullptr) {
-			std::print("No tool found for cmake var {}\n", cmake_variable);
-			return;
-		}
-
-		command.m_args.emplace_back(
-			"-D" + std::string{cmake_variable} + "=" + tool->path_string()
-		);
-	}
-
-	inline void append_cmake_archive_tool_if_discovered(
-		sys::command_line& command,
-		const build::request& req
-	) {
-		if (const auto* tool = req.discovered_tool(discovery::tool_role::archiver)) {
-			command.m_args.emplace_back(
-				"-DCMAKE_AR=" + tool->path_string()
-			);
-			return;
-		}
-
-		if (const auto* tool = req.discovered_tool(discovery::tool_role::librarian)) {
-			command.m_args.emplace_back(
-				"-DCMAKE_AR=" + tool->path_string()
-			);
-		}
-	}
-
-	[[nodiscard]] inline std::string_view cmake_generator_for_backend(
-		cli::backend_kind backend
-	) noexcept {
-		switch (backend) {
-			case cli::backend_kind::automatic:
-			case cli::backend_kind::ninja:
-				return "Ninja";
-
-			case cli::backend_kind::make:
-			case cli::backend_kind::direct:
-			case cli::backend_kind::count:
-				return {};
-		}
-
-		return {};
-	}
-
-	inline void append_cmake_backend_generator_args(
-		sys::command_line& command,
-		const build::request& req
-	) {
-		const auto generator = cmake_generator_for_backend(req.backend());
-
-		if (generator.empty()) {
-			return;
-		}
-
-		command.m_args.emplace_back("-G");
-		command.m_args.emplace_back(std::string{generator});
-
-		if (generator == "Ninja") {
-			if (const auto* ninja = req.discovered_tool(discovery::tool_role::generator_ninja)) {
-				command.m_args.emplace_back(
-					"-DCMAKE_MAKE_PROGRAM=" + ninja->path_string()
-				);
-			}
-		}
-	}
-
-	inline void append_cmake_discovered_toolchain_args(
-		sys::command_line& command,
-		const build::request& req
-	) {
-		append_cmake_tool_if_discovered(
-			command,
-			req,
-			discovery::tool_role::c_compiler,
-			"CMAKE_C_COMPILER"
-		);
-
-		append_cmake_tool_if_discovered(
-			command,
-			req,
-			discovery::tool_role::cxx_compiler,
-			"CMAKE_CXX_COMPILER"
-		);
-
-		append_cmake_archive_tool_if_discovered(command, req);
-
-		append_cmake_tool_if_discovered(
-			command,
-			req,
-			discovery::tool_role::ranlib,
-			"CMAKE_RANLIB"
-		);
-
-		append_cmake_tool_if_discovered(
-			command,
-			req,
-			discovery::tool_role::resource_compiler,
-			"CMAKE_RC_COMPILER"
-		);
-	}
-
-	[[nodiscard]] inline sys::command_line cmake_configure_command(
-		const build::request& req,
-		const ext::cmake::project& cmake_project,
-		const std::filesystem::path& source_dir,
-		const std::filesystem::path& build_dir,
-		const std::filesystem::path& install_dir
-	) {
-		sys::command_line command;
-		command.m_args.emplace_back(req.tool_path(discovery::tool_role::cmake, "cmake").string());
-		command.m_args.emplace_back("-S");
-		command.m_args.emplace_back(source_dir.string());
-		command.m_args.emplace_back("-B");
-		command.m_args.emplace_back(build_dir.string());
-		command.m_args.emplace_back("-DCMAKE_INSTALL_PREFIX=" + install_dir.string());
-
-		if (!cmake_project.m_generator.empty()) {
-			command.m_args.emplace_back("-G");
-			command.m_args.emplace_back(cmake_project.m_generator);
-		} else {
-			append_cmake_backend_generator_args(command, req);
-		}
-
-		append_cmake_discovered_toolchain_args(command, req);
-
-		if (!cmake_project.m_build_config.empty()) {
-			command.m_args.emplace_back("-DCMAKE_BUILD_TYPE=" + cmake_project.m_build_config);
-		}
-
-		for (const auto& [key, value] : cmake_project.m_defines) {
-			command.m_args.emplace_back("-D" + key + "=" + value);
-		}
-
-		for (const auto& arg : cmake_project.m_args) {
-			command.m_args.emplace_back(arg);
-		}
-
-		return command;
-	}
-#endif // MGMK_ENABLE_EXT_CMAKE
-
-	[[nodiscard]] inline std::filesystem::path archive_extension(ext::archive_format format) {
-		switch (format) {
-			case ext::archive_format::zip: return ".zip";
-			case ext::archive_format::tar: return ".tar";
-			case ext::archive_format::tar_gz: return ".tar.gz";
-			case ext::archive_format::tar_xz: return ".tar.xz";
-			case ext::archive_format::auto_detect: return ".archive";
-		}
-
-		return ".archive";
-	}
-
-	[[nodiscard]] inline std::filesystem::path fetch_archive_path(
-		const build::request& req,
-		std::string_view name,
-		ext::archive_format format
-	) {
-		return fetch_root(req) / "archive" / (std::string{name} + archive_extension(format).string());
-	}
-
-	[[nodiscard]] inline bool string_ends_with(std::string_view text, std::string_view suffix) noexcept {
-		return text.size() >= suffix.size() && text.substr(text.size() - suffix.size()) == suffix;
-	}
-
-	[[nodiscard]] inline ext::archive_format resolve_archive_format(
-		const ext::archive_fetch& archive
-	) {
-		if (archive.m_format != ext::archive_format::auto_detect) {
-			return archive.m_format;
-		}
-
-		std::string url = archive.m_url;
-		std::ranges::transform(url, url.begin(), [](unsigned char ch) {
-			return static_cast<char>(std::tolower(ch));
-		});
-
-		if (string_ends_with(url, ".zip")) {
-			return ext::archive_format::zip;
-		}
-
-		if (string_ends_with(url, ".tar")) {
-			return ext::archive_format::tar;
-		}
-
-		if (string_ends_with(url, ".tar.gz") || string_ends_with(url, ".tgz")) {
-			return ext::archive_format::tar_gz;
-		}
-
-		if (string_ends_with(url, ".tar.xz") || string_ends_with(url, ".txz")) {
-			return ext::archive_format::tar_xz;
-		}
-
-		mgmkassert(false, "mgmake prep: archive format auto-detect could not infer archive type from URL '" + archive.m_url + "'");
-		return ext::archive_format::auto_detect;
-	}
-
-	[[nodiscard]] inline sys::command_line archive_download_command(
-		const build::request& req,
-		const std::filesystem::path& archive_path,
-		std::string_view url
-	) {
-		const auto* downloader = req.discovered_tool_any({
-			discovery::tool_role::curl,
-			discovery::tool_role::wget
-		});
-
-		mgmkassert(downloader != nullptr, "mgmake prep: archive fetch requires curl or wget");
-
-		sys::command_line command{};
-		command.m_args.emplace_back(downloader->path_string());
-
-		switch (downloader->m_role) {
-			case discovery::tool_role::curl:
-				command.m_args.emplace_back("-L");
-				command.m_args.emplace_back("-o");
-				command.m_args.emplace_back(archive_path.string());
-				command.m_args.emplace_back(std::string{url});
-				break;
-
-			case discovery::tool_role::wget:
-				command.m_args.emplace_back("-O");
-				command.m_args.emplace_back(archive_path.string());
-				command.m_args.emplace_back(std::string{url});
-				break;
-
-			default:
-				mgmkassert(false, "mgmake prep: unsupported archive downloader");
-				break;
-		}
-
-		return command;
-	}
-
-
-	[[nodiscard]] inline std::filesystem::path git_fetch_complete_marker(
-		const std::filesystem::path& source_dir
-	) {
-		return source_dir / ".git";
-	}
-
-	[[nodiscard]] inline sys::command_line git_clone_command(
-		const std::string& git_path,
-		const ext::git_fetch& git,
-		const std::filesystem::path& source_dir
-	) {
-		sys::command_line command{};
-		command.m_args.emplace_back(git_path);
-		command.m_args.emplace_back("clone");
-
-		if (git.m_shallow) {
-			command.m_args.emplace_back("--depth");
-			command.m_args.emplace_back("1");
-		}
-
-		if (git.m_submodules) {
-			command.m_args.emplace_back("--recurse-submodules");
-		}
-
-		if (!git.m_ref.empty()) {
-			command.m_args.emplace_back("--branch");
-			command.m_args.emplace_back(git.m_ref);
-		}
-
-		command.m_args.emplace_back(git.m_url);
-		command.m_args.emplace_back(source_dir.string());
-		return command;
-	}
-
-	[[nodiscard]] inline sys::command_line archive_extract_command(
-		const build::request& req,
-		ext::archive_format format,
-		const std::filesystem::path& archive_path,
-		const std::filesystem::path& tmp_dir
-	) {
-		sys::command_line command{};
-
-		switch (format) {
-			case ext::archive_format::zip: {
-				const auto unzip = req.tool_path(discovery::tool_role::unzip, "unzip");
-				command.m_args.emplace_back(unzip.string());
-				command.m_args.emplace_back(archive_path.string());
-				command.m_args.emplace_back("-d");
-				command.m_args.emplace_back(tmp_dir.string());
-				break;
-			}
-
-			case ext::archive_format::tar:
-			case ext::archive_format::tar_gz:
-			case ext::archive_format::tar_xz: {
-				const auto tar = req.tool_path(discovery::tool_role::tar, "tar");
-				command.m_args.emplace_back(tar.string());
-
-				switch (format) {
-					case ext::archive_format::tar: command.m_args.emplace_back("-xf"); break;
-					case ext::archive_format::tar_gz: command.m_args.emplace_back("-xzf"); break;
-					case ext::archive_format::tar_xz: command.m_args.emplace_back("-xJf"); break;
-					default: break;
-				}
-
-				command.m_args.emplace_back(archive_path.string());
-				command.m_args.emplace_back("-C");
-				command.m_args.emplace_back(tmp_dir.string());
-				break;
-			}
-
-			case ext::archive_format::auto_detect:
-				mgmkassert(false, "mgmake prep: archive format auto-detect must be resolved before extraction");
-				break;
-		}
-
-		return command;
-	}
-
-	inline context::context(
-		prep::result& result,
-		const build::request& req,
-		const spec::project& project
-	)
-		: m_result{result}
-		, m_req{req}
-		, m_project{project}
-		, m_emit{result.m_dag}
-		, m_fetches(project.m_fetches.size())
-#ifdef MGMK_ENABLE_EXT_CMAKE
-		, m_cmake_projects(project.m_cmake_projects.size())
-#endif // MGMK_ENABLE_EXT_CMAKE
-	{}
-
-	inline const prep::fetched& context::fetch(ext::fetch::id id) {
-		mgmkassert(id < m_project.m_fetches.size(), "mgmake prep: invalid fetch id");
-
-		if (m_fetches.at(id).has_value()) {
-			return m_fetches.at(id).value();
-		}
-
-		const auto& fetch = m_project.m_fetches.at(id);
-		m_fetches.at(id) = fetch_value(fetch);
-		return m_fetches.at(id).value();
-	}
-
-	inline prep::fetched context::fetch_value(const ext::fetch& fetch) {
-		mgmkassert(!fetch.m_name.empty(), "mgmake prep: fetch has no name");
-
-		// Fetches are keyed by name so repeated provider references share one prepared source tree.
-		if (auto existing = m_named_fetches.find(fetch.m_name); existing != m_named_fetches.end()) {
-			return existing->second;
-		}
-
-		mgmkassert(
-			!m_active_fetches.contains(fetch.m_name),
-			"mgmake prep: cyclic fetch dependency involving '" + fetch.m_name + "'"
-		);
-		m_active_fetches.emplace(fetch.m_name);
-
-		prep::fetched result{};
-
-		if (const auto* git = std::get_if<ext::git_fetch>(&fetch.m_data)) {
-			result = git_fetch(fetch, *git);
-		} else if (const auto* archive = std::get_if<ext::archive_fetch>(&fetch.m_data)) {
-			result = archive_fetch(fetch, *archive);
-		} else if (const auto* local = std::get_if<ext::local_fetch>(&fetch.m_data)) {
-			result = local_fetch(fetch, *local);
-		} else {
-			mgmkassert(false, "mgmake prep: unsupported fetch kind for '" + fetch.m_name + "'");
-		}
-
-		m_active_fetches.erase(fetch.m_name);
-		m_named_fetches.emplace(fetch.m_name, result);
-		m_result.m_fetches.insert_or_assign(fetch.m_name, result);
-		return result;
-	}
-
-
-#ifdef MGMK_ENABLE_EXT_CMAKE
-	inline const prep::cmake_project& context::cmake(ext::cmake::project::id id) {
-		mgmkassert(id < m_project.m_cmake_projects.size(), "mgmake prep: invalid CMake project id");
-
-		if (m_cmake_projects.at(id).has_value()) {
-			return m_cmake_projects.at(id).value();
-		}
-
-		const auto& cmake_project = m_project.m_cmake_projects.at(id);
-		m_cmake_projects.at(id) = cmake_value(cmake_project);
-		return m_cmake_projects.at(id).value();
-	}
-
-	inline prep::cmake_project context::cmake_value(
-		const ext::cmake::project& cmake_project
-	) {
-		mgmkassert(!cmake_project.m_name.empty(), "mgmake prep: CMake project has no name");
-		mgmkassert(cmake_project.m_source.has_value(), "mgmake prep: CMake project '" + cmake_project.m_name + "' has no source");
-
-		const auto fetched = fetch_value(cmake_project.m_source.value());
-		const auto source_dir = fetched.m_source_dir;
-		const auto build_dir = cmake_build_dir(request(), cmake_project.m_name);
-		const auto install_dir = cmake_install_dir(request(), cmake_project.m_name);
-		const auto query_path = ext::cmake::file_api::query_file(build_dir);
-		const auto configure_output = cmake_configure_output(build_dir);
-
-		const auto query_id = m_emit.generated(query_path);
-		const auto configure_id = m_emit.generated(configure_output);
-
-		// CMake must see the query file before configure so it writes codemodel replies.
-		// Write it directly instead of shelling out; JSON quoting through cmd/sh is fragile.
-		mgmkassert(
-			ext::cmake::file_api::write_query_file(build_dir),
-			"mgmake prep: failed to write CMake File API query for project '" + cmake_project.m_name + "'"
-		);
-
-		m_emit.action(
-			"Configure CMake project " + cmake_project.m_name,
-			"Configures external CMake project '" + cmake_project.m_name + "'.",
-			{fetched.m_stamp, query_id},
-			{configure_id},
-			cmake_configure_command(
-				request(),
-				cmake_project,
-				source_dir,
-				build_dir,
-				install_dir
-			)
-		);
-
-		dag::target dag_target{
-			"ext:cmake:configure:" + cmake_project.m_name,
-			{configure_id},
-			{fetched.m_target}
-		};
-		m_emit.target(dag_target);
-
-		prep::cmake_project result{};
-		result.m_name = cmake_project.m_name;
-		result.m_source_dir = source_dir;
-		result.m_build_dir = build_dir;
-		result.m_install_dir = install_dir;
-		result.m_usage_root = cmake_project.m_install
-			? ext::path_root::install
-			: ext::path_root::build;
-
-		m_result.m_cmake_projects.insert_or_assign(cmake_project.m_name, result);
-		return result;
-	}
-#endif // MGMK_ENABLE_EXT_CMAKE
-
-	inline prep::fetched context::git_fetch(
-		const ext::fetch& fetch,
-		const ext::git_fetch& git
-	) {
-		const auto src_dir = fetch_source_dir(request(), fetch.m_name);
-		const auto complete_marker = git_fetch_complete_marker(src_dir);
-		const auto stamp_id = m_emit.generated(complete_marker);
-
-
-		const auto* git_tool = request().discovered_tool(discovery::tool_role::git);
-		const auto git_path = git_tool ? git_tool->path_string() : std::string{"git"};
-
-		m_emit.action(
-			"Clone fetch " + fetch.m_name,
-			"Clones external git source '" + fetch.m_name + "'.",
-			{},
-			{stamp_id},
-			git_clone_command(git_path, git, src_dir)
-		);
-
-		dag::target dag_target{
-			"ext:fetch:" + fetch.m_name,
-			{stamp_id},
-			{}
-		};
-
-		return prep::fetched{
-			.m_target = m_emit.target(dag_target),
-			.m_stamp = stamp_id,
-			.m_source_dir = src_dir
-		};
-	}
-
-	inline prep::fetched context::archive_fetch(
-		const ext::fetch& fetch,
-		const ext::archive_fetch& archive
-	) {
-		const auto format = resolve_archive_format(archive);
-		const auto src_dir = fetch_source_dir(request(), fetch.m_name);
-		const auto tmp_dir = fetch_tmp_dir(request(), fetch.m_name);
-		const auto archive_path = fetch_archive_path(request(), fetch.m_name, format);
-		const auto prepare_stamp = fetch_stamp(request(), fetch.m_name, "prepare");
-		const auto final_stamp = fetch_stamp(request(), fetch.m_name, "fetch");
-
-		const auto prepare_id = m_emit.generated(prepare_stamp);
-		const auto archive_id = m_emit.generated(archive_path);
-		const auto tmp_id = m_emit.generated(tmp_dir);
-		const auto stamp_id = m_emit.generated(final_stamp);
-
-		m_emit.action(
-			"Prepare fetch " + fetch.m_name,
-			"Prepares external archive fetch '" + fetch.m_name + "'.",
-			{},
-			{prepare_id},
-			sys::reset_directory_stamp_command(tmp_dir, prepare_stamp)
-		);
-
-		m_emit.action(
-			"Download fetch " + fetch.m_name,
-			"Downloads external archive source '" + fetch.m_name + "'.",
-			{prepare_id},
-			{archive_id},
-			archive_download_command(request(), archive_path, archive.m_url)
-		);
-
-		m_emit.action(
-			"Extract fetch " + fetch.m_name,
-			"Extracts external archive source '" + fetch.m_name + "'.",
-			{archive_id, prepare_id},
-			{tmp_id},
-			archive_extract_command(request(), format, archive_path, tmp_dir)
-		);
-
-		// Archives often contain a top-level directory; normalization gives dependents a stable source root.
-		const auto normalized_from = archive.m_strip_prefix.empty()
-			? tmp_dir
-			: tmp_dir / archive.m_strip_prefix;
-
-		m_emit.action(
-			"Normalize fetch " + fetch.m_name,
-			"Normalizes external archive source '" + fetch.m_name + "'.",
-			{tmp_id},
-			{stamp_id},
-			sys::normalize_directory_stamp_command(normalized_from, src_dir, final_stamp)
-		);
-
-		dag::target dag_target{
-			"ext:fetch:" + fetch.m_name,
-			{stamp_id},
-			{}
-		};
-
-		return prep::fetched{
-			.m_target = m_emit.target(dag_target),
-			.m_stamp = stamp_id,
-			.m_source_dir = src_dir
-		};
-	}
-
-	inline prep::fetched context::local_fetch(
-		const ext::fetch& fetch,
-		const ext::local_fetch& local
-	) {
-		const auto stamp_path = fetch_stamp(request(), fetch.m_name, "fetch");
-		const auto stamp_id = m_emit.generated(stamp_path);
-
-		m_emit.action(
-			"Validate fetch " + fetch.m_name,
-			"Validates local external source '" + fetch.m_name + "'.",
-			{},
-			{stamp_id},
-			sys::validate_path_command(local.m_path, stamp_path)
-		);
-
-		dag::target dag_target{
-			"ext:fetch:" + fetch.m_name,
-			{stamp_id},
-			{}
-		};
-
-		return prep::fetched{
-			.m_target = m_emit.target(dag_target),
-			.m_stamp = stamp_id,
-			.m_source_dir = local.m_path
-		};
-	}
-
-}
-
-#endif // MGMK_PREP_CONTEXT_IMPL_HXX
-// ===== end include/mgmake/prep/context_impl.hxx =====
-
 
 // ===== begin include/mgmake/lower/context.hxx =====
 #pragma once
@@ -13024,13 +13411,9 @@ namespace mgmake::prep {
 
 // skipped duplicate include: include/mgmake/lower/target.hxx
 // skipped duplicate include: include/mgmake/lower/usage.hxx
-#ifdef MGMK_ENABLE_EXT_CMAKE
-// skipped duplicate include: include/mgmake/lower/provider_build.hxx
-#endif // MGMK_ENABLE_EXT_CMAKE
 // skipped duplicate include: include/mgmake/build/request.hxx
 // skipped duplicate include: include/mgmake/dag/emitter.hxx
 // skipped duplicate include: include/mgmake/dep/database.hxx
-// skipped duplicate include: include/mgmake/ext/provided_target_ref.hxx
 // skipped duplicate include: include/mgmake/prep/result.hxx
 // skipped duplicate include: include/mgmake/spec/executable.hxx
 // skipped duplicate include: include/mgmake/spec/library.hxx
@@ -13038,8 +13421,8 @@ namespace mgmake::prep {
 #include <filesystem>
 #include <optional>
 #include <set>
-#include <string_view>
 #include <span>
+#include <string_view>
 #include <vector>
 
 // Lowering context converts validated project specs plus prep results into a DAG of artifacts, actions, and targets.
@@ -13084,13 +13467,6 @@ namespace mgmake::lower {
 		// Lowering a library by name is reserved for external/system libraries
 		const lower::target& lower_library(std::string_view lib);
 		void lower_executable(spec::executable::id id);
-#ifdef MGMK_ENABLE_EXT_CMAKE
-		lower::provider_build lower_provider_build(
-			const ext::provided_target_ref& provider,
-			std::span<const dag::artifact::id> outputs
-		);
-#endif // MGMK_ENABLE_EXT_CMAKE
-
 		lower::usage use_libraries(
 			const std::set<std::string>& libraries,
 			std::string_view owner_name
@@ -13122,18 +13498,6 @@ namespace mgmake::lower {
 		lower::target lower_system_library(
 			std::string_view lib
 		);
-
-#ifdef MGMK_ENABLE_EXT_CMAKE
-		lower::target lower_provider_library(
-			const spec::library& lib,
-			lower::usage usage
-		);
-
-		void lower_provider_executable(
-			const spec::executable& exe,
-			lower::usage usage
-		);
-#endif // MGMK_ENABLE_EXT_CMAKE
 
 		std::vector<std::optional<lower::target>> m_libraries;
 		std::set<spec::library::id> m_active_libraries;
@@ -13398,53 +13762,37 @@ namespace mgmake::lower {
 #endif // MGMK_LOWER_OBJECTS_HXX
 // ===== end include/mgmake/lower/objects.hxx =====
 
+#ifdef MGMK_ENABLE_EXT_CMAKE
 
-// ===== begin include/mgmake/lower/context_impl.hxx =====
+// ===== begin include/mgmake/lower/cmake/provider.hxx =====
 #pragma once
 
-#ifndef MGMK_LOWER_CONTEXT_IMPL_HXX
-#define MGMK_LOWER_CONTEXT_IMPL_HXX
+#ifndef MGMK_LOWER_CMAKE_PROVIDER_HXX
+#define MGMK_LOWER_CMAKE_PROVIDER_HXX
 
 // skipped duplicate include: include/mgmake/lower/context.hxx
-// skipped duplicate include: include/mgmake/lower/objects.hxx
+// skipped duplicate include: include/mgmake/lower/provider_build.hxx
 // skipped duplicate include: include/mgmake/build/artifact_names.hxx
 // skipped duplicate include: include/mgmake/build/target.hxx
 // skipped duplicate include: include/mgmake/detail/assert.hxx
 // skipped duplicate include: include/mgmake/spec/project.hxx
 // skipped duplicate include: include/mgmake/sys/command_line.hxx
-// skipped duplicate include: include/mgmake/sys/file_command.hxx
 
 #include <algorithm>
+#include <array>
 #include <filesystem>
 #include <set>
+#include <span>
 #include <string>
 #include <string_view>
-#include <utility>
-#include <array>
 #include <vector>
 
-// Lowering is demand-driven: libraries are lowered when linked, executables are lowered explicitly, and provider targets become DAG dependencies.
-
-namespace mgmake::lower {
-	inline context::context(
-		dag::graph& graph,
-		const build::request& req,
-		const spec::project& project,
-		const prep::result& prep,
-		dep::database& deps
-	)
-		: m_req{req}
-		, m_project{project}
-		, m_prep{prep}
-		, m_deps{deps}
-		, m_emit{graph}
-		, m_libraries(project.m_libraries.size()) {}
-
-
 #ifdef MGMK_ENABLE_EXT_CMAKE
-	[[nodiscard]] inline std::filesystem::path conventional_provider_artifact(
+
+namespace mgmake::lower::cmake {
+	[[nodiscard]] inline std::filesystem::path conventional_library_artifact(
 		const build::request& req,
-		const prep::cmake_project& cmake_project,
+		const prep::cmake::project& cmake_project,
 		const ext::provided_target_ref& provider,
 		spec::library::kind kind
 	) {
@@ -13474,18 +13822,18 @@ namespace mgmake::lower {
 		return {};
 	}
 
-	[[nodiscard]] inline std::filesystem::path conventional_provider_executable(
+	[[nodiscard]] inline std::filesystem::path conventional_executable_artifact(
 		const build::request& req,
-		const prep::cmake_project& cmake_project,
+		const prep::cmake::project& cmake_project,
 		const ext::provided_target_ref& provider
 	) {
 		const auto root = cmake_project.root(ext::path_root::usage);
 		return root / "bin" / (provider.m_target + std::string{build::executable_extension(req.target_platform())});
 	}
 
-	[[nodiscard]] inline std::filesystem::path resolve_provider_library_artifact(
+	[[nodiscard]] inline std::filesystem::path resolve_library_artifact(
 		const build::request& req,
-		const prep::cmake_project& cmake_project,
+		const prep::cmake::project& cmake_project,
 		const ext::provided_target_ref& provider,
 		const spec::library& lib
 	) {
@@ -13505,12 +13853,12 @@ namespace mgmake::lower {
 			}
 		}
 
-		return conventional_provider_artifact(req, cmake_project, provider, lib.m_kind);
+		return conventional_library_artifact(req, cmake_project, provider, lib.m_kind);
 	}
 
-	[[nodiscard]] inline std::filesystem::path resolve_provider_executable_artifact(
+	[[nodiscard]] inline std::filesystem::path resolve_executable_artifact(
 		const build::request& req,
-		const prep::cmake_project& cmake_project,
+		const prep::cmake::project& cmake_project,
 		const ext::provided_target_ref& provider,
 		const spec::executable& exe
 	) {
@@ -13530,10 +13878,10 @@ namespace mgmake::lower {
 			}
 		}
 
-		return conventional_provider_executable(req, cmake_project, provider);
+		return conventional_executable_artifact(req, cmake_project, provider);
 	}
 
-	[[nodiscard]] inline std::filesystem::path provider_target_stamp(
+	[[nodiscard]] inline std::filesystem::path provider_stamp(
 		const build::request& req,
 		const ext::provided_target_ref& provider
 	) {
@@ -13541,10 +13889,10 @@ namespace mgmake::lower {
 			(provider.m_project + ".cmake.build." + provider.m_target);
 	}
 
-	[[nodiscard]] inline sys::command_line cmake_build_command(
+	[[nodiscard]] inline sys::command_line build_command(
 		const build::request& req,
 		const ext::cmake::project& cmake_project,
-		const prep::cmake_project& prepared,
+		const prep::cmake::project& prepared,
 		const ext::provided_target_ref& provider
 	) {
 		sys::command_line command;
@@ -13569,7 +13917,7 @@ namespace mgmake::lower {
 		return command;
 	}
 
-	[[nodiscard]] inline sys::command_line cmake_touch_command(
+	[[nodiscard]] inline sys::command_line touch_command(
 		const build::request& req,
 		const std::filesystem::path& path
 	) {
@@ -13590,7 +13938,7 @@ namespace mgmake::lower {
 		}
 	}
 
-	[[nodiscard]] inline bool cmake_target_is_static(
+	[[nodiscard]] inline bool target_is_static(
 		const ext::cmake::target& target,
 		spec::library::kind fallback_kind
 	) {
@@ -13601,7 +13949,7 @@ namespace mgmake::lower {
 		return target.m_type.empty() && fallback_kind == spec::library::kind::static_lib;
 	}
 
-	[[nodiscard]] inline bool cmake_link_fragment_is_path(std::string_view fragment) {
+	[[nodiscard]] inline bool link_fragment_is_path(std::string_view fragment) {
 		if (fragment.empty() || fragment.starts_with("-")) {
 			return false;
 		}
@@ -13614,8 +13962,8 @@ namespace mgmake::lower {
 			fragment.find('\\') != std::string_view::npos;
 	}
 
-	[[nodiscard]] inline std::filesystem::path resolve_cmake_link_fragment_path(
-		const prep::cmake_project& prepared,
+	[[nodiscard]] inline std::filesystem::path resolve_link_fragment_path(
+		const prep::cmake::project& prepared,
 		std::string_view fragment
 	) {
 		auto path = std::filesystem::path{std::string{fragment}};
@@ -13627,9 +13975,9 @@ namespace mgmake::lower {
 		return path;
 	}
 
-	inline void append_cmake_target_link_usage(
+	inline void append_target_link_usage(
 		dag::emitter& emit,
-		const prep::cmake_project& prepared,
+		const prep::cmake::project& prepared,
 		const ext::cmake::target& target,
 		spec::library::kind fallback_kind,
 		std::vector<dag::artifact::id>& linkable_artifacts,
@@ -13637,9 +13985,9 @@ namespace mgmake::lower {
 		std::set<std::string>& visited_targets
 	);
 
-	inline void append_cmake_link_fragment(
+	inline void append_link_fragment(
 		dag::emitter& emit,
-		const prep::cmake_project& prepared,
+		const prep::cmake::project& prepared,
 		std::string_view fragment,
 		std::vector<dag::artifact::id>& linkable_artifacts,
 		std::vector<dag::artifact::id>& provider_outputs
@@ -13648,8 +13996,8 @@ namespace mgmake::lower {
 			return;
 		}
 
-		if (cmake_link_fragment_is_path(fragment)) {
-			const auto artifact = emit.generated(resolve_cmake_link_fragment_path(prepared, fragment));
+		if (link_fragment_is_path(fragment)) {
+			const auto artifact = emit.generated(resolve_link_fragment_path(prepared, fragment));
 			append_artifact_once(linkable_artifacts, artifact);
 			append_artifact_once(provider_outputs, artifact);
 			return;
@@ -13663,9 +14011,9 @@ namespace mgmake::lower {
 		append_artifact_once(linkable_artifacts, artifact);
 	}
 
-	inline void append_cmake_target_ref(
+	inline void append_target_ref(
 		dag::emitter& emit,
-		const prep::cmake_project& prepared,
+		const prep::cmake::project& prepared,
 		std::string_view target_id,
 		std::vector<dag::artifact::id>& linkable_artifacts,
 		std::vector<dag::artifact::id>& provider_outputs,
@@ -13699,7 +14047,7 @@ namespace mgmake::lower {
 			}
 		}
 
-		append_cmake_target_link_usage(
+		append_target_link_usage(
 			emit,
 			prepared,
 			*target,
@@ -13710,9 +14058,9 @@ namespace mgmake::lower {
 		);
 	}
 
-	inline void append_cmake_link_entries(
+	inline void append_link_entries(
 		dag::emitter& emit,
-		const prep::cmake_project& prepared,
+		const prep::cmake::project& prepared,
 		const std::vector<ext::cmake::link_entry>& entries,
 		std::vector<dag::artifact::id>& linkable_artifacts,
 		std::vector<dag::artifact::id>& provider_outputs,
@@ -13721,7 +14069,7 @@ namespace mgmake::lower {
 		for (const auto& entry : entries) {
 			switch (entry.m_kind) {
 				case ext::cmake::link_entry_kind::fragment:
-					append_cmake_link_fragment(
+					append_link_fragment(
 						emit,
 						prepared,
 						entry.m_value,
@@ -13731,7 +14079,7 @@ namespace mgmake::lower {
 					break;
 
 				case ext::cmake::link_entry_kind::target_id:
-					append_cmake_target_ref(
+					append_target_ref(
 						emit,
 						prepared,
 						entry.m_value,
@@ -13744,17 +14092,17 @@ namespace mgmake::lower {
 		}
 	}
 
-	inline void append_cmake_target_link_usage(
+	inline void append_target_link_usage(
 		dag::emitter& emit,
-		const prep::cmake_project& prepared,
+		const prep::cmake::project& prepared,
 		const ext::cmake::target& target,
 		spec::library::kind fallback_kind,
 		std::vector<dag::artifact::id>& linkable_artifacts,
 		std::vector<dag::artifact::id>& provider_outputs,
 		std::set<std::string>& visited_targets
 	) {
-		if (cmake_target_is_static(target, fallback_kind)) {
-			append_cmake_link_entries(
+		if (target_is_static(target, fallback_kind)) {
+			append_link_entries(
 				emit,
 				prepared,
 				target.m_link_entries,
@@ -13764,7 +14112,7 @@ namespace mgmake::lower {
 			);
 		}
 
-		append_cmake_link_entries(
+		append_link_entries(
 			emit,
 			prepared,
 			target.m_interface_link_entries,
@@ -13773,7 +14121,242 @@ namespace mgmake::lower {
 			visited_targets
 		);
 	}
+
+	[[nodiscard]] inline lower::provider_build lower_provider_build(
+		lower::context& ctx,
+		const ext::provided_target_ref& provider,
+		std::span<const dag::artifact::id> extra_outputs
+	) {
+		mgmkassert(provider.m_kind == ext::provider_kind::cmake, "mgmake lower: unsupported external provider kind");
+		const auto cmake_id = ctx.m_project.find_cmake(provider.m_project);
+		mgmkassert(cmake_id.has_value(), "mgmake lower: unknown CMake project '" + provider.m_project + "'");
+		const auto* cmake_spec = ctx.m_project.get_cmake(cmake_id.value());
+		mgmkassert(cmake_spec != nullptr, "mgmake lower: unknown CMake project '" + provider.m_project + "'");
+
+		const auto* prepared = ctx.m_prep.find_cmake_project(provider.m_project);
+		mgmkassert(prepared != nullptr, "mgmake lower: CMake project '" + provider.m_project + "' was not prepared");
+
+		const auto stamp = provider_stamp(ctx.request(), provider);
+		const auto stamp_id = ctx.m_emit.generated(stamp);
+
+		std::vector<dag::artifact::id> build_outputs{extra_outputs.begin(), extra_outputs.end()};
+
+		if (build_outputs.empty()) {
+			build_outputs.emplace_back(stamp_id);
+		}
+
+		ctx.m_emit.action(
+			"Build CMake target " + provider.m_project + ":" + provider.m_target,
+			"Builds CMake target '" + provider.m_target + "' from project '" + provider.m_project + "'.",
+			{},
+			build_outputs,
+			build_command(ctx.request(), *cmake_spec, *prepared, provider)
+		);
+
+		if (!extra_outputs.empty()) {
+			ctx.m_emit.action(
+				"Stamp CMake target " + provider.m_project + ":" + provider.m_target,
+				"Marks CMake target '" + provider.m_target + "' from project '" + provider.m_project + "' as ready.",
+				build_outputs,
+				{stamp_id},
+				touch_command(ctx.request(), stamp)
+			);
+		}
+
+		dag::target dag_target{
+			"ext:cmake:" + provider.m_project + ":" + provider.m_target,
+			{stamp_id},
+			{}
+		};
+
+		return lower::provider_build{
+			.m_dag_target = ctx.m_emit.target(dag_target),
+			.m_ready_stamp = stamp_id
+		};
+	}
+
+	[[nodiscard]] inline lower::target lower_provider_library(
+		lower::context& ctx,
+		const spec::library& lib,
+		lower::usage usage
+	) {
+		mgmkassert(lib.m_provider.has_value(), "mgmake lower: provider library has no provider");
+		const auto& provider = lib.m_provider.value();
+		const auto* prepared = ctx.m_prep.find_cmake_project(provider.m_project);
+		mgmkassert(prepared != nullptr, "mgmake lower: CMake project '" + provider.m_project + "' was not prepared");
+
+		auto include_dirs = lib.include_dirs();
+		include_dirs.insert(usage.m_include_dirs.begin(), usage.m_include_dirs.end());
+
+		for (const auto& include_dir : lib.m_external_include_dirs) {
+			include_dirs.emplace(prepared->resolve(include_dir));
+		}
+
+		lower::target lowered{};
+		std::vector<dag::artifact::id> provider_outputs{};
+		std::filesystem::path artifact_path;
+
+		if (lib.m_kind != spec::library::kind::interface) {
+			artifact_path = resolve_library_artifact(
+				ctx.request(),
+				*prepared,
+				provider,
+				lib
+			);
+
+			mgmkassert(!artifact_path.empty(), "mgmake lower: unable to resolve artifact for provider-backed library '" + lib.m_name + "'");
+			const auto artifact_id = ctx.m_emit.generated(artifact_path);
+			provider_outputs.emplace_back(artifact_id);
+			lowered.m_linkable_artifacts.emplace_back(artifact_id);
+		}
+
+		const ext::cmake::target* cmake_target = prepared->find_target(provider.m_target);
+
+		if (cmake_target == nullptr && !artifact_path.empty()) {
+			cmake_target = prepared->find_target_artifact(artifact_path);
+		}
+
+		mgmkassert(
+			cmake_target != nullptr,
+			"mgmake lower: CMake provider target '" + provider.m_target +
+				"' from project '" + provider.m_project +
+				"' was not found in the CMake File API codemodel"
+		);
+
+		const auto old_linkable_count = lowered.m_linkable_artifacts.size();
+		std::set<std::string> visited_cmake_targets;
+
+		if (!cmake_target->m_id.empty()) {
+			visited_cmake_targets.emplace(cmake_target->m_id);
+		}
+
+		append_target_link_usage(
+			ctx.m_emit,
+			*prepared,
+			*cmake_target,
+			lib.m_kind,
+			lowered.m_linkable_artifacts,
+			provider_outputs,
+			visited_cmake_targets
+		);
+
+		mgmkassert(
+			!cmake_target->has_link_usage() || lowered.m_linkable_artifacts.size() != old_linkable_count,
+			"mgmake lower: CMake provider target '" + provider.m_target +
+				"' was found and has link usage, but no CMake link inputs were imported"
+		);
+
+		// The provider build stamp becomes a usage input so dependents wait for the CMake target.
+		auto provider_target = lower_provider_build(ctx, provider, provider_outputs);
+		usage.m_dag_dependencies.emplace(provider_target.m_dag_target);
+		usage.m_usage_inputs.emplace_back(provider_target.m_ready_stamp);
+
+		lowered.m_linkable_artifacts.insert(
+			lowered.m_linkable_artifacts.end(),
+			usage.m_link_inputs.begin(),
+			usage.m_link_inputs.end()
+		);
+		lowered.m_include_dirs = std::move(include_dirs);
+		lowered.m_usage_inputs = std::move(usage.m_usage_inputs);
+
+		dag::target dag_target{
+			lib.m_name,
+			{},
+			std::move(usage.m_dag_dependencies)
+		};
+
+		for (const auto artifact_id : lowered.m_linkable_artifacts) {
+			dag_target.m_outputs.emplace(artifact_id);
+		}
+
+		lowered.m_dag_target = ctx.m_emit.target(dag_target);
+		return lowered;
+	}
+
+	inline void lower_provider_executable(
+		lower::context& ctx,
+		const spec::executable& exe,
+		lower::usage usage
+	) {
+		mgmkassert(exe.m_provider.has_value(), "mgmake lower: provider executable has no provider");
+		const auto& provider = exe.m_provider.value();
+		const auto* prepared = ctx.m_prep.find_cmake_project(provider.m_project);
+		mgmkassert(prepared != nullptr, "mgmake lower: CMake project '" + provider.m_project + "' was not prepared");
+
+		const auto artifact_path = resolve_executable_artifact(
+			ctx.request(),
+			*prepared,
+			provider,
+			exe
+		);
+
+		mgmkassert(!artifact_path.empty(), "mgmake lower: unable to resolve artifact for provider-backed executable '" + exe.m_name + "'");
+		const auto artifact_id = ctx.m_emit.generated(artifact_path);
+		const std::array provider_outputs{artifact_id};
+		auto provider_target = lower_provider_build(ctx, provider, provider_outputs);
+		usage.m_dag_dependencies.emplace(provider_target.m_dag_target);
+		usage.m_usage_inputs.emplace_back(provider_target.m_ready_stamp);
+
+		dag::target dag_target{
+			exe.m_name,
+			{artifact_id},
+			std::move(usage.m_dag_dependencies)
+		};
+
+		ctx.m_emit.target(dag_target);
+	}
+}
+
 #endif // MGMK_ENABLE_EXT_CMAKE
+
+#endif // MGMK_LOWER_CMAKE_PROVIDER_HXX
+// ===== end include/mgmake/lower/cmake/provider.hxx =====
+
+#endif // MGMK_ENABLE_EXT_CMAKE
+
+// ===== begin include/mgmake/lower/context_impl.hxx =====
+#pragma once
+
+#ifndef MGMK_LOWER_CONTEXT_IMPL_HXX
+#define MGMK_LOWER_CONTEXT_IMPL_HXX
+
+// skipped duplicate include: include/mgmake/lower/context.hxx
+// skipped duplicate include: include/mgmake/lower/objects.hxx
+#ifdef MGMK_ENABLE_EXT_CMAKE
+// skipped duplicate include: include/mgmake/lower/cmake/provider.hxx
+#endif // MGMK_ENABLE_EXT_CMAKE
+// skipped duplicate include: include/mgmake/build/artifact_names.hxx
+// skipped duplicate include: include/mgmake/build/target.hxx
+// skipped duplicate include: include/mgmake/detail/assert.hxx
+// skipped duplicate include: include/mgmake/spec/project.hxx
+// skipped duplicate include: include/mgmake/sys/command_line.hxx
+// skipped duplicate include: include/mgmake/sys/file_command.hxx
+
+#include <algorithm>
+#include <filesystem>
+#include <set>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+// Lowering is demand-driven: libraries are lowered when linked, executables are lowered explicitly, and provider targets become DAG dependencies.
+
+namespace mgmake::lower {
+	inline context::context(
+		dag::graph& graph,
+		const build::request& req,
+		const spec::project& project,
+		const prep::result& prep,
+		dep::database& deps
+	)
+		: m_req{req}
+		, m_project{project}
+		, m_prep{prep}
+		, m_deps{deps}
+		, m_emit{graph}
+		, m_libraries(project.m_libraries.size()) {}
+
 
 	[[nodiscard]] inline std::string render_link_input(
 		const dag::artifact& artifact,
@@ -13841,7 +14424,7 @@ namespace mgmake::lower {
 				dep.m_linkable_artifacts.end()
 			);
 
-			result.m_include_dirs.insert_range(dep.m_include_dirs);
+			result.m_include_dirs.insert(dep.m_include_dirs.begin(), dep.m_include_dirs.end());
 			result.m_usage_inputs.insert(
 				result.m_usage_inputs.end(),
 				dep.m_usage_inputs.begin(),
@@ -13881,7 +14464,7 @@ namespace mgmake::lower {
 
 #ifdef MGMK_ENABLE_EXT_CMAKE
 		if (lib.provider_backed()) {
-			m_libraries.at(id) = lower_provider_library(lib, std::move(usage));
+			m_libraries.at(id) = lower::cmake::lower_provider_library(*this, lib, std::move(usage));
 			m_active_libraries.erase(id);
 			return m_libraries.at(id).value();
 		}
@@ -13937,7 +14520,7 @@ namespace mgmake::lower {
 		);
 
 		auto include_dirs = lib.include_dirs();
-		include_dirs.insert_range(usage.m_include_dirs);
+		include_dirs.insert(usage.m_include_dirs.begin(), usage.m_include_dirs.end());
 		auto link_inputs = std::move(usage.m_link_inputs);
 
 		dag::target dag_target{
@@ -13966,7 +14549,7 @@ namespace mgmake::lower {
 		);
 
 		auto include_dirs = lib.include_dirs();
-		include_dirs.insert_range(usage.m_include_dirs);
+		include_dirs.insert(usage.m_include_dirs.begin(), usage.m_include_dirs.end());
 
 		auto object_ids = lower_objects(lib, include_dirs, usage.m_usage_inputs);
 
@@ -14069,7 +14652,7 @@ namespace mgmake::lower {
 		);
 
 		auto include_dirs = lib.include_dirs();
-		include_dirs.insert_range(usage.m_include_dirs);
+		include_dirs.insert(usage.m_include_dirs.begin(), usage.m_include_dirs.end());
 
 		auto object_ids = lower_objects(lib, include_dirs, usage.m_usage_inputs);
 
@@ -14173,7 +14756,7 @@ namespace mgmake::lower {
 
 #ifdef MGMK_ENABLE_EXT_CMAKE
 		if (exe.provider_backed()) {
-			lower_provider_executable(exe, std::move(usage));
+			lower::cmake::lower_provider_executable(*this, exe, std::move(usage));
 			return;
 		}
 #endif // MGMK_ENABLE_EXT_CMAKE
@@ -14184,7 +14767,7 @@ namespace mgmake::lower {
 		);
 
 		auto include_dirs = exe.include_dirs();
-		include_dirs.insert_range(usage.m_include_dirs);
+		include_dirs.insert(usage.m_include_dirs.begin(), usage.m_include_dirs.end());
 
 		auto object_ids = lower_objects(exe, include_dirs, usage.m_usage_inputs);
 		std::vector<dag::artifact::id> inputs = object_ids;
@@ -14255,190 +14838,76 @@ namespace mgmake::lower {
 		m_emit.target(dag_target);
 	}
 
-#ifdef MGMK_ENABLE_EXT_CMAKE
-	inline lower::provider_build context::lower_provider_build(
-		const ext::provided_target_ref& provider,
-		std::span<const dag::artifact::id> extra_outputs
-	) {
-		mgmkassert(provider.m_kind == ext::provider_kind::cmake, "mgmake lower: unsupported external provider kind");
-		const auto* cmake_spec = m_project.get_cmake(m_project.find_cmake(provider.m_project).value());
-		mgmkassert(cmake_spec != nullptr, "mgmake lower: unknown CMake project '" + provider.m_project + "'");
-
-		const auto* prepared = m_prep.find_cmake_project(provider.m_project);
-		mgmkassert(prepared != nullptr, "mgmake lower: CMake project '" + provider.m_project + "' was not prepared");
-
-		const auto stamp = provider_target_stamp(request(), provider);
-		const auto stamp_id = m_emit.generated(stamp);
-
-		std::vector<dag::artifact::id> build_outputs{extra_outputs.begin(), extra_outputs.end()};
-
-		if (build_outputs.empty()) {
-			build_outputs.emplace_back(stamp_id);
-		}
-
-		m_emit.action(
-			"Build CMake target " + provider.m_project + ":" + provider.m_target,
-			"Builds external CMake target '" + provider.m_target + "' from project '" + provider.m_project + "'.",
-			{},
-			build_outputs,
-			cmake_build_command(request(), *cmake_spec, *prepared, provider)
-		);
-
-		if (!extra_outputs.empty()) {
-			m_emit.action(
-				"Stamp CMake target " + provider.m_project + ":" + provider.m_target,
-				"Marks external CMake target '" + provider.m_target + "' from project '" + provider.m_project + "' as ready.",
-				build_outputs,
-				{stamp_id},
-				cmake_touch_command(request(), stamp)
-			);
-		}
-
-		dag::target dag_target{
-			"ext:cmake:" + provider.m_project + ":" + provider.m_target,
-			{stamp_id},
-			{}
-		};
-
-		return lower::provider_build{
-			.m_dag_target = m_emit.target(dag_target),
-			.m_ready_stamp = stamp_id
-		};
-	}
-
-	inline lower::target context::lower_provider_library(
-		const spec::library& lib,
-		lower::usage usage
-	) {
-		mgmkassert(lib.m_provider.has_value(), "mgmake lower: provider library has no provider");
-		const auto& provider = lib.m_provider.value();
-		const auto* prepared = m_prep.find_cmake_project(provider.m_project);
-		mgmkassert(prepared != nullptr, "mgmake lower: CMake project '" + provider.m_project + "' was not prepared");
-
-		auto include_dirs = lib.include_dirs();
-		include_dirs.insert_range(usage.m_include_dirs);
-
-		for (const auto& include_dir : lib.m_external_include_dirs) {
-			include_dirs.emplace(prepared->resolve(include_dir));
-		}
-
-		lower::target lowered{};
-		std::vector<dag::artifact::id> provider_outputs{};
-		std::filesystem::path artifact_path;
-
-		if (lib.m_kind != spec::library::kind::interface) {
-			artifact_path = resolve_provider_library_artifact(
-				request(),
-				*prepared,
-				provider,
-				lib
-			);
-
-			mgmkassert(!artifact_path.empty(), "mgmake lower: unable to resolve artifact for provider-backed library '" + lib.m_name + "'");
-			const auto artifact_id = m_emit.generated(artifact_path);
-			provider_outputs.emplace_back(artifact_id);
-			lowered.m_linkable_artifacts.emplace_back(artifact_id);
-		}
-
-		const ext::cmake::target* cmake_target = prepared->find_target(provider.m_target);
-
-		if (cmake_target == nullptr && !artifact_path.empty()) {
-			cmake_target = prepared->find_target_artifact(artifact_path);
-		}
-
-		mgmkassert(
-			cmake_target != nullptr,
-			"mgmake lower: CMake provider target '" + provider.m_target +
-				"' from project '" + provider.m_project +
-				"' was not found in the CMake File API codemodel"
-		);
-
-		const auto old_linkable_count = lowered.m_linkable_artifacts.size();
-		std::set<std::string> visited_cmake_targets;
-
-		if (!cmake_target->m_id.empty()) {
-			visited_cmake_targets.emplace(cmake_target->m_id);
-		}
-
-		append_cmake_target_link_usage(
-			m_emit,
-			*prepared,
-			*cmake_target,
-			lib.m_kind,
-			lowered.m_linkable_artifacts,
-			provider_outputs,
-			visited_cmake_targets
-		);
-
-		mgmkassert(
-			!cmake_target->has_link_usage() || lowered.m_linkable_artifacts.size() != old_linkable_count,
-			"mgmake lower: CMake provider target '" + provider.m_target +
-				"' was found and has link usage, but no CMake link inputs were imported"
-		);
-
-		// The provider build stamp becomes a usage input so dependents wait for the external target.
-		auto provider_target = lower_provider_build(provider, provider_outputs);
-		usage.m_dag_dependencies.emplace(provider_target.m_dag_target);
-		usage.m_usage_inputs.emplace_back(provider_target.m_ready_stamp);
-
-		lowered.m_linkable_artifacts.insert(
-			lowered.m_linkable_artifacts.end(),
-			usage.m_link_inputs.begin(),
-			usage.m_link_inputs.end()
-		);
-		lowered.m_include_dirs = std::move(include_dirs);
-		lowered.m_usage_inputs = std::move(usage.m_usage_inputs);
-
-		dag::target dag_target{
-			lib.m_name,
-			{},
-			std::move(usage.m_dag_dependencies)
-		};
-
-		for (const auto artifact_id : lowered.m_linkable_artifacts) {
-			dag_target.m_outputs.emplace(artifact_id);
-		}
-
-		lowered.m_dag_target = m_emit.target(dag_target);
-		return lowered;
-	}
-
-	inline void context::lower_provider_executable(
-		const spec::executable& exe,
-		lower::usage usage
-	) {
-		mgmkassert(exe.m_provider.has_value(), "mgmake lower: provider executable has no provider");
-		const auto& provider = exe.m_provider.value();
-		const auto* prepared = m_prep.find_cmake_project(provider.m_project);
-		mgmkassert(prepared != nullptr, "mgmake lower: CMake project '" + provider.m_project + "' was not prepared");
-
-		const auto artifact_path = resolve_provider_executable_artifact(
-			request(),
-			*prepared,
-			provider,
-			exe
-		);
-
-		mgmkassert(!artifact_path.empty(), "mgmake lower: unable to resolve artifact for provider-backed executable '" + exe.m_name + "'");
-		const auto artifact_id = m_emit.generated(artifact_path);
-		const std::array provider_outputs{artifact_id};
-		auto provider_target = lower_provider_build(provider, provider_outputs);
-		usage.m_dag_dependencies.emplace(provider_target.m_dag_target);
-		usage.m_usage_inputs.emplace_back(provider_target.m_ready_stamp);
-
-		dag::target dag_target{
-			exe.m_name,
-			{artifact_id},
-			std::move(usage.m_dag_dependencies)
-		};
-
-		m_emit.target(dag_target);
-	}
-#endif // MGMK_ENABLE_EXT_CMAKE
 }
 
 #endif // MGMK_LOWER_CONTEXT_IMPL_HXX
 // ===== end include/mgmake/lower/context_impl.hxx =====
+
+
+// ===== begin include/mgmake/lower/project.hxx =====
+#pragma once
+
+#ifndef MGMK_LOWER_PROJECT_HXX
+#define MGMK_LOWER_PROJECT_HXX
+
+// skipped duplicate include: include/mgmake/build/request.hxx
+// skipped duplicate include: include/mgmake/dag/graph.hxx
+// skipped duplicate include: include/mgmake/dep/database.hxx
+// skipped duplicate include: include/mgmake/prep/result.hxx
+
+namespace mgmake::spec {
+	struct project;
+}
+
+namespace mgmake::lower {
+	[[nodiscard]] dag::graph project(
+		const spec::project& project,
+		const build::request& req,
+		const prep::result& prepared,
+		dep::database& deps
+	);
+}
+
+#endif // MGMK_LOWER_PROJECT_HXX
+// ===== end include/mgmake/lower/project.hxx =====
+
+
+// ===== begin include/mgmake/lower/project_impl.hxx =====
+#pragma once
+
+#ifndef MGMK_LOWER_PROJECT_IMPL_HXX
+#define MGMK_LOWER_PROJECT_IMPL_HXX
+
+// skipped duplicate include: include/mgmake/lower/project.hxx
+// skipped duplicate include: include/mgmake/lower/context_impl.hxx
+// skipped duplicate include: include/mgmake/spec/project.hxx
+
+// Project lowering consumes the validated spec plus prepared metadata and emits the final build DAG.
+
+namespace mgmake::lower {
+	[[nodiscard]] inline dag::graph project(
+		const spec::project& project,
+		const build::request& req,
+		const prep::result& prepared,
+		dep::database& deps
+	) {
+		dag::graph result{};
+		lower::context ctx{result, req, project, prepared, deps};
+
+		for (spec::library::id id = 0; id < project.m_libraries.size(); ++id) {
+			ctx.lower_library(id);
+		}
+
+		for (spec::executable::id id = 0; id < project.m_executables.size(); ++id) {
+			ctx.lower_executable(id);
+		}
+
+		return result;
+	}
+}
+
+#endif // MGMK_LOWER_PROJECT_IMPL_HXX
+// ===== end include/mgmake/lower/project_impl.hxx =====
 
 
 // ===== begin include/mgmake/spec/project_impl.hxx =====
@@ -14448,48 +14917,42 @@ namespace mgmake::lower {
 #define MGMK_SPEC_PROJECT_IMPL_HXX
 
 // skipped duplicate include: include/mgmake/spec/project.hxx
-// skipped duplicate include: include/mgmake/lower/context_impl.hxx
-// skipped duplicate include: include/mgmake/prep/context_impl.hxx
+// skipped duplicate include: include/mgmake/acquire/plan.hxx
+// skipped duplicate include: include/mgmake/configure/plan.hxx
+// skipped duplicate include: include/mgmake/lower/project_impl.hxx
+// skipped duplicate include: include/mgmake/prep/finalize.hxx
 
-#include <utility>
-
-// Project implementation is the phase boundary from spec to prep DAG and final build DAG.
+// Project wrappers keep custom entrypoints simple while the free phase functions
+// remain the canonical implementations.
 
 namespace mgmake::spec {
-	inline prep::result project::prepare(const build::request& req) const {
-		prep::result result{};
-		prep::context ctx{result, req, *this};
-
-		for (ext::fetch::id id = 0; id < m_fetches.size(); ++id) {
-			ctx.fetch(id);
-		}
-
-#ifdef MGMK_ENABLE_EXT_CMAKE
-		for (ext::cmake::project::id id = 0; id < m_cmake_projects.size(); ++id) {
-			ctx.cmake(id);
-		}
-#endif // MGMK_ENABLE_EXT_CMAKE
-
-		return result;
+	inline mgmake::acquire::result project::acquire(
+		const build::request& req
+	) const {
+		return mgmake::acquire::plan(*this, req);
 	}
 
-	inline dag::graph project::build(
+	inline mgmake::configure::result project::configure(
 		const build::request& req,
-		const prep::result& prepared,
+		const mgmake::acquire::result& acquired
+	) const {
+		return mgmake::configure::plan(*this, req, acquired);
+	}
+
+	inline std::expected<mgmake::prep::result, std::string> project::prepare(
+		const build::request& req,
+		const mgmake::acquire::result& acquired,
+		const mgmake::configure::result& configured
+	) const {
+		return mgmake::prep::finalize(*this, req, acquired, configured);
+	}
+
+	inline dag::graph project::lower(
+		const build::request& req,
+		const mgmake::prep::result& prepared,
 		dep::database& deps
 	) const {
-		dag::graph result{};
-		lower::context ctx{result, req, *this, prepared, deps};
-
-		for (spec::library::id id = 0; id < m_libraries.size(); ++id) {
-			ctx.lower_library(id);
-		}
-
-		for (spec::executable::id id = 0; id < m_executables.size(); ++id) {
-			ctx.lower_executable(id);
-		}
-
-		return result;
+		return mgmake::lower::project(*this, req, prepared, deps);
 	}
 }
 
@@ -14573,7 +15036,7 @@ namespace mgmake::detail {
 #define MGMAKE_ENTRY_ENTRY_HXX
 
 // skipped duplicate include: include/mgmake/backend/execute.hxx
-// skipped duplicate include: include/mgmake/prep/executor.hxx
+// skipped duplicate include: include/mgmake/dag/execute.hxx
 // skipped duplicate include: include/mgmake/build/clean.hxx
 // skipped duplicate include: include/mgmake/build/request_from_options.hxx
 // skipped duplicate include: include/mgmake/build/run.hxx
@@ -14593,7 +15056,7 @@ namespace mgmake::detail {
 #include <type_traits>
 #include <utility>
 
-// The entry point owns program flow: parse CLI, build a request, resolve tools, prepare externals, lower the DAG, then dispatch the action.
+// The entry point owns program flow: parse CLI, build a request, resolve tools, build phase graphs, prepare metadata, lower the DAG, then dispatch the action.
 
 namespace mgmake {
 	template <build::toolchain_registry_like Toolchains>
@@ -14737,73 +15200,105 @@ namespace mgmake {
 
 		auto resolved_req = std::move(*resolved_req_result);
 		auto hashes = detail::hashes::load(resolved_req);
-		// Preparation creates a small DAG for external fetch/configure steps before build lowering.
-		auto prep_result = proj.prepare(resolved_req);
 
-		if (opts.m_action == cli::action_kind::graph) {
-			const std::string graph_kind = opts.m_targets.empty()
-				? std::string{"build"}
-				: opts.m_targets.front();
+		const bool graph_action = opts.m_action == cli::action_kind::graph;
+		const std::string graph_kind = graph_action
+			? (opts.m_targets.empty() ? std::string{"build"} : opts.m_targets.front())
+			: std::string{};
 
-			const auto graph_dir = resolved_req.build_dir() / "graph";
-
-			if (graph_kind == "discovery" || graph_kind == "prep") {
-				detail::write_graphviz_dot_file(
-					prep_result.m_dag,
-					graph_dir / "discovery.dot"
-				);
-				return detail::entry_exit_success;
-			}
-		}
-
-		auto prep_execute_result = prep::execute(
-			opts,
-			resolved_req,
-			prep_result,
-			hashes
-		);
-
-		if (!prep_execute_result) {
-			std::println(stderr, "{}", prep_execute_result.error());
-			return detail::entry_exit_action_failure;
-		}
-
-		if (opts.m_action == cli::action_kind::graph) {
-			const std::string graph_kind = opts.m_targets.empty()
-				? std::string{"build"}
-				: opts.m_targets.front();
-
-			const auto graph_dir = resolved_req.build_dir() / "graph";
-
-			if (graph_kind == "all") {
-				detail::write_graphviz_dot_file(
-					prep_result.m_dag,
-					graph_dir / "discovery.dot"
-				);
-			}
-
-			if (graph_kind == "build" || graph_kind == "all") {
-				dep::database deps{};
-				auto build_graph = proj.build(resolved_req, prep_result, deps);
-				detail::write_graphviz_dot_file(
-					build_graph,
-					graph_dir / "build.dot"
-				);
-
-				return detail::entry_exit_success;
-			}
-
+		if (graph_action &&
+			graph_kind != "acquire" &&
+			graph_kind != "configure" &&
+			graph_kind != "build" &&
+			graph_kind != "all"
+		) {
 			std::println(
 				stderr,
-				"mgmake: unknown graph kind '{}'; expected discovery, build, or all",
+				"mgmake: unknown graph kind '{}'; expected acquire, configure, build, or all",
 				graph_kind
 			);
 			return detail::entry_exit_usage_error;
 		}
 
-		// Build lowering consumes any dependency side files already on disk and emits the main DAG.
+		const auto graph_dir = resolved_req.build_dir() / "graph";
+
+		auto acquired = proj.acquire(resolved_req);
+
+		if (graph_action && (graph_kind == "acquire" || graph_kind == "all")) {
+			detail::write_graphviz_dot_file(
+				acquired.m_graph,
+				graph_dir / "acquire.dot"
+			);
+
+			if (graph_kind == "acquire") {
+				return detail::entry_exit_success;
+			}
+		}
+
+		auto configured = proj.configure(resolved_req, acquired);
+
+		if (graph_action && (graph_kind == "configure" || graph_kind == "all")) {
+			detail::write_graphviz_dot_file(
+				configured.m_graph,
+				graph_dir / "configure.dot"
+			);
+
+			if (graph_kind == "configure") {
+				return detail::entry_exit_success;
+			}
+		}
+
+		auto acquire_execute_result = dag::execute(
+			"acquire",
+			opts,
+			resolved_req,
+			acquired.m_graph,
+			hashes
+		);
+
+		if (!acquire_execute_result) {
+			std::println(stderr, "{}", acquire_execute_result.error());
+			return detail::entry_exit_action_failure;
+		}
+
+		auto configure_execute_result = dag::execute(
+			"configure",
+			opts,
+			resolved_req,
+			configured.m_graph,
+			hashes
+		);
+
+		if (!configure_execute_result) {
+			std::println(stderr, "{}", configure_execute_result.error());
+			return detail::entry_exit_action_failure;
+		}
+
+		auto prepared_result = proj.prepare(
+			resolved_req,
+			acquired,
+			configured
+		);
+
+		if (!prepared_result) {
+			std::println(stderr, "{}", prepared_result.error());
+			return detail::entry_exit_action_failure;
+		}
+
+		// Build lowering consumes finalized metadata and any dependency side files already on disk.
 		dep::database deps{};
-		auto graph = proj.build(resolved_req, prep_result, deps);
+		auto graph = proj.lower(resolved_req, *prepared_result, deps);
+
+		if (graph_action) {
+			if (graph_kind == "build" || graph_kind == "all") {
+				detail::write_graphviz_dot_file(
+					graph,
+					graph_dir / "build.dot"
+				);
+
+				return detail::entry_exit_success;
+			}
+		}
 
 		if (opts.m_action == cli::action_kind::run) {
 			const auto run_target = build::resolve_run_target_name(opts, proj);
@@ -14873,6 +15368,7 @@ namespace mgmake {
 		}
 
 		return detail::entry_exit_success;
+
 	}
 
 	template <typename ProjectFactory>
@@ -14963,16 +15459,6 @@ int main(int argc, char** argv) {                                               
 #endif // MGMAKE_ENTRY_MACRO_HXX
 // ===== end include/mgmake/entry/macro.hxx =====
 
-// Include extensions last
-// skipped duplicate include: include/mgmake/ext/provider_kind.hxx
-// skipped duplicate include: include/mgmake/ext/path_root.hxx
-// skipped duplicate include: include/mgmake/ext/provided_target_ref.hxx
-// skipped duplicate include: include/mgmake/ext/rooted_path.hxx
-// skipped duplicate include: include/mgmake/ext/fetch.hxx
-#ifdef MGMK_ENABLE_EXT_CMAKE
-// skipped duplicate include: include/mgmake/ext/cmake/project.hxx
-
-#endif // MGMK_ENABLE_EXT_CMAKE
 
 #endif // MGMAKE_MGMAKE_HXX
 // ===== end include/mgmake/mgmake.hxx =====

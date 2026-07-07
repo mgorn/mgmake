@@ -59,35 +59,12 @@
 #include "dag/graph.hxx"
 #include "dag/target.hxx"
 #include "dag/emitter.hxx"
+#include "dag/execute.hxx"
 #include "backend/ninja.hxx"
 #include "backend/registry.hxx"
 #include "backend/capabilities.hxx"
 #include "backend/execute.hxx"
-#include "spec/executable.hxx"
-#include "spec/executable_impl.hxx"
-#include "spec/library.hxx"
-#include "spec/library_impl.hxx"
-#include "spec/project.hxx"
-#include "discovery/discovery.hxx"
-#include "lower/target.hxx"
-#include "lower/usage.hxx"
-#ifdef MGMK_ENABLE_EXT_CMAKE
-#include "lower/provider_build.hxx"
-#endif // MGMK_ENABLE_EXT_CMAKE
-#include "prep/fetched.hxx"
-#include "prep/result.hxx"
-#include "prep/context.hxx"
-#include "prep/executor.hxx"
-#include "prep/context_impl.hxx"
-#include "lower/context.hxx"
-#include "lower/objects.hxx"
-#include "lower/context_impl.hxx"
-#include "spec/project_impl.hxx"
-#include "detail/project_factory.hxx"
-#include "entry/exit_code.hxx"
-#include "entry/entry.hxx"
-#include "entry/macro.hxx"
-// Include extensions last
+// Include extensions before specs that reference provider/fetch types.
 #include "ext/provider_kind.hxx"
 #include "ext/path_root.hxx"
 #include "ext/provided_target_ref.hxx"
@@ -95,7 +72,53 @@
 #include "ext/fetch.hxx"
 #ifdef MGMK_ENABLE_EXT_CMAKE
 #include "ext/cmake/project.hxx"
-
+#include "ext/cmake/target.hxx"
+#include "ext/cmake/codemodel.hxx"
+#include "ext/cmake/file_api.hxx"
 #endif // MGMK_ENABLE_EXT_CMAKE
+#include "spec/executable.hxx"
+#include "spec/executable_impl.hxx"
+#include "spec/library.hxx"
+#include "spec/library_impl.hxx"
+#include "acquire/fetched.hxx"
+#include "acquire/result.hxx"
+#include "acquire/context.hxx"
+#include "acquire/context_impl.hxx"
+#include "acquire/plan.hxx"
+#include "configure/result.hxx"
+#include "configure/context.hxx"
+#include "configure/context_impl.hxx"
+#ifdef MGMK_ENABLE_EXT_CMAKE
+#include "configure/cmake/project.hxx"
+#include "configure/cmake/paths.hxx"
+#include "configure/cmake/command.hxx"
+#endif // MGMK_ENABLE_EXT_CMAKE
+#include "configure/plan.hxx"
+#ifdef MGMK_ENABLE_EXT_CMAKE
+#include "prep/cmake/project.hxx"
+#include "prep/cmake/finalize.hxx"
+#endif // MGMK_ENABLE_EXT_CMAKE
+#include "prep/result.hxx"
+#include "prep/finalize.hxx"
+#include "spec/project.hxx"
+#include "discovery/discovery.hxx"
+#include "lower/target.hxx"
+#include "lower/usage.hxx"
+#ifdef MGMK_ENABLE_EXT_CMAKE
+#include "lower/provider_build.hxx"
+#endif // MGMK_ENABLE_EXT_CMAKE
+#include "lower/context.hxx"
+#include "lower/objects.hxx"
+#ifdef MGMK_ENABLE_EXT_CMAKE
+#include "lower/cmake/provider.hxx"
+#endif // MGMK_ENABLE_EXT_CMAKE
+#include "lower/context_impl.hxx"
+#include "lower/project.hxx"
+#include "lower/project_impl.hxx"
+#include "spec/project_impl.hxx"
+#include "detail/project_factory.hxx"
+#include "entry/exit_code.hxx"
+#include "entry/entry.hxx"
+#include "entry/macro.hxx"
 
 #endif // MGMAKE_MGMAKE_HXX
