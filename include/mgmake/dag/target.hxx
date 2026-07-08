@@ -24,6 +24,10 @@ namespace mgmake::dag {
         // For now this mostly exists so graphviz/ninja can show target-level deps.
         std::set<target::id> m_dependencies;
 
+        void add_output(const artifact::id art) {
+			m_outputs.emplace(art);
+		}
+
 		void add_dependency(const target::id dep) {
 			m_dependencies.emplace(dep);
 		}

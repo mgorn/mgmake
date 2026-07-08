@@ -3225,6 +3225,10 @@ namespace mgmake::dag {
         // For now this mostly exists so graphviz/ninja can show target-level deps.
         std::set<target::id> m_dependencies;
 
+        void add_output(const artifact::id art) {
+			m_outputs.emplace(art);
+		}
+
 		void add_dependency(const target::id dep) {
 			m_dependencies.emplace(dep);
 		}
@@ -8195,7 +8199,20 @@ namespace mgmake::dag {
 			return action(name, description, inputs, outputs, command, {});
 		}
 
-		dag::target::id target(auto&&... args) {
+		dag::target::id target(std::string_view name) {
+			auto id = m_graph.find_target(name);
+			if (not id.has_value()) {
+				return create_target(dag::target{ .m_name = std::string{ name } });
+			}
+			return id.value();
+		}
+
+		void target_output(dag::target::id id, dag::artifact::id output) {
+			auto& target = m_graph.target(id);
+			target.add_output(output);
+		}
+
+		dag::target::id create_target(auto&&... args) {
 			return m_graph.create_target(std::forward<decltype(args)>(args)...);
 		}
 	};
@@ -12312,14 +12329,11 @@ namespace mgmake::acquire {
 			git_clone_command(git_path, git, src_dir)
 		);
 
-		dag::target dag_target{
-			"acquire:fetch:" + fetch.m_name,
-			{stamp_id},
-			{}
-		};
+		auto dag_target = m_emit.target("acquire:fetch:" + fetch.m_name);
+		m_emit.target_output(dag_target, stamp_id);
 
 		return acquire::fetched{
-			.m_target = m_emit.target(dag_target),
+			.m_target = dag_target,
 			.m_stamp = stamp_id,
 			.m_source_dir = src_dir
 		};
@@ -12378,14 +12392,11 @@ namespace mgmake::acquire {
 			sys::normalize_directory_stamp_command(normalized_from, src_dir, final_stamp)
 		);
 
-		dag::target dag_target{
-			"acquire:fetch:" + fetch.m_name,
-			{stamp_id},
-			{}
-		};
+		auto dag_target = m_emit.target("acquire:fetch:" + fetch.m_name);
+		m_emit.target_output(dag_target, stamp_id);
 
 		return acquire::fetched{
-			.m_target = m_emit.target(dag_target),
+			.m_target = dag_target,
 			.m_stamp = stamp_id,
 			.m_source_dir = src_dir
 		};
@@ -12406,14 +12417,11 @@ namespace mgmake::acquire {
 			sys::validate_path_command(local.m_path, stamp_path)
 		);
 
-		dag::target dag_target{
-			"acquire:fetch:" + fetch.m_name,
-			{stamp_id},
-			{}
-		};
+		auto dag_target = m_emit.target("acquire:fetch:" + fetch.m_name);
+		m_emit.target_output(dag_target, stamp_id);
 
 		return acquire::fetched{
-			.m_target = m_emit.target(dag_target),
+			.m_target = dag_target,
 			.m_stamp = stamp_id,
 			.m_source_dir = local.m_path
 		};
@@ -12834,7 +12842,7 @@ namespace mgmake::configure {
 			{configure_id},
 			{}
 		};
-		m_emit.target(dag_target);
+		m_emit.create_target(dag_target);
 
 		configure::cmake::project result{};
 		result.m_name = cmake_project.m_name;
@@ -14141,7 +14149,7 @@ namespace mgmake::lower::cmake {
 		};
 
 		return lower::provider_build{
-			.m_dag_target = ctx.m_emit.target(dag_target),
+			.m_dag_target = ctx.m_emit.create_target(dag_target),
 			.m_ready_stamp = stamp_id
 		};
 	}
@@ -14286,7 +14294,7 @@ namespace mgmake::lower::cmake {
 		if (const auto existing = ctx.m_emit.graph().find_target(dag_target.m_name)) {
 			lowered.m_dag_target = existing.value();
 		} else {
-			lowered.m_dag_target = ctx.m_emit.target(dag_target);
+			lowered.m_dag_target = ctx.m_emit.create_target(dag_target);
 		}
 
 		return lowered;
@@ -14382,7 +14390,7 @@ namespace mgmake::lower::cmake {
 			std::move(usage.m_dag_dependencies)
 		};
 
-		ctx.m_emit.target(dag_target);
+		ctx.m_emit.create_target(dag_target);
 	}
 }
 
@@ -14579,12 +14587,10 @@ namespace mgmake::lower {
 
 	inline lower::target context::lower_system_library(std::string_view lib) {
 		auto artifact = m_emit.file_artifact(dag::artifact::kind::system, lib);
-		dag::target dag_target{ 
-			.m_name = std::string{ lib },
-			.m_outputs = { artifact }
-		};
+		auto target = m_emit.target(lib);
+		m_emit.target_output(target, artifact);
 		return lower::target{
-			.m_dag_target = m_emit.target(dag_target),
+			.m_dag_target = target,
 			.m_linkable_artifacts = { artifact }
 		};
 	}
@@ -14609,7 +14615,7 @@ namespace mgmake::lower {
 		};
 
 		lower::target lowered{};
-		lowered.m_dag_target = m_emit.target(dag_target);
+		lowered.m_dag_target = m_emit.create_target(dag_target);
 		lowered.m_linkable_artifacts = std::move(link_inputs);
 		lowered.m_include_dirs = std::move(include_dirs);
 		lowered.m_usage_inputs = std::move(usage.m_usage_inputs);
@@ -14702,7 +14708,7 @@ namespace mgmake::lower {
 		};
 
 		lower::target lowered{};
-		lowered.m_dag_target = m_emit.target(dag_target);
+		lowered.m_dag_target = m_emit.create_target(dag_target);
 		lowered.m_linkable_artifacts.emplace_back(archive_id);
 		lowered.m_linkable_artifacts.insert(
 			lowered.m_linkable_artifacts.end(),
@@ -14784,7 +14790,9 @@ namespace mgmake::lower {
 
 		std::vector<dag::artifact::id> inputs = object_ids;
 		for (auto input : usage.m_link_inputs) {
-			inputs.emplace_back(input);
+			if (not m_emit.graph().artifact(input).is_system()) {
+				inputs.emplace_back(input);
+			}
 		}
 		inputs.insert(inputs.end(), usage.m_usage_inputs.begin(), usage.m_usage_inputs.end());
 
@@ -14803,7 +14811,7 @@ namespace mgmake::lower {
 		};
 
 		lower::target lowered{};
-		lowered.m_dag_target = m_emit.target(dag_target);
+		lowered.m_dag_target = m_emit.create_target(dag_target);
 		lowered.m_linkable_artifacts.emplace_back(shared_id);
 		lowered.m_linkable_artifacts.insert(
 			lowered.m_linkable_artifacts.end(),
@@ -14849,7 +14857,9 @@ namespace mgmake::lower {
 		auto object_ids = lower_objects(exe, include_dirs, usage.m_usage_inputs);
 		std::vector<dag::artifact::id> inputs = object_ids;
 		for (auto input : usage.m_link_inputs) {
-			inputs.emplace_back(input);
+			if (not m_emit.graph().artifact(input).is_system()) {
+				inputs.emplace_back(input);
+			}
 		}
 		inputs.insert(inputs.end(), usage.m_usage_inputs.begin(), usage.m_usage_inputs.end());
 
@@ -14910,7 +14920,7 @@ namespace mgmake::lower {
 			std::move(usage.m_dag_dependencies)
 		};
 
-		m_emit.target(dag_target);
+		m_emit.create_target(dag_target);
 	}
 
 }

@@ -94,7 +94,7 @@ namespace mgmake::configure {
 			{configure_id},
 			{}
 		};
-		m_emit.target(dag_target);
+		m_emit.create_target(dag_target);
 
 		configure::cmake::project result{};
 		result.m_name = cmake_project.m_name;

@@ -209,7 +209,20 @@ namespace mgmake::dag {
 			return action(name, description, inputs, outputs, command, {});
 		}
 
-		dag::target::id target(auto&&... args) {
+		dag::target::id target(std::string_view name) {
+			auto id = m_graph.find_target(name);
+			if (not id.has_value()) {
+				return create_target(dag::target{ .m_name = std::string{ name } });
+			}
+			return id.value();
+		}
+
+		void target_output(dag::target::id id, dag::artifact::id output) {
+			auto& target = m_graph.target(id);
+			target.add_output(output);
+		}
+
+		dag::target::id create_target(auto&&... args) {
 			return m_graph.create_target(std::forward<decltype(args)>(args)...);
 		}
 	};

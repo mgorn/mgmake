@@ -293,14 +293,11 @@ namespace mgmake::acquire {
 			git_clone_command(git_path, git, src_dir)
 		);
 
-		dag::target dag_target{
-			"acquire:fetch:" + fetch.m_name,
-			{stamp_id},
-			{}
-		};
+		auto dag_target = m_emit.target("acquire:fetch:" + fetch.m_name);
+		m_emit.target_output(dag_target, stamp_id);
 
 		return acquire::fetched{
-			.m_target = m_emit.target(dag_target),
+			.m_target = dag_target,
 			.m_stamp = stamp_id,
 			.m_source_dir = src_dir
 		};
@@ -359,14 +356,11 @@ namespace mgmake::acquire {
 			sys::normalize_directory_stamp_command(normalized_from, src_dir, final_stamp)
 		);
 
-		dag::target dag_target{
-			"acquire:fetch:" + fetch.m_name,
-			{stamp_id},
-			{}
-		};
+		auto dag_target = m_emit.target("acquire:fetch:" + fetch.m_name);
+		m_emit.target_output(dag_target, stamp_id);
 
 		return acquire::fetched{
-			.m_target = m_emit.target(dag_target),
+			.m_target = dag_target,
 			.m_stamp = stamp_id,
 			.m_source_dir = src_dir
 		};
@@ -387,14 +381,11 @@ namespace mgmake::acquire {
 			sys::validate_path_command(local.m_path, stamp_path)
 		);
 
-		dag::target dag_target{
-			"acquire:fetch:" + fetch.m_name,
-			{stamp_id},
-			{}
-		};
+		auto dag_target = m_emit.target("acquire:fetch:" + fetch.m_name);
+		m_emit.target_output(dag_target, stamp_id);
 
 		return acquire::fetched{
-			.m_target = m_emit.target(dag_target),
+			.m_target = dag_target,
 			.m_stamp = stamp_id,
 			.m_source_dir = local.m_path
 		};

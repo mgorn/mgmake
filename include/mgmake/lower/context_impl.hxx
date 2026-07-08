@@ -183,12 +183,10 @@ namespace mgmake::lower {
 
 	inline lower::target context::lower_system_library(std::string_view lib) {
 		auto artifact = m_emit.file_artifact(dag::artifact::kind::system, lib);
-		dag::target dag_target{ 
-			.m_name = std::string{ lib },
-			.m_outputs = { artifact }
-		};
+		auto target = m_emit.target(lib);
+		m_emit.target_output(target, artifact);
 		return lower::target{
-			.m_dag_target = m_emit.target(dag_target),
+			.m_dag_target = target,
 			.m_linkable_artifacts = { artifact }
 		};
 	}
@@ -213,7 +211,7 @@ namespace mgmake::lower {
 		};
 
 		lower::target lowered{};
-		lowered.m_dag_target = m_emit.target(dag_target);
+		lowered.m_dag_target = m_emit.create_target(dag_target);
 		lowered.m_linkable_artifacts = std::move(link_inputs);
 		lowered.m_include_dirs = std::move(include_dirs);
 		lowered.m_usage_inputs = std::move(usage.m_usage_inputs);
@@ -306,7 +304,7 @@ namespace mgmake::lower {
 		};
 
 		lower::target lowered{};
-		lowered.m_dag_target = m_emit.target(dag_target);
+		lowered.m_dag_target = m_emit.create_target(dag_target);
 		lowered.m_linkable_artifacts.emplace_back(archive_id);
 		lowered.m_linkable_artifacts.insert(
 			lowered.m_linkable_artifacts.end(),
@@ -388,7 +386,9 @@ namespace mgmake::lower {
 
 		std::vector<dag::artifact::id> inputs = object_ids;
 		for (auto input : usage.m_link_inputs) {
-			inputs.emplace_back(input);
+			if (not m_emit.graph().artifact(input).is_system()) {
+				inputs.emplace_back(input);
+			}
 		}
 		inputs.insert(inputs.end(), usage.m_usage_inputs.begin(), usage.m_usage_inputs.end());
 
@@ -407,7 +407,7 @@ namespace mgmake::lower {
 		};
 
 		lower::target lowered{};
-		lowered.m_dag_target = m_emit.target(dag_target);
+		lowered.m_dag_target = m_emit.create_target(dag_target);
 		lowered.m_linkable_artifacts.emplace_back(shared_id);
 		lowered.m_linkable_artifacts.insert(
 			lowered.m_linkable_artifacts.end(),
@@ -453,7 +453,9 @@ namespace mgmake::lower {
 		auto object_ids = lower_objects(exe, include_dirs, usage.m_usage_inputs);
 		std::vector<dag::artifact::id> inputs = object_ids;
 		for (auto input : usage.m_link_inputs) {
-			inputs.emplace_back(input);
+			if (not m_emit.graph().artifact(input).is_system()) {
+				inputs.emplace_back(input);
+			}
 		}
 		inputs.insert(inputs.end(), usage.m_usage_inputs.begin(), usage.m_usage_inputs.end());
 
@@ -514,7 +516,7 @@ namespace mgmake::lower {
 			std::move(usage.m_dag_dependencies)
 		};
 
-		m_emit.target(dag_target);
+		m_emit.create_target(dag_target);
 	}
 
 }

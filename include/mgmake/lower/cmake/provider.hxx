@@ -218,7 +218,7 @@ namespace mgmake::lower::cmake {
 		};
 
 		return lower::provider_build{
-			.m_dag_target = ctx.m_emit.target(dag_target),
+			.m_dag_target = ctx.m_emit.create_target(dag_target),
 			.m_ready_stamp = stamp_id
 		};
 	}
@@ -363,7 +363,7 @@ namespace mgmake::lower::cmake {
 		if (const auto existing = ctx.m_emit.graph().find_target(dag_target.m_name)) {
 			lowered.m_dag_target = existing.value();
 		} else {
-			lowered.m_dag_target = ctx.m_emit.target(dag_target);
+			lowered.m_dag_target = ctx.m_emit.create_target(dag_target);
 		}
 
 		return lowered;
@@ -459,7 +459,7 @@ namespace mgmake::lower::cmake {
 			std::move(usage.m_dag_dependencies)
 		};
 
-		ctx.m_emit.target(dag_target);
+		ctx.m_emit.create_target(dag_target);
 	}
 }
 
