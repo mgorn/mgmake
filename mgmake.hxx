@@ -14154,7 +14154,7 @@ namespace mgmake::lower::cmake {
 	inline void append_link_fragment(
 		dag::emitter& emit,
 		const prep::cmake::project& prepared,
-		std::string_view fragment,
+		const std::string& fragment,
 		translated_link_usage& usage
 	) {
 		if (fragment.empty()) {
@@ -14170,7 +14170,7 @@ namespace mgmake::lower::cmake {
 
 		const auto artifact = emit.file_artifact(
 			dag::artifact::kind::system,
-			std::filesystem::path{std::string{fragment}}
+			std::filesystem::path{fragment}
 		);
 
 		append_artifact_once(usage.m_link_inputs, artifact);
@@ -14860,9 +14860,7 @@ namespace mgmake::lower {
 
 		std::vector<dag::artifact::id> inputs = object_ids;
 		for (auto input : usage.m_link_inputs) {
-			if (not m_emit.graph().artifact(input).is_system()) {
-				inputs.emplace_back(input);
-			}
+			inputs.emplace_back(input);
 		}
 		inputs.insert(inputs.end(), usage.m_usage_inputs.begin(), usage.m_usage_inputs.end());
 
@@ -14927,9 +14925,7 @@ namespace mgmake::lower {
 		auto object_ids = lower_objects(exe, include_dirs, usage.m_usage_inputs);
 		std::vector<dag::artifact::id> inputs = object_ids;
 		for (auto input : usage.m_link_inputs) {
-			if (not m_emit.graph().artifact(input).is_system()) {
-				inputs.emplace_back(input);
-			}
+			inputs.emplace_back(input);
 		}
 		inputs.insert(inputs.end(), usage.m_usage_inputs.begin(), usage.m_usage_inputs.end());
 
