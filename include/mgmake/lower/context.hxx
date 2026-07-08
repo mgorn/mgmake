@@ -60,6 +60,7 @@ namespace mgmake::lower {
 		const lower::target& lower_library(spec::library::id id);
 		// Lowering a library by name is reserved for external/system libraries
 		const lower::target& lower_library(std::string_view lib);
+		lower::target lower_system_library(std::string_view lib);
 		void lower_executable(spec::executable::id id);
 		lower::usage use_libraries(
 			const std::set<std::string>& libraries,
@@ -87,10 +88,6 @@ namespace mgmake::lower {
 		lower::target lower_shared_library(
 			const spec::library& lib,
 			lower::usage usage
-		);
-
-		lower::target lower_system_library(
-			std::string_view lib
 		);
 
 		std::vector<std::optional<lower::target>> m_libraries;
