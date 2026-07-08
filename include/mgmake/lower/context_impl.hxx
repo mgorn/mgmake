@@ -386,9 +386,7 @@ namespace mgmake::lower {
 
 		std::vector<dag::artifact::id> inputs = object_ids;
 		for (auto input : usage.m_link_inputs) {
-			if (not m_emit.graph().artifact(input).is_system()) {
-				inputs.emplace_back(input);
-			}
+			inputs.emplace_back(input);
 		}
 		inputs.insert(inputs.end(), usage.m_usage_inputs.begin(), usage.m_usage_inputs.end());
 
@@ -453,9 +451,7 @@ namespace mgmake::lower {
 		auto object_ids = lower_objects(exe, include_dirs, usage.m_usage_inputs);
 		std::vector<dag::artifact::id> inputs = object_ids;
 		for (auto input : usage.m_link_inputs) {
-			if (not m_emit.graph().artifact(input).is_system()) {
-				inputs.emplace_back(input);
-			}
+			inputs.emplace_back(input);
 		}
 		inputs.insert(inputs.end(), usage.m_usage_inputs.begin(), usage.m_usage_inputs.end());
 
