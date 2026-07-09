@@ -83,9 +83,12 @@ namespace mgmake::ext {
 			return m_value.contains(key);
 		}
 
-		[[nodiscard]] json_value get(const std::string& key) const {
+		[[nodiscard]] std::optional<json_value> get(const std::string& key) const {
 			mgmkassert(m_value.is_object(), "json_value::get can only be used on objects");
 
+			if (not has(key)) {
+				return std::nullopt;
+			}
 			mgmkassert(has(key), std::format("json_value::get member '{}' doesn't exist", key));
 			const auto found = m_value.find(key);
 			mgmkassert(found != m_value.end(), std::format("json_value::get failed to get member '{}'", key));
@@ -98,10 +101,11 @@ namespace mgmake::ext {
 		}
 
 		[[nodiscard]] std::vector<json_value> array(const std::string& key) const {
-			std::vector<json_value> result;
-			const auto value = get(key);
-			mgmkassert(value.is_array(), std::format("Requested key: '{}' is not an array", key));
-			return value.items();
+			if(const auto value = get(key)) {
+				mgmkassert(value->is_array(), std::format("Requested key: '{}' is not an array", key));
+				return value->items();
+			}
+			return {};
 		}
 
 		[[nodiscard]] std::vector<json_value> items() const {

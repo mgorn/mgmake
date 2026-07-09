@@ -23,6 +23,7 @@ namespace mgmake::ext {
 
 		native_type m_value{};
 
+		// Parse a JSON string
 		[[nodiscard]] static constexpr std::optional<json_value> parse(std::string_view) {
 			return std::nullopt;
 		}
@@ -59,18 +60,22 @@ namespace mgmake::ext {
 			return false;
 		}
 
+		// Get a value by key
 		[[nodiscard]] constexpr std::optional<json_value> get(std::string_view) const {
 			return std::nullopt;
 		}
 
+		// operator[] for get
 		[[nodiscard]] constexpr std::optional<json_value> operator[](std::string_view key) const {
 			return get(key);
 		}
 
+		// Get the array items for the array at key
 		[[nodiscard]] constexpr std::vector<json_value> array(std::string_view) const {
 			return {};
 		}
 
+		// Get the items of the array
 		[[nodiscard]] constexpr std::vector<json_value> items() const {
 			return {};
 		}

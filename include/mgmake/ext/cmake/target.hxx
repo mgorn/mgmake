@@ -56,36 +56,33 @@ namespace mgmake::ext::cmake {
 			if (!parsed.has("name")) {
 				return std::unexpected{target_parse_error(source_file, "missing string member 'name'")};
 			}
-			const auto name = parsed.get("name");
-			const auto name_text = name.as_string();
+			const auto name = parsed.get("name")->as_string();
 
-			if (!name_text.has_value() || name_text->empty()) {
+			if (!name.has_value() || name->empty()) {
 				return std::unexpected{target_parse_error(source_file, "member 'name' is not a non-empty string")};
 			}
 
 			target result{};
-			result.m_name = *name_text;
+			result.m_name = name.value();
 
-			if (parsed.has("id")) {
-				const auto id = parsed.get("id");
-				const auto id_text = id.as_string();
+			if (const auto id = parsed.get("id")) {
+				const auto id_text = id->as_string();
 
 				if (!id_text.has_value()) {
 					return std::unexpected{target_parse_error(source_file, "member 'id' is present but is not a string")};
 				}
 
-				result.m_id = *id_text;
+				result.m_id = id_text.value();
 			}
 
-			if (parsed.has("type")) {
-				const auto type = parsed.get("type");
-				const auto type_text = type.as_string();
+			if (const auto type = parsed.get("type")) {
+				const auto type_text = type->as_string();
 
 				if (!type_text.has_value()) {
 					return std::unexpected{target_parse_error(source_file, "member 'type' is present but is not a string")};
 				}
 
-				result.m_type = *type_text;
+				result.m_type = type_text.value();
 			}
 
 			if (parsed.has("artifacts")) {
@@ -93,14 +90,13 @@ namespace mgmake::ext::cmake {
 					if (!artifact.has("path")) {
 						continue;
 					}
-					const auto path = artifact.get("path");
-					const auto path_text = path.as_string();
+					const auto path = artifact.get("path")->as_string();
 
-					if (!path_text.has_value() || path_text->empty()) {
+					if (!path.has_value() || path->empty()) {
 						return std::unexpected{target_parse_error(source_file, "artifact path is not a non-empty string")};
 					}
 
-					std::filesystem::path artifact_path{*path_text};
+					std::filesystem::path artifact_path{path.value()};
 
 					if (artifact_path.is_relative()) {
 						artifact_path = build_dir / artifact_path;
@@ -159,9 +155,8 @@ namespace mgmake::ext::cmake {
 			const std::filesystem::path& source_file
 		) {
 			for (const auto& item : parsed.array(key)) {
-				if (item.has("fragment")) {
-					const auto fragment = item.get("fragment");
-					const auto text = fragment.as_string();
+				if (const auto fragment = item.get("fragment")) {
+					const auto text = fragment->as_string();
 
 					if (!text.has_value() || text->empty()) {
 						return std::unexpected{target_parse_error(source_file, "link fragment is not a non-empty string")};
@@ -173,9 +168,8 @@ namespace mgmake::ext::cmake {
 					});
 				}
 
-				if (item.has("id")) {
-					const auto id = item.get("id");
-					const auto text = id.as_string();
+				if (const auto id = item.get("id")) {
+					const auto text = id->as_string();
 
 					if (!text.has_value() || text->empty()) {
 						return std::unexpected{target_parse_error(source_file, "link target id is not a non-empty string")};

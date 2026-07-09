@@ -23,15 +23,15 @@ namespace mgmake::dag {
 
         inline constexpr artifact::id create_artifact(auto&&... args) {
             m_artifacts.emplace_back(std::forward<decltype(args)>(args)...);
-            return { m_artifacts.size() - 1 };
+            return m_artifacts.size() - 1;
         }
         inline constexpr action::id create_action(auto&&... args) {
             m_actions.emplace_back(std::forward<decltype(args)>(args)...);
-            return { m_actions.size() - 1 };
+            return m_actions.size() - 1;
         }
         inline constexpr target::id create_target(auto&&... args) {
             m_targets.emplace_back(std::forward<decltype(args)>(args)...);
-            return { m_targets.size() - 1 };
+            return m_targets.size() - 1;
         }
 
 		inline constexpr struct artifact& artifact(const artifact::id id) {
@@ -66,7 +66,7 @@ namespace mgmake::dag {
 		}
 
 		// check() records current hashes for existing files and reports whether any artifact changed.
-		[[nodiscard]] inline bool check(detail::hashes& hashes) const {
+		inline bool check(detail::hashes& hashes) const {
 			bool dirty = false;
 
 			for (const auto& artifact : m_artifacts) {

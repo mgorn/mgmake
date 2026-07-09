@@ -183,29 +183,29 @@ namespace mgmake::dep {
 
 		// MSVC /sourceDependencies records the primary source separately.
 		// Lowering filters already-explicit action inputs after parsing.
-		if (const auto source = data.get("Source")) {
-			if (const auto path = source.as_string()) {
-				result.emplace_back(*path);
+		if (const auto source = data->get("Source")) {
+			if (const auto path = source->as_string()) {
+				result.emplace_back(path.value());
 			}
 		}
 
 		// Ordinary header dependencies.
-		for (const auto& include : data.array("Includes")) {
+		for (const auto& include : data->array("Includes")) {
 			if (const auto path = include.as_string()) {
-				result.emplace_back(*path);
+				result.emplace_back(path.value());
 			}
 		}
 
 		// Header units can name real header files as well. Capture the known
 		// Header field, but avoid recursively treating arbitrary strings as paths.
-		for (const auto& header_unit : data.array("ImportedHeaderUnits")) {
+		for (const auto& header_unit : data->array("ImportedHeaderUnits")) {
 			if (!header_unit.has("Header")) {
 				continue;
 			}
 
 			const auto header = header_unit.get("Header");
-			if (const auto path = header.as_string()) {
-				result.emplace_back(*path);
+			if (const auto path = header->as_string()) {
+				result.emplace_back(path.value());
 			}
 		}
 
