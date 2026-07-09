@@ -107,51 +107,45 @@ namespace mgmake::detail {
 		[[nodiscard]] inline static std::optional<hash_type> hash_file(
 			const file_type& file
 		) {
-			std::ifstream input{file, std::ios::binary};
+			auto file = fs::open<std::ios::binary>(file);
 
-			if (!input) {
-				return std::nullopt;
-			}
+			return file.transform([&](auto& input) {
+				constexpr hash_type offset_basis = 14695981039346656037ull;
+				constexpr hash_type prime = 1099511628211ull;
 
-			constexpr hash_type offset_basis = 14695981039346656037ull;
-			constexpr hash_type prime = 1099511628211ull;
+				hash_type result = offset_basis;
+				std::array<char, 64 * 1024> buffer{};
 
-			hash_type result = offset_basis;
-			std::array<char, 64 * 1024> buffer{};
+				while (input) {
+					input.read(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+					const auto count = input.gcount();
 
-			while (input) {
-				input.read(buffer.data(), static_cast<std::streamsize>(buffer.size()));
-				const auto count = input.gcount();
-
-				for (std::streamsize i = 0; i < count; ++i) {
-					result ^= static_cast<unsigned char>(buffer[static_cast<std::size_t>(i)]);
-					result *= prime;
+					for (std::streamsize i = 0; i < count; ++i) {
+						result ^= static_cast<unsigned char>(buffer[static_cast<std::size_t>(i)]);
+						result *= prime;
+					}
 				}
-			}
 
-			return result;
+				return result;
+			});
 		}
 
 		[[nodiscard]] inline static map_type load_file(
-			const std::filesystem::path& path
+			const fs::path& path
 		) {
 			map_type result{};
-			std::ifstream input{path};
+			auto input = fs::open(path);
 
 			if (!input) {
 				return result;
 			}
 
-			std::string tag;
-			input >> tag;
-
+			auto tag = input.get<std::string>();
 			if (tag != "mgmake-hashes") {
 				return result;
 			}
 
-			int version = 0;
-			input >> version;
-
+			auto version = input.get<int>();
 			if (version != 1) {
 				return result;
 			}
@@ -159,6 +153,7 @@ namespace mgmake::detail {
 			hash_type hash{};
 			std::string path_string;
 
+			// TODO: Replace with fs::stream::get
 			while (input >> hash >> std::quoted(path_string)) {
 				result.emplace(file_type{path_string}, hash);
 			}
