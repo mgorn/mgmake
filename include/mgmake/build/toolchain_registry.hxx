@@ -64,7 +64,7 @@ namespace mgmake::build {
 			{ registry.choices_string() } -> std::convertible_to<std::string>;
 		};
 
-	inline const auto default_toolchains = toolchain_registry{
+	inline constexpr auto default_toolchains = toolchain_registry{
 		tc_clang_mg,
 		tc_clang,
 		tc_gcc,

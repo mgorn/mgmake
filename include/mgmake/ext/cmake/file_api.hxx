@@ -56,37 +56,24 @@ namespace mgmake::ext::cmake::file_api {
 		return out.good();
 	}
 
-	[[nodiscard]] inline std::expected<std::string, std::string> read_file(
-		const std::filesystem::path& path
-	) {
-		std::ifstream in(path, std::ios::binary);
-
-		if (!in.is_open()) {
-			return std::unexpected{"failed to open file '" + path.string() + "'"};
-		}
-
-		return std::string{
-			std::istreambuf_iterator<char>{in},
-			std::istreambuf_iterator<char>{}
-		};
-	}
-
 	[[nodiscard]] inline std::expected<ext::json, std::string> parse_json_file(
 		const std::filesystem::path& path
 	) {
-		const auto content = read_file(path);
+		const auto content = fs::open(path).transform([](auto& in) {
+			return in.read_all();
+		});
 
 		if (!content.has_value()) {
 			return std::unexpected{content.error()};
 		}
 
-		auto parsed = ext::json::parse(*content);
+		auto parsed = ext::json::parse(content.value());
 
 		if (!parsed.has_value()) {
 			return std::unexpected{"failed to parse JSON file '" + path.string() + "'"};
 		}
 
-		return std::move(*parsed);
+		return std::move(parsed.value());
 	}
 
 	[[nodiscard]] inline std::vector<std::filesystem::path> index_files_newest_first(

@@ -29,11 +29,19 @@ namespace mgmake::fs {
             return m_stream.read(std::forward<decltype(args)>(args)...);
         }
 
-        template<typename value_t>
+        std::string read_all() const {
+            return { std::istreambuf_iterator<char>{ m_stream }, std::istreambuf_iterator<char>{} };
+        }
+
+        template<typename value_t, auto manip_v = nullptr>
         value_t get() const {
             static_assert(is_input, "fs::stream::get can only be used with input streams");
             value_t result;
-            m_stream >> result;
+            if constexpr (manip_v) {
+                m_stream >> manip_v(result);
+            } else {
+                m_stream >> result;
+            }
             return std::move(result);
         }
     };

@@ -13,29 +13,27 @@
 // Value parsers convert one option argument string into a typed destination value.
 
 namespace mgmake::cli {
-	template <typename T>
+	template <typename type_t>
 	struct value_parser;
 
 	template <>
 	struct value_parser<std::string> {
-		[[nodiscard]] static bool parse(std::string_view text, std::string& out) {
-			out = std::string{ text };
-			return true;
-		}
-
-		[[nodiscard]] static std::string error(std::string_view text) {
-			return std::format("invalid string value '{}'", text);
+		[[nodiscard]] static std::expected<std::string,std::string> parse(std::string_view text) {
+			return std::string{ text };
 		}
 	};
 
 	template <>
 	struct value_parser<int> {
-		[[nodiscard]] static bool parse(std::string_view text, int& out) {
-			return parse_positive_int(text, out);
-		}
+		[[nodiscard]] static std::expected<int,std::string> parse(std::string_view text) {
+			if (text.empty()) {
+				return std::unexpected(std::format("invalid integer value '{}'", text));
+			}
 
-		[[nodiscard]] static std::string error(std::string_view text) {
-			return std::format("invalid integer value '{}'", text);
+			try {
+				return std::stoi(text);
+			} catch (...) {}
+			return std::unexpected(std::format("invalid integer value '{}'", text));
 		}
 	};
 }

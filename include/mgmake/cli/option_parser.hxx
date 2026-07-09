@@ -4,7 +4,6 @@
 #define MGMAKE_CLI_OPTION_PARSER_HXX
 
 #include "option_builder.hxx"
-#include "parse_result.hxx"
 #include "util.hxx"
 
 #include <format>
@@ -131,21 +130,17 @@ namespace mgmake::cli::detail {
 	}
 
 	inline void print_commands_help() {
-		for_each_action_help([](
-			[[maybe_unused]] action_kind action,
-			std::string_view name,
-			std::string_view description
-		) {
-			std::println("  {:<10} {}", name, description);
+		action_kind_names::for_each_entry([&](action_kind action, std::string_view name) {
+			std::println("  {:<10} {}", name, action_help_entries::to_string(action, ""));
 		});
 	}
 }
 
 namespace mgmake::cli {
-	template <typename... Options>
+	template <typename... opt_ts>
 	struct option_parser {
 		static void print_options_help() {
-			(detail::print_option_help_row<Options>(), ...);
+			(detail::print_option_help_row<opt_ts>(), ...);
 		}
 
 		static void print_help(std::string_view program_name) {
@@ -174,7 +169,7 @@ namespace mgmake::cli {
 
 			([&] {
 				if (!matched) {
-					result = Options::try_parse(opts, args, index, arg);
+					result = opt_ts::try_parse(opts, args, index, arg);
 					matched = result.m_matched;
 				}
 			}(), ...);

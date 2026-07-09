@@ -19,36 +19,29 @@ namespace mgmake::cli {
 		opts.m_show_version = true;
 	}
 
-	using help_option =
-		callback_option<"help", 'h', apply_help>
-			::description<"Show help.">;
+	using help_option = callback_option<"help", 'h', apply_help>
+		::description<"Show help.">;
 
-	using version_option =
-		callback_option<"version", '\0', apply_version>
-			::description<"Show version information.">;
+	using version_option = callback_option<"version", '\0', apply_version>
+		::description<"Show version information.">;
 
-	using verbose_option =
-		flag_option<&options::m_verbose, "verbose", 'v'>
-			::description<"Print commands before executing them.">;
+	using verbose_option = flag_option<&options::m_verbose, "verbose", 'v'>
+		::description<"Print commands before executing them.">;
 
-	using dry_run_option =
-		flag_option<&options::m_dry_run, "dry-run">
-			::description<"Print commands without executing them.">;
+	using dry_run_option = flag_option<&options::m_dry_run, "dry-run">
+		::description<"Print commands without executing them.">;
 
-	using backend_option =
-		value_option<&options::m_backend, "backend">
-			::value_name<"name">
-			::description<"Select a build backend to use.">;
+	using backend_option = value_option<&options::m_backend, "backend">
+		::value_name<"name">
+		::description<"Select a build backend to use.">;
 
-	using toolchain_option =
-		value_option<&options::m_toolchain, "toolchain">
-			::value_name<"name">
-			::description<"Select a compiler toolchain preset.">;
+	using toolchain_option = value_option<&options::m_toolchain, "toolchain">
+		::value_name<"name">
+		::description<"Select a compiler toolchain preset.">;
 
-	using build_dir_option =
-		value_option<&options::m_build_dir, "build-dir">
-			::value_name<"path">
-			::description<"Set the build directory.">;
+	using build_dir_option = value_option<&options::m_build_dir, "build-dir">
+		::value_name<"path">
+		::description<"Set the build directory.">;
 
 	using jobs_option =
 		value_option<&options::m_jobs, "jobs", 'j'>
@@ -296,7 +289,7 @@ namespace mgmake::cli {
 		apple_sdk_option
 	>;
 
-	[[nodiscard]] inline parse_result parse(std::span<const std::string> args) {
+	[[nodiscard]] inline std::expected<cli::options,std::string> parse(std::span<const std::string> args) {
 		return default_parser::parse(args);
 	}
 

@@ -131,21 +131,25 @@ namespace mgmake::detail {
 		}
 
 		[[nodiscard]] inline static map_type load_file(
-			const fs::path& path
+			const std::filesystem::path& path
 		) {
 			map_type result{};
-			auto input = fs::open(path);
+			std::ifstream input{path};
 
 			if (!input) {
 				return result;
 			}
 
-			auto tag = input.get<std::string>();
+			std::string tag;
+			input >> tag;
+
 			if (tag != "mgmake-hashes") {
 				return result;
 			}
 
-			auto version = input.get<int>();
+			int version = 0;
+			input >> version;
+
 			if (version != 1) {
 				return result;
 			}
@@ -153,7 +157,6 @@ namespace mgmake::detail {
 			hash_type hash{};
 			std::string path_string;
 
-			// TODO: Replace with fs::stream::get
 			while (input >> hash >> std::quoted(path_string)) {
 				result.emplace(file_type{path_string}, hash);
 			}

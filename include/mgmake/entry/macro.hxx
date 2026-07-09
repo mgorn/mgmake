@@ -14,19 +14,19 @@ namespace mgmk = mgmake;
 #define MGMK_DETAIL_ENTRY_0()                                                   \
 int wmain(int argc, wchar_t** argv) {                                            \
     auto args = ::mgmk::sys::args_from_wide(argc, argv);                         \
-    return ::mgmk::entry(args);                                                  \
+    return ::mgmk::entry<>(args);                                                  \
 }
 
-#define MGMK_DETAIL_ENTRY_1(ProjectFactory)                                      \
+#define MGMK_DETAIL_ENTRY_1(FACTORY_FN)                                      \
 int wmain(int argc, wchar_t** argv) {                                            \
     auto args = ::mgmk::sys::args_from_wide(argc, argv);                         \
-    return ::mgmk::entry(args, ProjectFactory);                                  \
+    return ::mgmk::entry<FACTORY_FN>(args);                                  \
 }
 
-#define MGMK_DETAIL_ENTRY_2(ProjectFactory, Toolchains)                          \
+#define MGMK_DETAIL_ENTRY_2(FACTORY_FN, TOOLCHAINS_V)                          \
 int wmain(int argc, wchar_t** argv) {                                            \
     auto args = ::mgmk::sys::args_from_wide(argc, argv);                         \
-    return ::mgmk::entry(args, ProjectFactory, Toolchains);                      \
+    return ::mgmk::entry<FACTORY_FN, TOOLCHAINS_V>(args);                      \
 }
 
 #else
@@ -37,16 +37,16 @@ int main(int argc, char** argv) {                                               
     return ::mgmk::entry(args);                                                  \
 }
 
-#define MGMK_DETAIL_ENTRY_1(ProjectFactory)                                      \
+#define MGMK_DETAIL_ENTRY_1(FACTORY_FN)                                      \
 int main(int argc, char** argv) {                                                \
     auto args = ::mgmk::sys::args_from_utf8(argc, argv);                         \
-    return ::mgmk::entry(args, ProjectFactory);                                  \
+    return ::mgmk::entry<FACTORY_FN>(args);                                  \
 }
 
-#define MGMK_DETAIL_ENTRY_2(ProjectFactory, Toolchains)                          \
+#define MGMK_DETAIL_ENTRY_2(FACTORY_FN, TOOLCHAINS_V)                          \
 int main(int argc, char** argv) {                                                \
     auto args = ::mgmk::sys::args_from_utf8(argc, argv);                         \
-    return ::mgmk::entry(args, ProjectFactory, Toolchains);                      \
+    return ::mgmk::entry<FACTORY_FN, TOOLCHAINS_V>(args);                      \
 }
 
 #endif // defined(MGMK_PLATFORM_WINDOWS) && defined(MGMK_INCLUDED_WINDOWS)

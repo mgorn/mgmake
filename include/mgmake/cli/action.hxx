@@ -109,13 +109,6 @@ namespace mgmake::cli {
 		return action_kind_names::to_string(action);
 	}
 
-	template <typename Fn>
-	inline constexpr void for_each_action_help(Fn&& fn) {
-		action_kind_names::for_each_entry([&](action_kind action, std::string_view name) {
-			fn(action, name, action_help_entries::to_string(action, ""));
-		});
-	}
-
 	[[nodiscard]] inline constexpr std::optional<action_kind> action_from_string(
 		std::string_view text
 	) noexcept {
