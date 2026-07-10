@@ -4,6 +4,7 @@
 #define MGMAKE_CLI_ACTION_HXX
 
 #include "../detail/enum_string.hxx"
+#include "../detail/type_list.hxx"
 
 #include <optional>
 #include <string_view>
@@ -25,78 +26,62 @@ namespace mgmake::cli {
 		count
 	};
 
-	using action_kind_names = detail::enum_table<
-		action_kind,
-		detail::enum_entry<action_kind::build, "build">,
-		detail::enum_entry<action_kind::generate, "generate">,
-		detail::enum_entry<action_kind::clean, "clean">,
-		detail::enum_entry<action_kind::run, "run">,
-		detail::enum_entry<action_kind::tools, "tools">,
-		detail::enum_entry<action_kind::graph, "graph">,
-		detail::enum_entry<action_kind::help, "help">,
-		detail::enum_entry<action_kind::version, "version">
+	template<action_kind kind_v>
+	struct action {};
+	template<> struct action<action_kind::build> {
+		static constexpr static_string name = "build";
+		static constexpr std::array<static_string> aliases = { name };
+		static constexpr static_string help_entry = "Build the project. This is the default command.";
+	};
+	template<> struct action<action_kind::generate> {
+		static constexpr static_string name = "generate";
+		static constexpr std::array<static_string> aliases = { name, "gen" };
+		static constexpr static_string help_entry = "Generate backend build files.";
+	};
+	template<> struct action<action_kind::clean> {
+		static constexpr static_string name = "clean";
+		static constexpr std::array<static_string> aliases = { name };
+		static constexpr static_string help_entry = "Remove generated build output.";
+	};
+	template<> struct action<action_kind::run> {
+		static constexpr static_string name = "run";
+		static constexpr std::array<static_string> aliases = { name };
+		static constexpr static_string help_entry = "Build and run a target.";
+	};
+	template<> struct action<action_kind::tools> {
+		static constexpr static_string name = "tools";
+		static constexpr std::array<static_string> aliases = { name, "toolchains", "toolchain-info" };
+		static constexpr static_string help_entry = "Show discovered build tools and discovery diagnostics.";
+	};
+	template<> struct action<action_kind::graph> {
+		static constexpr static_string name = "graph";
+		static constexpr std::array<static_string> aliases = { name };
+		static constexpr static_string help_entry = "Write graph visualization files.";
+	};
+	template<> struct action<action_kind::help> {
+		static constexpr static_string name = "help";
+		static constexpr std::array<static_string> aliases = { name };
+		static constexpr static_string help_entry = "Show this help text.";
+	};
+	template<> struct action<action_kind::version> {
+		static constexpr static_string name = "version";
+		static constexpr std::array<static_string> aliases = { name };
+		static constexpr static_string help_entry = "Show version information.";
+	};
+
+
+	using actions = detail::type_list<
+		action<action_kind::build>,
+		action<action_kind::generate>,
+		action<action_kind::clean>,
+		action<action_kind::run>,
+		action<action_kind::tools>,
+		action<action_kind::graph>,
+		action<action_kind::help>,
+		action<action_kind::version>,
 	>;
 
-	static_assert(
-		action_kind_names::is_zero_based_count_canonical(action_kind::count),
-		"action_kind_names must cover every action_kind value exactly once"
-	);
-
-	using action_kind_parse_names = detail::enum_table<
-		action_kind,
-		detail::enum_entry<action_kind::build, "build">,
-		detail::enum_entry<action_kind::generate, "generate">,
-		detail::enum_entry<action_kind::generate, "gen">,
-		detail::enum_entry<action_kind::clean, "clean">,
-		detail::enum_entry<action_kind::run, "run">,
-		detail::enum_entry<action_kind::tools, "tools">,
-		detail::enum_entry<action_kind::tools, "toolchains">,
-		detail::enum_entry<action_kind::tools, "toolchain-info">,
-		detail::enum_entry<action_kind::graph, "graph">,
-		detail::enum_entry<action_kind::help, "help">,
-		detail::enum_entry<action_kind::version, "version">
-	>;
-
-	static_assert(
-		action_kind_parse_names::is_display_aliases(),
-		"action_kind_parse_names must not contain duplicate or empty names"
-	);
-
-	using action_help_entries = detail::enum_table<
-		action_kind,
-		detail::enum_entry<
-			action_kind::build,
-			"Build the project. This is the default command."
-		>,
-		detail::enum_entry<
-			action_kind::generate,
-			"Generate backend build files."
-		>,
-		detail::enum_entry<
-			action_kind::clean,
-			"Remove generated build output."
-		>,
-		detail::enum_entry<
-			action_kind::run,
-			"Build and run a target."
-		>,
-		detail::enum_entry<
-			action_kind::tools,
-			"Show discovered build tools and discovery diagnostics."
-		>,
-		detail::enum_entry<
-			action_kind::graph,
-			"Write graph visualization files."
-		>,
-		detail::enum_entry<
-			action_kind::help,
-			"Show this help text."
-		>,
-		detail::enum_entry<
-			action_kind::version,
-			"Show version information."
-		>
-	>;
+	
 
 	static_assert(
 		action_help_entries::has_no_empty_names()
