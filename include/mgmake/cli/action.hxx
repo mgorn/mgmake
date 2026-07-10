@@ -3,8 +3,6 @@
 #ifndef MGMAKE_CLI_ACTION_HXX
 #define MGMAKE_CLI_ACTION_HXX
 
-#include "../meta/type_list.hxx"
-
 namespace mgmake::cli {
     struct action {
         enum struct kind : uint8_t {
@@ -16,7 +14,7 @@ namespace mgmake::cli {
             tools,
             clean,
             generate,
-            build,
+            build, // default (see options.hxx)
             run,
             graph,
 
