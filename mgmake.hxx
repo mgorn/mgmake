@@ -19,11 +19,11 @@
 #define MGMAKE_CLI_ENTRY_HXX
 
 
-// ===== begin include/mgmake/cli/options.hxx =====
+// ===== begin include/mgmake/cli/default_options.hxx =====
 #pragma once
 
-#ifndef MGMAKE_CLI_OPTIONS_HXX
-#define MGMAKE_CLI_OPTIONS_HXX
+#ifndef MGMAKE_CLI_DEFAULT_OPTIONS_HXX
+#define MGMAKE_CLI_DEFAULT_OPTIONS_HXX
 
 
 // ===== begin include/mgmake/cli/option.hxx =====
@@ -33,94 +33,25 @@
 #define MGMAKE_CLI_OPTION_HXX
 
 
-// ===== begin include/mgmake/meta/type_builder.hxx =====
+// ===== begin include/mgmake/meta/member_access.hxx =====
 #pragma once
 
-#ifndef MGMAKE_META_TYPE_BUILDER_HXX
-#define MGMAKE_META_TYPE_BUILDER_HXX
+#ifndef MGMAKE_META_MEMBER_ACCESS_HXX
+#define MGMAKE_META_MEMBER_ACCESS_HXX
+
+#include <concepts>
+#include <functional>
+#include <type_traits>
+#include <utility>
 
 
-// ===== begin include/mgmake/meta/static_string.hxx =====
+// ===== begin include/mgmake/meta/member_traits.hxx =====
 #pragma once
 
-#ifndef MGMAKE_META_STATIC_STRING_HXX
-#define MGMAKE_META_STATIC_STRING_HXX
+#ifndef MGMAKE_META_MEMBER_TRAITS_HXX
+#define MGMAKE_META_MEMBER_TRAITS_HXX
 
-#include <array>
-#include <cstddef>
-#include <string_view>
-
-// static_string carries compile-time strings through templates without relying on runtime storage.
-
-namespace mgmake::meta {
-    template<std::size_t N>
-    struct static_string {
-        std::array<char, N> m_data{};
-
-        constexpr static_string() = default;
-
-        // Allows implicit conversion from string literals.
-        constexpr static_string(const char (&str)[N]) {
-            for (std::size_t i = 0; i < N; ++i) {
-                m_data[i] = str[i];
-            }
-        }
-
-        [[nodiscard]] static consteval std::size_t size() noexcept {
-            return N - 1;
-        }
-
-        [[nodiscard]] static consteval bool empty() noexcept {
-            return size() == 0;
-        }
-
-        [[nodiscard]] constexpr std::string_view view() const noexcept {
-            return { m_data.data(), size() };
-        }
-
-        constexpr operator std::string_view() const noexcept {
-            return view();
-        }
-    };
-
-    template<std::size_t N1, std::size_t N2>
-    constexpr bool operator==(const static_string<N1>& a, const static_string<N2>& b) noexcept {
-        if constexpr (N1 != N2) {
-            return false;
-        } else {
-            for (std::size_t i = 0; i < N1; ++i) {
-                if (a.m_data[i] != b.m_data[i]) {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-    }
-
-    template<std::size_t N1, std::size_t N2>
-    constexpr auto operator+(const static_string<N1>& a, const static_string<N2>& b) {
-        static_string<N1 + N2 - 1> result;
-
-        for (std::size_t i = 0; i < N1 - 1; ++i) {
-            result.m_data[i] = a.m_data[i];
-        }
-        for (std::size_t i = 0; i < N2; ++i) {
-            result.m_data[i + N1 - 1] = b.m_data[i];
-        }
-
-        return result;
-    }
-}
-
-#endif // MGMAKE_META_STATIC_STRING_HXX// ===== end include/mgmake/meta/static_string.hxx =====
-
-
-// ===== begin include/mgmake/meta/type_map.hxx =====
-#pragma once
-
-#ifndef MGMAKE_META_TYPE_MAP_HXX
-#define MGMAKE_META_TYPE_MAP_HXX
+#include <type_traits>
 
 
 // ===== begin include/mgmake/meta/type_list.hxx =====
@@ -323,6 +254,197 @@ namespace mgmake::meta {
 #endif // MGMAKE_META_TYPE_LIST_HXX// ===== end include/mgmake/meta/type_list.hxx =====
 
 
+namespace mgmake::meta {
+    // Extracts information specifically from a member-function pointer.
+    template<typename type_t>
+    struct member_function_traits;
+
+    // Extracts information from either a member-function or member-object pointer.
+    template<typename type_t>
+    struct member_traits;
+
+    // Member functions use the more specific member-function trait.
+    template<typename type_t> requires std::is_member_function_pointer_v<type_t>
+    struct member_traits<type_t> : member_function_traits<type_t> {};
+
+    // Member objects expose their declaring class and stored type.
+    template<typename member_t, typename class_t> requires (not std::is_function_v<member_t>)
+    struct member_traits<member_t class_t::*> {
+        using class_type = class_t;
+        using member_type = member_t;
+
+        static constexpr auto is_function = false;
+        static constexpr auto is_object = true;
+    };
+
+	// Macro bc we need like 12 different versions of the same thing to cover all bases
+	// fucking hell C++ just steal Zig ideas already
+#define MGMAKE_META_MEMBER_FUNCTION_TRAITS(...)                            \
+    template<                                                              \
+        bool noexcept_v,                                                    \
+        typename return_t,                                                  \
+        typename class_t,                                                   \
+        typename... args_t                                                  \
+    >                                                                       \
+    struct member_function_traits<                                          \
+        return_t (class_t::*)(args_t...) __VA_ARGS__ noexcept(noexcept_v)   \
+    > {                                                                     \
+        using class_type = class_t;                                         \
+        using member_type =                                                 \
+            return_t(args_t...) __VA_ARGS__ noexcept(noexcept_v);           \
+        using return_type = return_t;                                       \
+        using arg_types = type_list<args_t...>;                             \
+                                                                            \
+        static constexpr auto is_function = true;                           \
+        static constexpr auto is_object = false;                            \
+        static constexpr auto is_noexcept = noexcept_v;                     \
+    }
+
+    MGMAKE_META_MEMBER_FUNCTION_TRAITS();
+    MGMAKE_META_MEMBER_FUNCTION_TRAITS(const);
+    MGMAKE_META_MEMBER_FUNCTION_TRAITS(volatile);
+    MGMAKE_META_MEMBER_FUNCTION_TRAITS(const volatile);
+
+    MGMAKE_META_MEMBER_FUNCTION_TRAITS(&);
+    MGMAKE_META_MEMBER_FUNCTION_TRAITS(const &);
+    MGMAKE_META_MEMBER_FUNCTION_TRAITS(volatile &);
+    MGMAKE_META_MEMBER_FUNCTION_TRAITS(const volatile &);
+
+    MGMAKE_META_MEMBER_FUNCTION_TRAITS(&&);
+    MGMAKE_META_MEMBER_FUNCTION_TRAITS(const &&);
+    MGMAKE_META_MEMBER_FUNCTION_TRAITS(volatile &&);
+    MGMAKE_META_MEMBER_FUNCTION_TRAITS(const volatile &&);
+
+#undef MGMAKE_META_MEMBER_FUNCTION_TRAITS
+}
+
+#endif // MGMAKE_META_MEMBER_TRAITS_HXX// ===== end include/mgmake/meta/member_traits.hxx =====
+
+
+namespace mgmake::meta {
+    // Provides uniform get/set access through a compile-time bound member-object pointer.
+    template<auto member_ptr = nullptr>
+    struct member_access {
+        using pointer_type = decltype(member_ptr);
+
+        static_assert(std::is_member_object_pointer_v<pointer_type>, "member_access requires a pointer to a non-static data member");
+        static_assert(member_ptr != nullptr, "member_access requires a non-null member pointer");
+
+        using traits = member_traits<pointer_type>;
+        using class_type = typename traits::class_type;
+        using value_type = typename traits::member_type;
+
+        static constexpr auto pointer = member_ptr;
+
+        template<typename object_t> requires std::invocable<pointer_type, object_t&&>
+        [[nodiscard]] static constexpr decltype(auto) get(object_t&& object)
+			noexcept(std::is_nothrow_invocable_v<pointer_type, object_t&&>) {
+            return std::invoke(pointer, std::forward<object_t>(object));
+        }
+
+        template<typename object_t, typename new_value_t> requires (std::invocable<pointer_type, object_t&&> and std::is_assignable_v<std::invoke_result_t<pointer_type, object_t&&>, new_value_t&&>)
+        static constexpr void set(object_t&& object, new_value_t&& new_value) noexcept(std::is_nothrow_invocable_v<pointer_type, object_t&&> and std::is_nothrow_assignable_v<std::invoke_result_t<pointer_type, object_t&&>, new_value_t&&>) {
+            std::invoke(pointer, std::forward<object_t>(object)) = std::forward<new_value_t>(new_value);
+        }
+    };
+	template<>
+	struct member_access<nullptr> {};
+}
+
+#endif // MGMAKE_META_MEMBER_ACCESS_HXX// ===== end include/mgmake/meta/member_access.hxx =====
+
+
+// ===== begin include/mgmake/meta/type_builder.hxx =====
+#pragma once
+
+#ifndef MGMAKE_META_TYPE_BUILDER_HXX
+#define MGMAKE_META_TYPE_BUILDER_HXX
+
+
+// ===== begin include/mgmake/meta/static_string.hxx =====
+#pragma once
+
+#ifndef MGMAKE_META_STATIC_STRING_HXX
+#define MGMAKE_META_STATIC_STRING_HXX
+
+#include <array>
+#include <cstddef>
+#include <string_view>
+
+// static_string carries compile-time strings through templates without relying on runtime storage.
+
+namespace mgmake::meta {
+    template<std::size_t N>
+    struct static_string {
+        std::array<char, N> m_data{};
+
+        constexpr static_string() = default;
+
+        // Allows implicit conversion from string literals.
+        constexpr static_string(const char (&str)[N]) {
+            for (std::size_t i = 0; i < N; ++i) {
+                m_data[i] = str[i];
+            }
+        }
+
+        [[nodiscard]] static consteval std::size_t size() noexcept {
+            return N - 1;
+        }
+
+        [[nodiscard]] static consteval bool empty() noexcept {
+            return size() == 0;
+        }
+
+        [[nodiscard]] constexpr std::string_view view() const noexcept {
+            return { m_data.data(), size() };
+        }
+
+        constexpr operator std::string_view() const noexcept {
+            return view();
+        }
+    };
+
+    template<std::size_t N1, std::size_t N2>
+    constexpr bool operator==(const static_string<N1>& a, const static_string<N2>& b) noexcept {
+        if constexpr (N1 != N2) {
+            return false;
+        } else {
+            for (std::size_t i = 0; i < N1; ++i) {
+                if (a.m_data[i] != b.m_data[i]) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+    }
+
+    template<std::size_t N1, std::size_t N2>
+    constexpr auto operator+(const static_string<N1>& a, const static_string<N2>& b) {
+        static_string<N1 + N2 - 1> result;
+
+        for (std::size_t i = 0; i < N1 - 1; ++i) {
+            result.m_data[i] = a.m_data[i];
+        }
+        for (std::size_t i = 0; i < N2; ++i) {
+            result.m_data[i + N1 - 1] = b.m_data[i];
+        }
+
+        return result;
+    }
+}
+
+#endif // MGMAKE_META_STATIC_STRING_HXX// ===== end include/mgmake/meta/static_string.hxx =====
+
+
+// ===== begin include/mgmake/meta/type_map.hxx =====
+#pragma once
+
+#ifndef MGMAKE_META_TYPE_MAP_HXX
+#define MGMAKE_META_TYPE_MAP_HXX
+
+// skipped duplicate include: include/mgmake/meta/type_list.hxx
+
 // ===== begin include/mgmake/meta/type_pair.hxx =====
 #pragma once
 
@@ -488,7 +610,7 @@ namespace mgmake::meta {
         using set = type_builder<typename storage_t::template emplace<type_value<key_v>, type_value<value_v>>>;
 
         template<template<typename> typename consumer_t>
-        using build = typename consumer_t<storage_t>::build;
+        using build = consumer_t<storage_t>;
     };
 }
 
@@ -526,37 +648,29 @@ namespace mgmake::cli {
         callback // invoke a callback function when the option is passed
     };
 
-    // Actual option implementation
-    template<
-        meta::static_string name_v = "",
-        meta::static_string description_v = "",
-        char short_name_v = '\0',
-        option_mode mode_v = option_mode::deduce,
-        auto callback_v = nullptr
-    > struct option_impl {
-        static constexpr auto name_value = name_v;
-        static constexpr auto description_value = description_v;
-        static constexpr auto short_name_value = short_name_v;
-        static constexpr auto mode_value = mode_v;
-        static constexpr auto callback_value = callback_v;
-    };
-
-    // Template to consume the map made with option_builder and produce an option
+    // Actual option impl, consume the configuration in the type map
     template<typename storage_t = meta::type_map<>>
-    struct option_consumer {
+    struct option_impl {
         MGMAKE_META_TYPE_CONSUMER_FIELD(name, meta::static_string{""});
         MGMAKE_META_TYPE_CONSUMER_FIELD(description, meta::static_string{""});
 	    MGMAKE_META_TYPE_CONSUMER_FIELD(short_name, '\0');
 	    MGMAKE_META_TYPE_CONSUMER_FIELD(mode, option_mode::deduce);
 	    MGMAKE_META_TYPE_CONSUMER_FIELD(callback, nullptr);
+	    //MGMAKE_META_TYPE_CONSUMER_FIELD(assign, meta::member_access<>);
 
-        using build = option_impl<
-            name_value,
-            description_value,
-            short_name_value,
-            mode_value,
-            callback_value
-        >;
+		static inline constexpr bool match(std::string_view arg) {
+			if (arg.empty()) {
+				return false;
+			}
+
+			if (arg.starts_with("--")) {
+				arg.remove_prefix(2);
+			} else if (arg.starts_with("-")) {
+				arg.remove_prefix(1);
+			}
+
+			return arg == name_value or (arg.size() == 1 and arg.front() == short_name_value);
+		}
     };
 
     // Build a compile-time map for the option settings
@@ -569,14 +683,68 @@ namespace mgmake::cli {
         MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, short_name, char);
         MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, mode, option_mode);
         MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, callback, auto);
+		// TODO: Not use the macro so the value to assign can be passed as well?
+		// Or wait --assigned=value assigns parsed value to the member
+		// so A seperate one that assigns a fixed value as well? Or just use callback to override?
+        //MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, assign, meta::member_access<>);
 
-        using build = typename builder_t::template build<option_consumer>;
+        using build = typename builder_t::template build<option_impl>;
     };
     // default builder alias
     using option = option_builder<>;
 }
 
 #endif // MGMAKE_CLI_OPTION_HXX// ===== end include/mgmake/cli/option.hxx =====
+
+
+// ===== begin include/mgmake/cli/options.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CLI_OPTIONS_HXX
+#define MGMAKE_CLI_OPTIONS_HXX
+
+
+// ===== begin include/mgmake/cli/action.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CLI_ACTION_HXX
+#define MGMAKE_CLI_ACTION_HXX
+
+#include <cstdint>
+
+namespace mgmake::cli {
+    struct action {
+        enum struct kind : uint8_t {
+            // meta actions, no cli required
+            help,
+            version,
+
+            // normal actions, require cli
+            tools,
+            clean,
+            generate,
+            build, // default (see options.hxx)
+            run,
+            graph,
+
+            // # of action kinds std::to_underlying(kind::count)
+            count
+        };
+    };
+}
+
+#endif // MGMAKE_CLI_ACTION_HXX// ===== end include/mgmake/cli/action.hxx =====
+
+
+namespace mgmake::cli {
+	// Store parsed CLI options
+	struct options {
+		// Build action by default
+		action::kind m_action = action::kind::build;
+	};
+}
+
+#endif // MGMAKE_CLI_OPTIONS_HXX// ===== end include/mgmake/cli/options.hxx =====
 
 
 // skipped duplicate include: include/mgmake/meta/type_list.hxx
@@ -587,10 +755,13 @@ namespace mgmake::cli {
     using help_option = option
         ::name<"help">::short_name<'h'>
         ::description<"Show help.">
-        ::callback<[](auto& opts) {
-            // TODO: Print help menu
-            std::println("TODO: Restore Help");
-        }>;
+		// Parsing parses action first, flags next
+		// this will override the requested action & make mgmake use the help action instead
+		::callback<[](options& opts){
+			opts.m_action = action::kind::help;
+		}>
+        //::assign<meta::member_access<&options::m_action>, action::kind::help>
+		::build;
 
     // Type list of default options
     // this way you can add your own option to default_options
@@ -601,14 +772,17 @@ namespace mgmake::cli {
     >;
 }
 
-#endif // MGMAKE_CLI_OPTIONS_HXX// ===== end include/mgmake/cli/options.hxx =====
+#endif // MGMAKE_CLI_DEFAULT_OPTIONS_HXX// ===== end include/mgmake/cli/default_options.hxx =====
 
+// skipped duplicate include: include/mgmake/cli/options.hxx
 
 // ===== begin include/mgmake/cli/parser.hxx =====
 #pragma once
 
 #ifndef MGMAKE_CLI_PARSER_HXX
 #define MGMAKE_CLI_PARSER_HXX
+
+// skipped duplicate include: include/mgmake/cli/options.hxx
 
 // skipped duplicate include: include/mgmake/meta/type_list.hxx
 
@@ -774,6 +948,7 @@ namespace mgmake::sys {
 }// ===== end include/mgmake/sys/shell.hxx =====
 
 
+#include <bitset>
 #include <expected>
 #include <optional>
 #include <string>
@@ -781,9 +956,25 @@ namespace mgmake::sys {
 namespace mgmake::cli {
     template<typename list_t = meta::type_list<>>
     struct parser {
-        std::expected<void, std::string> parse(const sys::shell& cmd) const {
+        static inline constexpr std::expected<options, std::string> parse(const sys::shell& cmd) {
+			auto args = cmd.user_args();
+			for (std::string_view arg : args) {
+				auto matches = match(arg);
+				if (matches.any()) {
+					return std::unexpected("Matched!");
+				}
+			}
             return std::unexpected("Parser not yet implemented");
         }
+
+		using matches_type = std::bitset<list_t::size()>;
+		static inline constexpr matches_type match(std::string_view arg) {
+			return []<std::size_t... Is>(std::index_sequence<Is...>, std::string_view arg) {
+				matches_type matches{};
+				(matches.set(Is, list_t::template type_at<Is>::match(arg)), ...);
+				return matches;
+			}(std::make_index_sequence<list_t::size()>{}, arg);
+		}
     };
 }
 
@@ -816,10 +1007,10 @@ namespace mgmake::cli {
     template<auto project_v = nullptr, auto toolchains_v = nullptr, typename options_t = default_options>
     inline sys::exit_code entry(sys::shell cmd) {
         // construct the parser at compile time :)
-        static constexpr auto p = parser<options_t>();
+        using p = parser<options_t>;
 
         // parse cmd at runtime
-        if (auto result = p.parse(cmd)) {
+        if (auto result = p::parse(cmd)) {
             return sys::exit_code::success;
         } else {
             std::println(stderr, "{}", result.error());

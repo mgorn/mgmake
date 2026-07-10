@@ -3,6 +3,7 @@
 #ifndef MGMAKE_CLI_ENTRY_HXX
 #define MGMAKE_CLI_ENTRY_HXX
 
+#include "default_options.hxx"
 #include "options.hxx"
 #include "parser.hxx"
 
@@ -16,10 +17,10 @@ namespace mgmake::cli {
     template<auto project_v = nullptr, auto toolchains_v = nullptr, typename options_t = default_options>
     inline sys::exit_code entry(sys::shell cmd) {
         // construct the parser at compile time :)
-        static constexpr auto p = parser<options_t>();
+        using p = parser<options_t>;
 
         // parse cmd at runtime
-        if (auto result = p.parse(cmd)) {
+        if (auto result = p::parse(cmd)) {
             return sys::exit_code::success;
         } else {
             std::println(stderr, "{}", result.error());

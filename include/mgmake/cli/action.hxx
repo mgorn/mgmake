@@ -3,6 +3,8 @@
 #ifndef MGMAKE_CLI_ACTION_HXX
 #define MGMAKE_CLI_ACTION_HXX
 
+#include <cstdint>
+
 namespace mgmake::cli {
     struct action {
         enum struct kind : uint8_t {

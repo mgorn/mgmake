@@ -17,7 +17,7 @@ namespace mgmake::meta {
         using set = type_builder<typename storage_t::template emplace<type_value<key_v>, type_value<value_v>>>;
 
         template<template<typename> typename consumer_t>
-        using build = typename consumer_t<storage_t>;
+        using build = consumer_t<storage_t>;
     };
 }
 

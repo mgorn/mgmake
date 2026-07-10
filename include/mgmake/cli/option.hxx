@@ -23,7 +23,21 @@ namespace mgmake::cli {
 	    MGMAKE_META_TYPE_CONSUMER_FIELD(short_name, '\0');
 	    MGMAKE_META_TYPE_CONSUMER_FIELD(mode, option_mode::deduce);
 	    MGMAKE_META_TYPE_CONSUMER_FIELD(callback, nullptr);
-	    MGMAKE_META_TYPE_CONSUMER_FIELD(assign, meta::member_access<>);
+	    //MGMAKE_META_TYPE_CONSUMER_FIELD(assign, meta::member_access<>);
+
+		static inline constexpr bool match(std::string_view arg) {
+			if (arg.empty()) {
+				return false;
+			}
+
+			if (arg.starts_with("--")) {
+				arg.remove_prefix(2);
+			} else if (arg.starts_with("-")) {
+				arg.remove_prefix(1);
+			}
+
+			return arg == name_value or (arg.size() == 1 and arg.front() == short_name_value);
+		}
     };
 
     // Build a compile-time map for the option settings
