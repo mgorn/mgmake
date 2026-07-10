@@ -1,5 +1,6 @@
 #include "mgmake.hxx"
 
+/*
 using namespace mgmk;
 using namespace mgmk::spec;
 
@@ -15,5 +16,6 @@ project proj() {
 		.add_target(testlib)
 		.add_target(builder);
 }
+*/
 
-MGMK_ENTRY(proj);
+MGMK_ENTRY();

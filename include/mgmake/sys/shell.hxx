@@ -1,9 +1,22 @@
 #pragma once
 
+#include <algorithm>   // std::ranges::find_first_of
+#include <array>       // std::array
+#include <cstddef>     // std::size_t
+#include <cstdlib>     // std::system
+#include <format>      // std::format
+#include <print>       // std::println
+#include <ranges>      // views, ranges::to
+#include <span>        // std::span
+#include <string>      // std::string
+#include <string_view> // std::string_view
+#include <utility>     // std::exchange
+#include <vector>      // std::vector
+
 namespace mgmake::sys {
     struct shell {
         inline constexpr std::string_view program_name() const {
-            return m_args.empty() ? "" : m_args.at(0);
+            return m_args.empty() ? std::string_view{} : m_args.at(0);
         }
 
         inline constexpr std::span<const std::string> user_args() const {
@@ -50,7 +63,7 @@ namespace mgmake::sys {
         // This is required for empty arguments, whitespace, quotes, and characters that
         // may affect how the shell interprets the command line.
         static inline constexpr bool arg_needs_escape(std::string_view arg) {
-            return arg.empty() or (std::ranges::find_first_of(arg, shell_special_characters) != arg.end());
+            return arg.empty() or (std::ranges::find_first_of(arg, special_characters) != arg.end());
         }
 
         static inline constexpr std::array special_characters{
@@ -82,12 +95,12 @@ namespace mgmake::sys {
         // This is only for individual arguments, not whole commands, pipelines,
         // redirections, or multiple concatenated arguments.
         static inline constexpr std::string arg_escape(std::string_view arg) {
-            if (not needs_arg_escape(arg)) {
-                return arg;
+            if (not arg_needs_escape(arg)) {
+                return std::string{ arg };
             }
 
             if (arg.empty()) {
-                return empty_arg_escape;
+                return std::string{ empty_arg_escape };
             }
 
             std::string result;
