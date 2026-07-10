@@ -1,0 +1,146 @@
+#pragma once
+
+namespace mgmake::sys {
+    struct shell {
+        inline constexpr std::string_view program_name() const {
+            return m_args.empty() ? "" : m_args.at(0);
+        }
+
+        inline constexpr std::span<const std::string> user_args() const {
+            if (m_args.size() <= 1) {
+                return {};
+            }
+            return view().subspan(1);
+        }
+
+        inline constexpr std::span<const std::string> view() const {
+            return { m_args };
+        }
+
+        // Escapes and joins the arguments into the command-line text used for execution and backend generation.
+        inline constexpr std::string full_command() const {
+            return m_args
+                | std::views::transform(arg_escape)
+                | std::views::join_with(' ')
+                | std::ranges::to<std::string>();
+        }
+
+        auto invoke(bool verbose, bool dry_run) const {
+            const auto command = full_command();
+
+            if (verbose or dry_run) {
+                std::println("{}", command);
+            }
+
+            if (dry_run) {
+                return 0;
+            }
+
+#ifdef MGMK_PLATFORM_WINDOWS
+            // cmd.exe strips outer quotes for /c; keep inner quotes around a spaced executable path intact.
+            return std::system(std::format("\"{}\"", command).c_str());
+#else
+            return std::system(command.c_str());
+#endif
+        }
+
+        // Returns true when an argument needs escaping before being written into a
+        // generated shell command.
+        //
+        // This is required for empty arguments, whitespace, quotes, and characters that
+        // may affect how the shell interprets the command line.
+        static inline constexpr bool arg_needs_escape(std::string_view arg) {
+            return arg.empty() or (std::ranges::find_first_of(arg, shell_special_characters) != arg.end());
+        }
+
+        static inline constexpr std::array special_characters{
+#ifdef MGMK_PLATFORM_WINDOWS
+        ' ', '\t', '"', '&', '|', '<', '>', '^', '%', '!', '(', ')'
+#else
+        ' ', '\t', '\'', '"', '$', '\\', '&', ';', '(', ')', '<', '>', '|'
+#endif // MGMK_PLATFORM_WINDOWS
+        };
+
+        static inline constexpr std::string_view empty_arg_escape{
+#ifdef MGMK_PLATFORM_WINDOWS
+            "\"\""
+#else
+            "''"
+#endif // MGMK_PLATFORM_WINDOWS
+        };
+
+        static inline constexpr char quote_character{
+#ifdef MGMK_PLATFORM_WINDOWS
+            '"'
+#else
+            '\''
+#endif // MGMK_PLATFORM_WINDOWS
+        };
+
+        // Escapes one command-line argument for use in a generated shell command.
+        //
+        // This is only for individual arguments, not whole commands, pipelines,
+        // redirections, or multiple concatenated arguments.
+        static inline constexpr std::string arg_escape(std::string_view arg) {
+            if (not needs_arg_escape(arg)) {
+                return arg;
+            }
+
+            if (arg.empty()) {
+                return empty_arg_escape;
+            }
+
+            std::string result;
+            result.reserve(arg.size() + 2);
+            result += quote_character;
+
+#ifdef MGMK_PLATFORM_WINDOWS
+            static constexpr char escape_character = '\\';
+            std::size_t backslashes = 0;
+
+            for (const char ch : arg) {
+                if (ch == escape_character) {
+                    ++backslashes;
+                    continue;
+                }
+
+                if (ch == quote_character) {
+                    result.append((std::exchange(backslashes, 0) * 2) + 1, escape_character);
+                    result.push_back(quote_character);
+                    continue;
+                }
+
+                result.append(std::exchange(backslashes, 0), escape_character);
+                result.push_back(ch);
+            }
+
+            result.append(backslashes * 2, escape_character);
+#else
+            static constexpr std::string_view posix_quote_escape = "'\\''";
+
+            auto escaped_body = arg
+                | std::views::split(quote_character)
+                | std::views::join_with(posix_quote_escape);
+
+            result.append_range(escaped_body);
+#endif // MGMK_PLATFORM_WINDOWS
+
+            result += quote_character;
+            return result;
+        }
+
+        // Copies the already-tokenized argc/argv arguments; escaping is handled when command text is generated.
+        static inline constexpr shell from_args(int argc, const char* const* argv) {
+            if (argc <= 0 or argv == nullptr) {
+                return {};
+            }
+
+            return {
+                std::views::counted(argv, argc)
+                | std::ranges::to<std::vector<std::string>>()
+            };
+        }
+
+        std::vector<std::string> m_args{};
+    };
+}
