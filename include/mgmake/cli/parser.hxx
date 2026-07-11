@@ -21,6 +21,7 @@ namespace mgmake::cli {
 			for (std::string_view arg : args) {
 				auto matches = match(arg);
 				if (matches.any()) {
+                    // TODO: Take the matched options, handle them
 					return std::unexpected("Matched!");
 				}
 			}
