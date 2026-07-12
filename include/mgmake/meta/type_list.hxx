@@ -12,11 +12,11 @@
 // Compile-time list of types.
 //
 // `type_list` stores a variadic type pack as a named type. It has no runtime
-// state. The list can be queried, extended, merged, sorted, or applied to
-// another variadic template with `apply`.
+// state. The list can be queried, extended, merged, filtered, sorted, folded,
+// or applied to another variadic template with `apply`.
 
 namespace mgmake::meta {
-    template<typename... types_t>
+	template<typename... types_t>
 	struct type_list {
 		static consteval std::size_t size() {
 			return sizeof...(types_t);
@@ -27,13 +27,7 @@ namespace mgmake::meta {
 
 		template<typename type_t>
 		static consteval std::size_t count() {
-			return (
-				std::size_t{0} + ... + (
-					std::same_as<type_t, types_t>
-						? 1
-						: 0
-				)
-			);
+			return (std::size_t{0} + ... + (std::same_as<type_t, types_t> ? 1 : 0));
 		}
 
 		template<typename type_t>
@@ -48,10 +42,7 @@ namespace mgmake::meta {
 
 		template<typename type_t>
 		static consteval std::size_t index() {
-			static_assert(
-				unique<type_t>(),
-				"type_list::index<type_t>() requires exactly one matching type."
-			);
+			static_assert(unique<type_t>(), "type_list::index<type_t>() requires exactly one matching type.");
 
 			constexpr std::array<bool, size()> matches {
 				std::same_as<type_t, types_t>...
@@ -102,10 +93,7 @@ namespace mgmake::meta {
 
 		template<typename type_t, bool check = true>
 		struct append_unique_type {
-			static_assert(
-				(not check) or (not has<type_t>()),
-				"type_list::append_unique cannot append a duplicate type."
-			);
+			static_assert((not check) or (not has<type_t>()), "type_list::append_unique cannot append a duplicate type.");
 
 			using type = append_types_unique<type_t>;
 		};
@@ -118,10 +106,7 @@ namespace mgmake::meta {
 
 		template<typename type_t, bool check = true>
 		struct prepend_unique_type {
-			static_assert(
-				(not check) or (not has<type_t>()),
-				"type_list::prepend_unique cannot prepend a duplicate type."
-			);
+			static_assert((not check) or (not has<type_t>()), "type_list::prepend_unique cannot prepend a duplicate type.");
 
 			using type = std::conditional_t<
 				has<type_t>(),
@@ -142,6 +127,49 @@ namespace mgmake::meta {
 		// Invoke a variadic template with this list's stored type pack.
 		template<template<typename...> typename pack_t>
 		using apply = pack_t<types_t...>;
+
+	private:
+		template<auto operation, typename state_t, typename... remaining_t>
+		struct fold_type;
+
+		template<auto operation, typename state_t>
+		struct fold_type<operation, state_t> {
+			using type = state_t;
+		};
+
+		template<auto operation, typename state_t, typename first_t, typename... rest_t>
+		struct fold_type<operation, state_t, first_t, rest_t...> {
+			using next_state_t = typename decltype(operation.template operator()<state_t, first_t>())::type;
+
+			using type = typename fold_type<operation, next_state_t, rest_t...>::type;
+		};
+
+	public:
+		// Fold the stored types from left to right into an accumulated type.
+		//
+		// The operation should be callable as:
+		//     `operation.template operator()<state_t, type_t>()`
+		// and return `std::type_identity<next_state_t>`.
+		template<auto operation, typename initial_t>
+		using fold = typename fold_type<operation, initial_t, types_t...>::type;
+
+		// Keep the types for which the consteval NTTP predicate returns true.
+		//
+		// The predicate should be callable as:
+		//     `predicate.template operator()<type_t>()`
+		template<auto predicate>
+		using filter = fold<
+			[]<typename filtered_t, typename type_t>() consteval {
+				return std::type_identity<
+					std::conditional_t<
+						static_cast<bool>(predicate.template operator()<type_t>()),
+						typename filtered_t::template append<type_t>,
+						filtered_t
+					>
+				>{};
+			},
+			type_list<>
+		>;
 
 	private:
 		template<auto compare, typename sorted_t, typename type_t>
@@ -165,32 +193,25 @@ namespace mgmake::meta {
 			>;
 		};
 
-		template<auto compare, typename sorted_t, typename... remaining_t>
-		struct sort_type;
-
-		template<auto compare, typename sorted_t>
-		struct sort_type<compare, sorted_t> {
-			using type = sorted_t;
-		};
-
-		template<auto compare, typename sorted_t, typename first_t, typename... rest_t>
-		struct sort_type<compare, sorted_t, first_t, rest_t...> {
-			using next_sorted_t = typename insert_sorted_type<
-				compare,
-				sorted_t,
-				first_t
-			>::type;
-
-			using type = typename sort_type<compare, next_sorted_t, rest_t...>::type;
-		};
-
 	public:
 		// Sort this `type_list` using a consteval NTTP comparator.
+		//
 		// The comparator should be callable as:
 		//     `compare.template operator()<left_t, right_t>()`
-		// and should return `true` when `left_t` should appear before `right_t`.
+		// and return true when `left_t` should appear before `right_t`.
 		template<auto compare>
-		using sort = typename sort_type<compare, type_list<>, types_t...>::type;
+		using sort = fold<
+			[]<typename sorted_t, typename type_t>() consteval {
+				return std::type_identity<
+					typename insert_sorted_type<
+						compare,
+						sorted_t,
+						type_t
+					>::type
+				>{};
+			},
+			type_list<>
+		>;
 	};
 }
 

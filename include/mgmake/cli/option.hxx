@@ -3,6 +3,7 @@
 #ifndef MGMAKE_CLI_OPTION_HXX
 #define MGMAKE_CLI_OPTION_HXX
 
+#include "../detail/assert.hxx"
 #include "../meta/member_access.hxx"
 #include "../meta/type_builder.hxx"
 
@@ -18,25 +19,70 @@ namespace mgmake::cli {
     // Actual option impl, consume the configuration in the type map
     template<typename storage_t = meta::type_map<>>
     struct option_impl {
-        MGMAKE_META_TYPE_CONSUMER_FIELD(name, meta::static_string{""});
-        MGMAKE_META_TYPE_CONSUMER_FIELD(description, meta::static_string{""});
+        MGMAKE_META_TYPE_CONSUMER_FIELD(name, meta::static_string{ "" });
+        MGMAKE_META_TYPE_CONSUMER_FIELD(description, meta::static_string{ "" });
 	    MGMAKE_META_TYPE_CONSUMER_FIELD(short_name, '\0');
 	    MGMAKE_META_TYPE_CONSUMER_FIELD(mode, option_mode::deduce);
 	    MGMAKE_META_TYPE_CONSUMER_FIELD(callback, nullptr);
-	    //MGMAKE_META_TYPE_CONSUMER_FIELD(assign, meta::member_access<>);
+	    using assign_type = typename storage_t::template at<meta::type_value<meta::static_string{ "assign" }>, false>;
+        MGMAKE_META_TYPE_CONSUMER_FIELD(assign_hint, meta::static_string{ "value" });
+	    using set_type = typename storage_t::template at<meta::type_value<meta::static_string{ "set" }>, false>;
+	    MGMAKE_META_TYPE_CONSUMER_FIELD(action, false);
 
 		static inline constexpr bool match(std::string_view arg) {
 			if (arg.empty()) {
 				return false;
 			}
 
-			if (arg.starts_with("--")) {
-				arg.remove_prefix(2);
-			} else if (arg.starts_with("-")) {
-				arg.remove_prefix(1);
+			// If the option is an action
+			if constexpr (action_value) {
+				if (arg == name_value) {
+					return true;
+				}
 			}
 
-			return arg == name_value or (arg.size() == 1 and arg.front() == short_name_value);
+			// Parse as switch
+			if (arg.starts_with("--")) {
+				return match_long(arg.substr(2));
+			} else if (arg.starts_with("-")) {
+				return match_short(arg.substr(1));
+			}
+			return false;
+		}
+
+		static inline constexpr bool match_long(std::string_view arg) {
+			return arg.starts_with(name_value);
+		}
+
+		static inline constexpr bool match_short(std::string_view arg) {
+			// handle short = val (e.g. -g=ninja/-g ninja or smth)
+			return arg.size() == 1 and arg.front() == short_name_value;
+		}
+
+		static inline constexpr auto handle_action(std::string_view arg) {
+			mgmkassert(match(arg), "handling an action with the incorrect arg");
+			mgmkassert(action_value, "switch option is being handled as an action");
+		}
+
+		static inline constexpr auto is_assign = [] -> bool {
+			if constexpr(not std::is_same_v<assign_type, void>) {
+				return assign_type::valid;
+			}
+			return false;
+		}();
+
+		static inline constexpr auto handle_switch(std::string_view arg) {
+			mgmkassert(match(arg), "handling a switch with the incorrect arg");
+			mgmkassert(not is_assign, "handling a value assign switch as a normal switch");
+		}
+
+		static inline constexpr auto handle_assign(std::string_view arg, std::string_view value) {
+			mgmkassert(match(arg), "handling a switch with the incorrect arg");
+			mgmkassert(is_assign, "handling a normal switch as a value assign switch");
+
+			if constexpr (is_assign) {
+
+			}
 		}
     };
 
@@ -50,10 +96,17 @@ namespace mgmake::cli {
         MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, short_name, char);
         MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, mode, option_mode);
         MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, callback, auto);
-		// TODO: Not use the macro so the value to assign can be passed as well?
-		// Or wait --assigned=value assigns parsed value to the member
-		// so A seperate one that assigns a fixed value as well? Or just use callback to override?
-        //MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, assign, meta::member_access<>);
+		// option accepts a value (`--switch=value` or `--switch value`) and assigns its value to the option member
+		// pass a `meta::member_access<>` for the member to assign.
+		template<typename member_t = meta::member_access<>>
+        using assign = option_builder<typename builder_type::template set<"assign", member_t>>;
+        MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, assign_hint, meta::static_string);
+		// Sets the value at the member to the default value.
+		template<typename member_t = meta::member_access<>, auto value_v = nullptr>
+        using set = callback<[](auto& obj) {
+			member_t::set(obj, value_v);
+		}>;
+		MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, action, bool);
 
         using build = typename builder_t::template build<option_impl>;
     };

@@ -13,8 +13,8 @@ namespace mgmake::meta {
         template<static_string key_v>
         using get = typename storage_t::template at<type_value<key_v>>;
 
-        template<static_string key_v, auto value_v>
-        using set = type_builder<typename storage_t::template emplace<type_value<key_v>, type_value<value_v>>>;
+        template<static_string key_v, typename value_t>
+        using set = type_builder<typename storage_t::template emplace<type_value<key_v>, value_t>>;
 
         template<template<typename> typename consumer_t>
         using build = consumer_t<storage_t>;
@@ -28,7 +28,7 @@ namespace mgmake::meta {
 #define MGMAKE_META_TYPE_BUILDER_FIELD_AS(wrapper_t, alias_t, key_v, ...) \
 	template<__VA_ARGS__ alias_t##_v> \
 	using alias_t = wrapper_t< \
-		typename builder_t::template set<key_v, alias_t##_v> \
+		typename builder_t::template set<key_v, meta::type_value<alias_t##_v>> \
 	>
 
 // When defining consumers, ensure `storage_t` is the name of the `meta::type_map`

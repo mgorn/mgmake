@@ -33,6 +33,101 @@
 #define MGMAKE_CLI_OPTION_HXX
 
 
+// ===== begin include/mgmake/detail/assert.hxx =====
+#pragma once
+
+#ifndef MGMAKE_DETAIL_ASSERT_HXX
+#define MGMAKE_DETAIL_ASSERT_HXX
+
+#include <cstdlib>
+#include <iostream>
+#include <source_location>
+#include <string_view>
+
+// mgmkassert is the lightweight invariant check used throughout spec construction and lowering.
+
+namespace mgmake::detail {
+
+[[noreturn]] inline void assertion_failed(
+    std::string_view condition,
+    std::string_view message,
+    std::source_location location = std::source_location::current()
+) {
+    std::cerr
+        << "mgmake assertion failed\n"
+        << "  condition: " << condition << "\n"
+        << "  message: " << message << "\n"
+        << "  file: " << location.file_name() << "\n"
+        << "  line: " << location.line() << "\n"
+        << "  function: " << location.function_name() << "\n";
+
+    std::abort();
+}
+
+inline void mgmk_assert_impl(
+    const bool condition,
+    const std::string_view condition_text,
+    const std::string_view message,
+    const std::source_location location = std::source_location::current()
+) {
+    if (!condition) {
+        assertion_failed(condition_text, message, location);
+    }
+}
+
+struct constexpr_assertion_failure {};
+
+template<typename message_t>
+[[noreturn]] consteval void constexpr_assert_failed(
+    const char*,
+    const message_t&
+) {
+    throw constexpr_assertion_failure{};
+}
+
+} // namespace mgmake::detail
+
+#define mgmkstaticassert(condition, message) \
+    static_assert(static_cast<bool>(condition), message)
+
+#ifndef MGMK_ENABLE_ASSERTS
+    #ifndef NDEBUG
+        #define MGMK_ENABLE_ASSERTS 1
+    #else
+        #define MGMK_ENABLE_ASSERTS 0
+    #endif // NDEBUG
+#endif // MGMK_ENABLE_ASSERTS
+
+#if MGMK_ENABLE_ASSERTS
+    #define mgmkassert(condition, message)                                      \
+        do {                                                                    \
+            if (!(condition)) {                                                 \
+                if consteval {                                                  \
+                    ::mgmake::detail::constexpr_assert_failed(                  \
+                        #condition,                                             \
+                        message                                                 \
+                    );                                                          \
+                } else {                                                        \
+                    ::mgmake::detail::mgmk_assert_impl(                         \
+                        false,                                                  \
+                        #condition,                                             \
+                        message,                                                \
+                        std::source_location::current()                         \
+                    );                                                          \
+                }                                                               \
+            }                                                                   \
+        } while (false)
+#else
+    #define mgmkassert(condition, message)                                      \
+        do {                                                                    \
+            (void)sizeof(condition);                                            \
+        } while (false)
+#endif // MGMK_ENABLE_ASSERTS
+
+#endif // MGMAKE_DETAIL_ASSERT_HXX
+// ===== end include/mgmake/detail/assert.hxx =====
+
+
 // ===== begin include/mgmake/meta/member_access.hxx =====
 #pragma once
 
@@ -69,11 +164,11 @@
 // Compile-time list of types.
 //
 // `type_list` stores a variadic type pack as a named type. It has no runtime
-// state. The list can be queried, extended, merged, sorted, or applied to
-// another variadic template with `apply`.
+// state. The list can be queried, extended, merged, filtered, sorted, folded,
+// or applied to another variadic template with `apply`.
 
 namespace mgmake::meta {
-    template<typename... types_t>
+	template<typename... types_t>
 	struct type_list {
 		static consteval std::size_t size() {
 			return sizeof...(types_t);
@@ -84,13 +179,7 @@ namespace mgmake::meta {
 
 		template<typename type_t>
 		static consteval std::size_t count() {
-			return (
-				std::size_t{0} + ... + (
-					std::same_as<type_t, types_t>
-						? 1
-						: 0
-				)
-			);
+			return (std::size_t{0} + ... + (std::same_as<type_t, types_t> ? 1 : 0));
 		}
 
 		template<typename type_t>
@@ -105,10 +194,7 @@ namespace mgmake::meta {
 
 		template<typename type_t>
 		static consteval std::size_t index() {
-			static_assert(
-				unique<type_t>(),
-				"type_list::index<type_t>() requires exactly one matching type."
-			);
+			static_assert(unique<type_t>(), "type_list::index<type_t>() requires exactly one matching type.");
 
 			constexpr std::array<bool, size()> matches {
 				std::same_as<type_t, types_t>...
@@ -159,10 +245,7 @@ namespace mgmake::meta {
 
 		template<typename type_t, bool check = true>
 		struct append_unique_type {
-			static_assert(
-				(not check) or (not has<type_t>()),
-				"type_list::append_unique cannot append a duplicate type."
-			);
+			static_assert((not check) or (not has<type_t>()), "type_list::append_unique cannot append a duplicate type.");
 
 			using type = append_types_unique<type_t>;
 		};
@@ -175,10 +258,7 @@ namespace mgmake::meta {
 
 		template<typename type_t, bool check = true>
 		struct prepend_unique_type {
-			static_assert(
-				(not check) or (not has<type_t>()),
-				"type_list::prepend_unique cannot prepend a duplicate type."
-			);
+			static_assert((not check) or (not has<type_t>()), "type_list::prepend_unique cannot prepend a duplicate type.");
 
 			using type = std::conditional_t<
 				has<type_t>(),
@@ -199,6 +279,49 @@ namespace mgmake::meta {
 		// Invoke a variadic template with this list's stored type pack.
 		template<template<typename...> typename pack_t>
 		using apply = pack_t<types_t...>;
+
+	private:
+		template<auto operation, typename state_t, typename... remaining_t>
+		struct fold_type;
+
+		template<auto operation, typename state_t>
+		struct fold_type<operation, state_t> {
+			using type = state_t;
+		};
+
+		template<auto operation, typename state_t, typename first_t, typename... rest_t>
+		struct fold_type<operation, state_t, first_t, rest_t...> {
+			using next_state_t = typename decltype(operation.template operator()<state_t, first_t>())::type;
+
+			using type = typename fold_type<operation, next_state_t, rest_t...>::type;
+		};
+
+	public:
+		// Fold the stored types from left to right into an accumulated type.
+		//
+		// The operation should be callable as:
+		//     `operation.template operator()<state_t, type_t>()`
+		// and return `std::type_identity<next_state_t>`.
+		template<auto operation, typename initial_t>
+		using fold = typename fold_type<operation, initial_t, types_t...>::type;
+
+		// Keep the types for which the consteval NTTP predicate returns true.
+		//
+		// The predicate should be callable as:
+		//     `predicate.template operator()<type_t>()`
+		template<auto predicate>
+		using filter = fold<
+			[]<typename filtered_t, typename type_t>() consteval {
+				return std::type_identity<
+					std::conditional_t<
+						static_cast<bool>(predicate.template operator()<type_t>()),
+						typename filtered_t::template append<type_t>,
+						filtered_t
+					>
+				>{};
+			},
+			type_list<>
+		>;
 
 	private:
 		template<auto compare, typename sorted_t, typename type_t>
@@ -222,32 +345,25 @@ namespace mgmake::meta {
 			>;
 		};
 
-		template<auto compare, typename sorted_t, typename... remaining_t>
-		struct sort_type;
-
-		template<auto compare, typename sorted_t>
-		struct sort_type<compare, sorted_t> {
-			using type = sorted_t;
-		};
-
-		template<auto compare, typename sorted_t, typename first_t, typename... rest_t>
-		struct sort_type<compare, sorted_t, first_t, rest_t...> {
-			using next_sorted_t = typename insert_sorted_type<
-				compare,
-				sorted_t,
-				first_t
-			>::type;
-
-			using type = typename sort_type<compare, next_sorted_t, rest_t...>::type;
-		};
-
 	public:
 		// Sort this `type_list` using a consteval NTTP comparator.
+		//
 		// The comparator should be callable as:
 		//     `compare.template operator()<left_t, right_t>()`
-		// and should return `true` when `left_t` should appear before `right_t`.
+		// and return true when `left_t` should appear before `right_t`.
 		template<auto compare>
-		using sort = typename sort_type<compare, type_list<>, types_t...>::type;
+		using sort = fold<
+			[]<typename sorted_t, typename type_t>() consteval {
+				return std::type_identity<
+					typename insert_sorted_type<
+						compare,
+						sorted_t,
+						type_t
+					>::type
+				>{};
+			},
+			type_list<>
+		>;
 	};
 }
 
@@ -325,6 +441,7 @@ namespace mgmake::meta {
     // Provides uniform get/set access through a compile-time bound member-object pointer.
     template<auto member_ptr = nullptr>
     struct member_access {
+		static inline constexpr bool valid = true;
         using pointer_type = decltype(member_ptr);
 
         static_assert(std::is_member_object_pointer_v<pointer_type>, "member_access requires a pointer to a non-static data member");
@@ -348,7 +465,9 @@ namespace mgmake::meta {
         }
     };
 	template<>
-	struct member_access<nullptr> {};
+	struct member_access<nullptr> {
+		static inline constexpr bool valid = false;
+	};
 }
 
 #endif // MGMAKE_META_MEMBER_ACCESS_HXX// ===== end include/mgmake/meta/member_access.hxx =====
@@ -606,8 +725,8 @@ namespace mgmake::meta {
         template<static_string key_v>
         using get = typename storage_t::template at<type_value<key_v>>;
 
-        template<static_string key_v, auto value_v>
-        using set = type_builder<typename storage_t::template emplace<type_value<key_v>, type_value<value_v>>>;
+        template<static_string key_v, typename value_t>
+        using set = type_builder<typename storage_t::template emplace<type_value<key_v>, value_t>>;
 
         template<template<typename> typename consumer_t>
         using build = consumer_t<storage_t>;
@@ -621,7 +740,7 @@ namespace mgmake::meta {
 #define MGMAKE_META_TYPE_BUILDER_FIELD_AS(wrapper_t, alias_t, key_v, ...) \
 	template<__VA_ARGS__ alias_t##_v> \
 	using alias_t = wrapper_t< \
-		typename builder_t::template set<key_v, alias_t##_v> \
+		typename builder_t::template set<key_v, meta::type_value<alias_t##_v>> \
 	>
 
 // When defining consumers, ensure `storage_t` is the name of the `meta::type_map`
@@ -651,25 +770,70 @@ namespace mgmake::cli {
     // Actual option impl, consume the configuration in the type map
     template<typename storage_t = meta::type_map<>>
     struct option_impl {
-        MGMAKE_META_TYPE_CONSUMER_FIELD(name, meta::static_string{""});
-        MGMAKE_META_TYPE_CONSUMER_FIELD(description, meta::static_string{""});
+        MGMAKE_META_TYPE_CONSUMER_FIELD(name, meta::static_string{ "" });
+        MGMAKE_META_TYPE_CONSUMER_FIELD(description, meta::static_string{ "" });
 	    MGMAKE_META_TYPE_CONSUMER_FIELD(short_name, '\0');
 	    MGMAKE_META_TYPE_CONSUMER_FIELD(mode, option_mode::deduce);
 	    MGMAKE_META_TYPE_CONSUMER_FIELD(callback, nullptr);
-	    //MGMAKE_META_TYPE_CONSUMER_FIELD(assign, meta::member_access<>);
+	    using assign_type = typename storage_t::template at<meta::type_value<meta::static_string{ "assign" }>, false>;
+        MGMAKE_META_TYPE_CONSUMER_FIELD(assign_hint, meta::static_string{ "value" });
+	    using set_type = typename storage_t::template at<meta::type_value<meta::static_string{ "set" }>, false>;
+	    MGMAKE_META_TYPE_CONSUMER_FIELD(action, false);
 
 		static inline constexpr bool match(std::string_view arg) {
 			if (arg.empty()) {
 				return false;
 			}
 
-			if (arg.starts_with("--")) {
-				arg.remove_prefix(2);
-			} else if (arg.starts_with("-")) {
-				arg.remove_prefix(1);
+			// If the option is an action
+			if constexpr (action_value) {
+				if (arg == name_value) {
+					return true;
+				}
 			}
 
-			return arg == name_value or (arg.size() == 1 and arg.front() == short_name_value);
+			// Parse as switch
+			if (arg.starts_with("--")) {
+				return match_long(arg.substr(2));
+			} else if (arg.starts_with("-")) {
+				return match_short(arg.substr(1));
+			}
+			return false;
+		}
+
+		static inline constexpr bool match_long(std::string_view arg) {
+			return arg.starts_with(name_value);
+		}
+
+		static inline constexpr bool match_short(std::string_view arg) {
+			// handle short = val (e.g. -g=ninja/-g ninja or smth)
+			return arg.size() == 1 and arg.front() == short_name_value;
+		}
+
+		static inline constexpr auto handle_action(std::string_view arg) {
+			mgmkassert(match(arg), "handling an action with the incorrect arg");
+			mgmkassert(action_value, "switch option is being handled as an action");
+		}
+
+		static inline constexpr auto is_assign = [] -> bool {
+			if constexpr(not std::is_same_v<assign_type, void>) {
+				return assign_type::valid;
+			}
+			return false;
+		}();
+
+		static inline constexpr auto handle_switch(std::string_view arg) {
+			mgmkassert(match(arg), "handling a switch with the incorrect arg");
+			mgmkassert(not is_assign, "handling a value assign switch as a normal switch");
+		}
+
+		static inline constexpr auto handle_assign(std::string_view arg, std::string_view value) {
+			mgmkassert(match(arg), "handling a switch with the incorrect arg");
+			mgmkassert(is_assign, "handling a normal switch as a value assign switch");
+
+			if constexpr (is_assign) {
+
+			}
 		}
     };
 
@@ -683,10 +847,17 @@ namespace mgmake::cli {
         MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, short_name, char);
         MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, mode, option_mode);
         MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, callback, auto);
-		// TODO: Not use the macro so the value to assign can be passed as well?
-		// Or wait --assigned=value assigns parsed value to the member
-		// so A seperate one that assigns a fixed value as well? Or just use callback to override?
-        //MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, assign, meta::member_access<>);
+		// option accepts a value (`--switch=value` or `--switch value`) and assigns its value to the option member
+		// pass a `meta::member_access<>` for the member to assign.
+		template<typename member_t = meta::member_access<>>
+        using assign = option_builder<typename builder_type::template set<"assign", member_t>>;
+        MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, assign_hint, meta::static_string);
+		// Sets the value at the member to the default value.
+		template<typename member_t = meta::member_access<>, auto value_v = nullptr>
+        using set = callback<[](auto& obj) {
+			member_t::set(obj, value_v);
+		}>;
+		MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, action, bool);
 
         using build = typename builder_t::template build<option_impl>;
     };
@@ -736,11 +907,18 @@ namespace mgmake::cli {
 #endif // MGMAKE_CLI_ACTION_HXX// ===== end include/mgmake/cli/action.hxx =====
 
 
+#include <filesystem>
+
 namespace mgmake::cli {
 	// Store parsed CLI options
 	struct options {
 		// Build action by default
 		action::kind m_action = action::kind::build;
+
+		bool m_verbose = false;
+		bool m_dry_run = false;
+
+		std::filesystem::path m_build_dir = std::filesystem::current_path() / ".build";
 	};
 }
 
@@ -755,12 +933,27 @@ namespace mgmake::cli {
     using help_option = option
         ::name<"help">::short_name<'h'>
         ::description<"Show help.">
-		// Parsing parses action first, flags next
-		// this will override the requested action & make mgmake use the help action instead
-		::callback<[](options& opts){
-			opts.m_action = action::kind::help;
-		}>
-        //::assign<meta::member_access<&options::m_action>, action::kind::help>
+		::action<true>
+		::set<meta::member_access<&options::m_action>, action::kind::help>
+		::build;
+	
+	using verbose_option = option
+		::name<"verbose">::short_name<'v'>
+		::description<"Print commands before executing them.">
+		::set<meta::member_access<&options::m_verbose>, true>
+		::build;
+	
+	using dry_run_option = option
+		::name<"dry-run">
+		::description<"Print commands without executing them.">
+		::set<meta::member_access<&options::m_dry_run>, true>
+		::build;
+
+	using build_dir_option = option
+		::name<"build-dir">
+		::description<"Set the build directory.">
+		::assign<meta::member_access<&options::m_build_dir>>
+		::assign_hint<"path">
 		::build;
 
     // Type list of default options
@@ -768,7 +961,10 @@ namespace mgmake::cli {
     // before passing the list to the entry for your own CLI
     // options
     using default_options = meta::type_list<
-        help_option
+        help_option,
+		verbose_option,
+		dry_run_option,
+		build_dir_option
     >;
 }
 
@@ -956,14 +1152,55 @@ namespace mgmake::sys {
 namespace mgmake::cli {
     template<typename list_t = meta::type_list<>>
     struct parser {
+		using list_type = list_t;
+
+		// Action options (first arg, no - or --)
+		using actions_type = typename list_type::template filter<[]<typename opt_t> -> bool {
+			return opt_t::action_value;
+		}>;
+		// Switch option (- or -- prefix)
+		using switches_type = typename list_type::template filter<[]<typename opt_t> -> bool {
+			return not opt_t::action_value;
+		}>;
+
         static inline constexpr std::expected<options, std::string> parse(const sys::shell& cmd) {
 			auto args = cmd.user_args();
+			auto has_action = args.size() > 0 and not args.at(0).starts_with("-");
+			// Have action? -> match it
+			if (has_action) {
+				auto action = args.at(0);
+
+				// Make the action parser
+				using action_parser = parser<actions_type>;
+				// Any matches on actions?
+				auto matches = action_parser::match(action);
+				if (matches.any()) {
+					return std::unexpected{ "Matched actions!" };
+				} else {
+					return std::unexpected{ std::format("Unknown action: '{}'", action) };
+				}
+
+				// args should now only be the switches
+				args = args.subspan(1);
+			}
+
+			// Match switches
 			for (std::string_view arg : args) {
+				auto is_long = arg.starts_with("--");
+				auto is_short = arg.starts_with("-");
+				auto is_switch = is_long or is_short;
+				if (not is_switch) {
+					// TODO: This is probably a value
+					// e.g. for `--build-dir .build`
+					// arg is probably `.build`
+					continue;
+				}
 				auto matches = match(arg);
 				if (matches.any()) {
-					return std::unexpected("Matched!");
+					return std::unexpected("Matched switch!");
 				}
 			}
+
             return std::unexpected("Parser not yet implemented");
         }
 

@@ -14,6 +14,7 @@ namespace mgmake::meta {
     // Provides uniform get/set access through a compile-time bound member-object pointer.
     template<auto member_ptr = nullptr>
     struct member_access {
+		static inline constexpr bool valid = true;
         using pointer_type = decltype(member_ptr);
 
         static_assert(std::is_member_object_pointer_v<pointer_type>, "member_access requires a pointer to a non-static data member");
@@ -37,7 +38,9 @@ namespace mgmake::meta {
         }
     };
 	template<>
-	struct member_access<nullptr> {};
+	struct member_access<nullptr> {
+		static inline constexpr bool valid = false;
+	};
 }
 
 #endif // MGMAKE_META_MEMBER_ACCESS_HXX
