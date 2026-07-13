@@ -212,6 +212,29 @@ namespace mgmake::meta {
 			},
 			type_list<>
 		>;
+
+		// Invoke the callable with the type at the runtime-selected index.
+		template<typename callable_t>
+		static constexpr decltype(auto) type_switch(callable_t&& callable, std::size_t index) {
+			// A return type cannot be inferred without at least one stored type.
+			static_assert(size() > 0, "Cannot type-switch over an empty type_list.");
+			mgmkassert(index < size(), "type_switch index is outside the bounds of the type_list");
+
+			using first_type = type_at<0>;
+			using return_t = decltype(std::declval<callable_t&&>().template operator()<first_type>());
+			// A single dispatch table requires every specialization to share a return type.
+			static_assert((std::same_as<return_t, decltype(std::declval<callable_t&&>().template operator()<types_t>())> and ...), "Every type_switch invocation must return the same type.");
+
+			using dispatch_t = return_t (*)(callable_t&&);
+			// Generate one reusable dispatch entry for each type.
+			static constexpr std::array<dispatch_t, size()> dispatch {
+				+[](callable_t&& callable) -> return_t {
+					return std::forward<callable_t>(callable).template operator()<types_t>();
+				}...
+			};
+
+			return dispatch[index](std::forward<callable_t>(callable));
+		}
 	};
 }
 

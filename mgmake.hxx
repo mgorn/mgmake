@@ -364,6 +364,29 @@ namespace mgmake::meta {
 			},
 			type_list<>
 		>;
+
+		// Invoke the callable with the type at the runtime-selected index.
+		template<typename callable_t>
+		static constexpr decltype(auto) type_switch(callable_t&& callable, std::size_t index) {
+			// A return type cannot be inferred without at least one stored type.
+			static_assert(size() > 0, "Cannot type-switch over an empty type_list.");
+			mgmkassert(index < size(), "type_switch index is outside the bounds of the type_list");
+
+			using first_type = type_at<0>;
+			using return_t = decltype(std::declval<callable_t&&>().template operator()<first_type>());
+			// A single dispatch table requires every specialization to share a return type.
+			static_assert((std::same_as<return_t, decltype(std::declval<callable_t&&>().template operator()<types_t>())> and ...), "Every type_switch invocation must return the same type.");
+
+			using dispatch_t = return_t (*)(callable_t&&);
+			// Generate one reusable dispatch entry for each type.
+			static constexpr std::array<dispatch_t, size()> dispatch {
+				+[](callable_t&& callable) -> return_t {
+					return std::forward<callable_t>(callable).template operator()<types_t>();
+				}...
+			};
+
+			return dispatch[index](std::forward<callable_t>(callable));
+		}
 	};
 }
 
@@ -980,6 +1003,97 @@ namespace mgmake::cli {
 
 // skipped duplicate include: include/mgmake/cli/options.hxx
 
+// ===== begin include/mgmake/cli/value_parser.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CLI_VALUE_PARSER_HXX
+#define MGMAKE_CLI_VALUE_PARSER_HXX
+
+#include <expected>
+#include <format>
+#include <string>
+#include <string_view>
+
+// Value parsers convert one option argument string into a typed destination value.
+
+namespace mgmake::cli {
+	template<typename type_t>
+	struct value_parser;
+
+	template<> struct value_parser<std::string> {
+		[[nodiscard]] static std::expected<std::string, std::string> parse(std::string_view text) {
+			return std::string{ text };
+		}
+	};
+
+	template<> struct value_parser<int> {
+		[[nodiscard]] static std::expected<int, std::string> parse(std::string_view text) {
+			if (text.empty()) {
+				return std::unexpected(std::format("invalid integer value '{}' (empty)", text));
+			}
+
+			try {
+				// Why can't std::stoi take a string_view???
+				return std::stoi(std::string{ text });
+				// Why does the alternative `std::from_chars` return a `std::from_chars_result` instead of a `std::expected` or something??
+			} catch (...) {}
+			return std::unexpected(std::format("invalid integer value '{}'", text));
+		}
+	};
+
+	template<> struct value_parser<std::filesystem::path> {
+		[[nodiscard]] static std::expected<std::filesystem::path, std::string> parse(std::string_view text) {
+			return std::filesystem::path{ text };
+		}
+	};
+}
+
+#endif // MGMAKE_CLI_VALUE_PARSER_HXX
+// ===== end include/mgmake/cli/value_parser.hxx =====
+
+
+
+// ===== begin include/mgmake/detail/index_bit.hxx =====
+#pragma once
+
+// skipped duplicate include: include/mgmake/detail/assert.hxx
+
+#include <bit>
+#include <bitset>
+#include <cstddef>
+#include <limits>
+#include <utility>
+
+namespace mgmake::detail {
+	// Returns the index of the single set bit.
+	template<std::size_t N>
+	[[nodiscard]] constexpr std::size_t index_bit(std::bitset<N> bits) noexcept {
+		static_assert(N > 0);
+
+		using chunk_t = unsigned long long;
+		constexpr std::size_t chunk_bits = std::numeric_limits<chunk_t>::digits;
+
+		// Select only the lowest chunk so that `to_ullong()` cannot overflow.
+		const auto chunk_mask = ~(~std::bitset<N>{} << chunk_bits);
+
+		mgmkassert(bits.count() == 1, "index_bit requires a bitset with exactly 1 bit set");
+
+		for (std::size_t offset = 0; offset < N; offset += chunk_bits) {
+			const auto selected_chunk = bits & chunk_mask;
+
+			if (selected_chunk.any()) {
+				const auto chunk = selected_chunk.to_ullong();
+
+				return offset + static_cast<std::size_t>(std::countr_zero(chunk));
+			}
+
+			bits >>= chunk_bits;
+		}
+
+		std::unreachable();
+	}
+}// ===== end include/mgmake/detail/index_bit.hxx =====
+
 // skipped duplicate include: include/mgmake/meta/type_list.hxx
 
 // ===== begin include/mgmake/sys/shell.hxx =====
@@ -1148,6 +1262,7 @@ namespace mgmake::sys {
 #include <expected>
 #include <optional>
 #include <string>
+#include <utility>
 
 namespace mgmake::cli {
     template<typename list_t = meta::type_list<>>
@@ -1164,6 +1279,9 @@ namespace mgmake::cli {
 		}>;
 
         static inline constexpr std::expected<options, std::string> parse(const sys::shell& cmd) {
+			// The resulting options
+			options opts{};
+
 			auto args = cmd.user_args();
 			auto has_action = args.size() > 0 and not args.at(0).starts_with("-");
 			// Have action? -> match it
@@ -1184,24 +1302,84 @@ namespace mgmake::cli {
 				args = args.subspan(1);
 			}
 
+			// TODO: Figure out what to do about parsing values and assign switches
+			// Iterate assign switches seperately?
+			// Pass switch & value args together
+			// Use the `assign_type` to know if the option is expecting a value
+			// Use `set` to know the default? or if it is used without a value?
+			// Use the `member_access::value_type` to know the expected type?
+			// automatically handle value/assign hints from the value type?
+			//   (E.g. a `std::filesystem::path` would say `--switch=path` instead of just `--switch=value`)
+			//   (E.g. maybe also `std::string` would say `--switch=text`?)
+
 			// Match switches
-			for (std::string_view arg : args) {
+			for (auto it = args.begin(); it != args.end(); ++it) {
+				std::string_view arg = *it;
+
 				auto is_long = arg.starts_with("--");
 				auto is_short = arg.starts_with("-");
 				auto is_switch = is_long or is_short;
 				if (not is_switch) {
-					// TODO: This is probably a value
-					// e.g. for `--build-dir .build`
-					// arg is probably `.build`
+					// must be a value for the last switch
 					continue;
 				}
+				mgmkassert(is_switch, "Values for switches should be skipped/parsed by the switch needing it");
+
 				auto matches = match(arg);
-				if (matches.any()) {
-					return std::unexpected("Matched switch!");
+				if (not matches.any()) {
+					return std::unexpected(std::format("Unknown argument: '{}'", arg));
+				}
+				mgmkassert(matches.count() == 1, "Matched arg to more than one option?");
+
+				auto index = detail::index_bit(matches);
+				auto result = list_type::type_switch([&]<typename opt_t> -> std::expected<bool, std::string> {
+					// If the option expects a value
+					if constexpr (opt_t::is_assign) {
+						// What is the expected value type?
+						using assign_type = opt_t::assign_type;
+						using value_type = assign_type::value_type;
+
+						// Is it `--switch=value` or `--switch value`?
+						std::string_view value_text{};
+						bool move_next = false; // If we need to move the iterator after consuming an arg
+						if (const auto seperator = arg.find_first_of("="); seperator != std::string_view::npos) {
+							value_text = arg.substr(seperator+1);
+						} else {
+							// Get the next arg
+							auto next_it = std::next(it);
+							if (next_it == args.end()) {
+								return std::unexpected(std::format("argument '{}' expects a value", arg));
+							}
+
+							value_text = *next_it;
+							move_next = true;
+						}
+
+						// parse it
+						using vp = value_parser<value_type>;
+						auto result = vp::parse(value_text);
+						if (not result.has_value()) {
+							return std::unexpected(std::format("Error parsing value for arg '{}': {}", arg, result.error()));
+						}
+
+						// assign
+						assign_type::set(opts, result.value());
+						std::println("set {} to {}", opt_t::name_value.view(), result.value().string());
+
+						// Move the iterator
+						if (move_next)
+							it = std::next(it);
+						return true;
+					} else {
+						return std::unexpected{"Not implemented"};
+					}
+				}, index);
+				if (not result.has_value()) {
+					return std::unexpected(result.error());
 				}
 			}
 
-            return std::unexpected("Parser not yet implemented");
+            return opts;
         }
 
 		using matches_type = std::bitset<list_t::size()>;
