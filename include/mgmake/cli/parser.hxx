@@ -4,7 +4,6 @@
 #define MGMAKE_CLI_PARSER_HXX
 
 #include "options.hxx"
-#include "value_parser.hxx"
 
 #include "../detail/index_bit.hxx"
 #include "../meta/type_list.hxx"
@@ -34,25 +33,29 @@ namespace mgmake::cli {
 			// The resulting options
 			options opts{};
 
+			// Make the action parser
+			//using action_parser = parser<actions_type>;
+			//using action_match_t = action_parser::matches_type;
+
 			auto args = cmd.user_args();
+			/*
 			auto has_action = args.size() > 0 and not args.at(0).starts_with("-");
+			action_match_t action_matches{};
 			// Have action? -> match it
 			if (has_action) {
 				auto action = args.at(0);
 
-				// Make the action parser
-				using action_parser = parser<actions_type>;
 				// Any matches on actions?
-				auto matches = action_parser::match(action);
-				if (matches.any()) {
-					return std::unexpected{ "Matched actions!" };
-				} else {
+				action_matches = action_parser::match(action);
+				if (not action_matches.any()) {
 					return std::unexpected{ std::format("Unknown action: '{}'", action) };
 				}
 
 				// args should now only be the switches
 				args = args.subspan(1);
 			}
+			// Now we hold on to the matches until we parse the rest of the options
+			*/
 
 			// TODO: Figure out what to do about parsing values and assign switches
 			// Iterate assign switches seperately?
@@ -71,11 +74,42 @@ namespace mgmake::cli {
 				auto is_long = arg.starts_with("--");
 				auto is_short = arg.starts_with("-");
 				auto is_switch = is_long or is_short;
-				if (not is_switch) {
-					// must be a value for the last switch
-					continue;
+				auto is_action = it == args.begin() and not is_switch; // First and isn't switch? -> Action
+				if (not is_switch and not is_action) {
+					std::string error_hint = "";
+
+					// 1) See if it could have been a short switch
+					if (error_hint.empty()) {
+						auto matches = match(std::format("-{}", arg));
+						if (matches.any()) {
+							error_hint = std::format("Did you mean '-{}'?", arg);
+						}
+					}
+
+					// 2) See if it could have been a long switch
+					if (error_hint.empty()) {
+						auto matches = match(std::format("--{}", arg));
+						if (matches.any()) {
+							error_hint = std::format("Did you mean '--{}'?", arg);
+						}
+					}
+
+					// 3) See if the arg is meant to be used as an action
+					if (error_hint.empty()) {
+						using action_parser = parser<actions_type>;
+						auto matches = action_parser::match(arg);
+						if (matches.any()) {
+							auto corrected = std::format("{} {} ...", cmd.program_name(), arg);
+							error_hint = std::format("'{}' is an action, did you mean '{}'?", arg, corrected);
+						}
+					}
+
+					if (not error_hint.empty()) {
+						return std::unexpected(std::format("Invalid argument: {} ({})", arg, error_hint));
+					}
+					return std::unexpected(std::format("Invalid argument: {}", arg));
 				}
-				mgmkassert(is_switch, "Values for switches should be skipped/parsed by the switch needing it");
+				mgmkassert(is_action or is_switch, "Values for switches should be skipped/parsed by the switch needing it");
 
 				auto matches = match(arg);
 				if (not matches.any()) {
@@ -96,6 +130,7 @@ namespace mgmake::cli {
 						bool move_next = false; // If we need to move the iterator after consuming an arg
 						if (const auto seperator = arg.find_first_of("="); seperator != std::string_view::npos) {
 							value_text = arg.substr(seperator+1);
+							arg = arg.substr(0, seperator);
 						} else {
 							// Get the next arg
 							auto next_it = std::next(it);
@@ -107,24 +142,31 @@ namespace mgmake::cli {
 							move_next = true;
 						}
 
-						// parse it
-						using vp = value_parser<value_type>;
-						auto result = vp::parse(value_text);
-						if (not result.has_value()) {
-							return std::unexpected(std::format("Error parsing value for arg '{}': {}", arg, result.error()));
-						}
-
 						// assign
-						assign_type::set(opts, result.value());
+						auto result = opt_t::handle_assign(opts, arg, value_text);
+						if (not result) {
+							return std::unexpected(std::format("opt_t::handle_assign failed: {}", result.error()));
+						}
 
 						// Move the iterator
 						if (move_next)
 							it = std::next(it);
 						return true;
-					} else {
-						return std::unexpected{"Not implemented"};
 					}
+					
+					// If the option invokes a callback
+					if constexpr (opt_t::is_callback) {
+						auto result = opt_t::handle_callback(opts, arg);
+						if (not result) {
+							return std::unexpected(std::format("opt_t::handle_callback failed: {}", result.error()));
+						}
+
+						return true;
+					}
+
+					return std::unexpected("Not implemented");
 				}, index);
+
 				if (not result.has_value()) {
 					return std::unexpected(result.error());
 				}

@@ -33,6 +33,57 @@
 #define MGMAKE_CLI_OPTION_HXX
 
 
+// ===== begin include/mgmake/cli/value_parser.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CLI_VALUE_PARSER_HXX
+#define MGMAKE_CLI_VALUE_PARSER_HXX
+
+#include <expected>
+#include <filesystem>
+#include <format>
+#include <string>
+#include <string_view>
+
+// Value parsers convert one option argument string into a typed destination value.
+
+namespace mgmake::cli {
+	template<typename type_t>
+	struct value_parser;
+
+	template<> struct value_parser<std::string> {
+		[[nodiscard]] static std::expected<std::string, std::string> parse(std::string_view text) {
+			return std::string{ text };
+		}
+	};
+
+	template<> struct value_parser<int> {
+		[[nodiscard]] static std::expected<int, std::string> parse(std::string_view text) {
+			if (text.empty()) {
+				return std::unexpected(std::format("invalid integer value '{}' (empty)", text));
+			}
+
+			try {
+				// Why can't std::stoi take a string_view???
+				return std::stoi(std::string{ text });
+				// Why does the alternative `std::from_chars` return a `std::from_chars_result` instead of a `std::expected` or something??
+			} catch (...) {}
+			return std::unexpected(std::format("invalid integer value '{}'", text));
+		}
+	};
+
+	template<> struct value_parser<std::filesystem::path> {
+		[[nodiscard]] static std::expected<std::filesystem::path, std::string> parse(std::string_view text) {
+			return std::filesystem::path{ text };
+		}
+	};
+}
+
+#endif // MGMAKE_CLI_VALUE_PARSER_HXX
+// ===== end include/mgmake/cli/value_parser.hxx =====
+
+
+
 // ===== begin include/mgmake/detail/assert.hxx =====
 #pragma once
 
@@ -781,6 +832,8 @@ namespace mgmake::meta {
 #endif // MGMAKE_META_TYPE_BUILDER_HXX// ===== end include/mgmake/meta/type_builder.hxx =====
 
 
+#include <expected>
+
 namespace mgmake::cli {
     enum struct option_mode {
         deduce, // Auto deduce the mode based on the definition
@@ -802,6 +855,7 @@ namespace mgmake::cli {
         MGMAKE_META_TYPE_CONSUMER_FIELD(assign_hint, meta::static_string{ "value" });
 	    using set_type = typename storage_t::template at<meta::type_value<meta::static_string{ "set" }>, false>;
 	    MGMAKE_META_TYPE_CONSUMER_FIELD(action, false);
+	    MGMAKE_META_TYPE_CONSUMER_FIELD(flag, true);
 
 		static inline constexpr bool match(std::string_view arg) {
 			if (arg.empty()) {
@@ -816,10 +870,12 @@ namespace mgmake::cli {
 			}
 
 			// Parse as switch
-			if (arg.starts_with("--")) {
-				return match_long(arg.substr(2));
-			} else if (arg.starts_with("-")) {
-				return match_short(arg.substr(1));
+			if constexpr (flag_value) {
+				if (arg.starts_with("--")) {
+					return match_long(arg.substr(2));
+				} else if (arg.starts_with("-")) {
+					return match_short(arg.substr(1));
+				}
 			}
 			return false;
 		}
@@ -833,9 +889,17 @@ namespace mgmake::cli {
 			return arg.size() == 1 and arg.front() == short_name_value;
 		}
 
-		static inline constexpr auto handle_action(std::string_view arg) {
-			mgmkassert(match(arg), "handling an action with the incorrect arg");
-			mgmkassert(action_value, "switch option is being handled as an action");
+		static inline constexpr bool is_callback = not std::is_same_v<std::decay_t<decltype(callback_value)>, std::nullptr_t>;
+		static inline constexpr std::expected<void, std::string> handle_callback(auto& opts, std::string_view arg) {
+			mgmkassert(is_callback, "option_impl::handle_callback called for non-callback option");
+			mgmkassert(match(arg), "handling a callback for the incorrect arg");
+
+			if constexpr (is_callback) {
+				callback_value(opts);
+				return {};
+			} else {
+				return std::unexpected("option_impl::handle_callback called for an option with no callback");
+			}
 		}
 
 		static inline constexpr auto is_assign = [] -> bool {
@@ -844,19 +908,25 @@ namespace mgmake::cli {
 			}
 			return false;
 		}();
-
-		static inline constexpr auto handle_switch(std::string_view arg) {
-			mgmkassert(match(arg), "handling a switch with the incorrect arg");
-			mgmkassert(not is_assign, "handling a value assign switch as a normal switch");
-		}
-
-		static inline constexpr auto handle_assign(std::string_view arg, std::string_view value) {
+		static inline constexpr std::expected<void, std::string> handle_assign(auto& opts, std::string_view arg, std::string_view value) {
 			mgmkassert(match(arg), "handling a switch with the incorrect arg");
 			mgmkassert(is_assign, "handling a normal switch as a value assign switch");
 
 			if constexpr (is_assign) {
+				// What is the expected value type?
+				using value_type = assign_type::value_type;
 
+				// parse it
+				using vp = value_parser<value_type>;
+				auto result = vp::parse(value);
+				if (not result.has_value()) {
+					return std::unexpected(std::format("Error parsing value for arg '{}': {}", arg, result.error()));
+				}
+
+				// assign
+				assign_type::set(opts, result.value());
 			}
+			return {};
 		}
     };
 
@@ -877,10 +947,11 @@ namespace mgmake::cli {
         MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, assign_hint, meta::static_string);
 		// Sets the value at the member to the default value.
 		template<typename member_t = meta::member_access<>, auto value_v = nullptr>
-        using set = callback<[](auto& obj) {
-			member_t::set(obj, value_v);
+        using set = callback<[](auto& opts) {
+			member_t::set(opts, value_v);
 		}>;
 		MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, action, bool);
+		MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, flag, bool); // aka switch
 
         using build = typename builder_t::template build<option_impl>;
     };
@@ -953,6 +1024,7 @@ namespace mgmake::cli {
 #include <print>
 
 namespace mgmake::cli {
+	// Actions
     using help_option = option
         ::name<"help">::short_name<'h'>
         ::description<"Show help.">
@@ -960,6 +1032,14 @@ namespace mgmake::cli {
 		::set<meta::member_access<&options::m_action>, action::kind::help>
 		::build;
 	
+	using build_option = option
+		::name<"build">
+		::description<"Build the project.">
+		::action<true>::flag<false>
+		::set<meta::member_access<&options::m_action>, action::kind::build>
+		::build;
+	
+	// Switches
 	using verbose_option = option
 		::name<"verbose">::short_name<'v'>
 		::description<"Print commands before executing them.">
@@ -985,6 +1065,7 @@ namespace mgmake::cli {
     // options
     using default_options = meta::type_list<
         help_option,
+		build_option,
 		verbose_option,
 		dry_run_option,
 		build_dir_option
@@ -1002,55 +1083,6 @@ namespace mgmake::cli {
 #define MGMAKE_CLI_PARSER_HXX
 
 // skipped duplicate include: include/mgmake/cli/options.hxx
-
-// ===== begin include/mgmake/cli/value_parser.hxx =====
-#pragma once
-
-#ifndef MGMAKE_CLI_VALUE_PARSER_HXX
-#define MGMAKE_CLI_VALUE_PARSER_HXX
-
-#include <expected>
-#include <format>
-#include <string>
-#include <string_view>
-
-// Value parsers convert one option argument string into a typed destination value.
-
-namespace mgmake::cli {
-	template<typename type_t>
-	struct value_parser;
-
-	template<> struct value_parser<std::string> {
-		[[nodiscard]] static std::expected<std::string, std::string> parse(std::string_view text) {
-			return std::string{ text };
-		}
-	};
-
-	template<> struct value_parser<int> {
-		[[nodiscard]] static std::expected<int, std::string> parse(std::string_view text) {
-			if (text.empty()) {
-				return std::unexpected(std::format("invalid integer value '{}' (empty)", text));
-			}
-
-			try {
-				// Why can't std::stoi take a string_view???
-				return std::stoi(std::string{ text });
-				// Why does the alternative `std::from_chars` return a `std::from_chars_result` instead of a `std::expected` or something??
-			} catch (...) {}
-			return std::unexpected(std::format("invalid integer value '{}'", text));
-		}
-	};
-
-	template<> struct value_parser<std::filesystem::path> {
-		[[nodiscard]] static std::expected<std::filesystem::path, std::string> parse(std::string_view text) {
-			return std::filesystem::path{ text };
-		}
-	};
-}
-
-#endif // MGMAKE_CLI_VALUE_PARSER_HXX
-// ===== end include/mgmake/cli/value_parser.hxx =====
-
 
 
 // ===== begin include/mgmake/detail/index_bit.hxx =====
@@ -1282,32 +1314,36 @@ namespace mgmake::cli {
 			// The resulting options
 			options opts{};
 
+			// Make the action parser
+			//using action_parser = parser<actions_type>;
+			//using action_match_t = action_parser::matches_type;
+
 			auto args = cmd.user_args();
+			/*
 			auto has_action = args.size() > 0 and not args.at(0).starts_with("-");
+			action_match_t action_matches{};
 			// Have action? -> match it
 			if (has_action) {
 				auto action = args.at(0);
 
-				// Make the action parser
-				using action_parser = parser<actions_type>;
 				// Any matches on actions?
-				auto matches = action_parser::match(action);
-				if (matches.any()) {
-					return std::unexpected{ "Matched actions!" };
-				} else {
+				action_matches = action_parser::match(action);
+				if (not action_matches.any()) {
 					return std::unexpected{ std::format("Unknown action: '{}'", action) };
 				}
 
 				// args should now only be the switches
 				args = args.subspan(1);
 			}
+			// Now we hold on to the matches until we parse the rest of the options
+			*/
 
 			// TODO: Figure out what to do about parsing values and assign switches
 			// Iterate assign switches seperately?
-			// Pass switch & value args together
-			// Use the `assign_type` to know if the option is expecting a value
+			// Pass switch & value args together - DONE
+			// Use the `assign_type` to know if the option is expecting a value - DONE
 			// Use `set` to know the default? or if it is used without a value?
-			// Use the `member_access::value_type` to know the expected type?
+			// Use the `member_access::value_type` to know the expected type? - Done?
 			// automatically handle value/assign hints from the value type?
 			//   (E.g. a `std::filesystem::path` would say `--switch=path` instead of just `--switch=value`)
 			//   (E.g. maybe also `std::string` would say `--switch=text`?)
@@ -1319,11 +1355,42 @@ namespace mgmake::cli {
 				auto is_long = arg.starts_with("--");
 				auto is_short = arg.starts_with("-");
 				auto is_switch = is_long or is_short;
-				if (not is_switch) {
-					// must be a value for the last switch
-					continue;
+				auto is_action = it == args.begin() and not is_switch; // First and isn't switch? -> Action
+				if (not is_switch and not is_action) {
+					std::string error_hint = "";
+
+					// 1) See if it could have been a short switch
+					if (error_hint.empty()) {
+						auto matches = match(std::format("-{}", arg));
+						if (matches.any()) {
+							error_hint = std::format("Did you mean '-{}'?", arg);
+						}
+					}
+
+					// 2) See if it could have been a long switch
+					if (error_hint.empty()) {
+						auto matches = match(std::format("--{}", arg));
+						if (matches.any()) {
+							error_hint = std::format("Did you mean '--{}'?", arg);
+						}
+					}
+
+					// 3) See if the arg is meant to be used as an action
+					if (error_hint.empty()) {
+						using action_parser = parser<actions_type>;
+						auto matches = action_parser::match(arg);
+						if (matches.any()) {
+							auto corrected = std::format("{} {} ...", cmd.program_name(), arg);
+							error_hint = std::format("'{}' is an action, did you mean '{}'?", arg, corrected);
+						}
+					}
+
+					if (not error_hint.empty()) {
+						return std::unexpected(std::format("Invalid argument: {} ({})", arg, error_hint));
+					}
+					return std::unexpected(std::format("Invalid argument: {}", arg));
 				}
-				mgmkassert(is_switch, "Values for switches should be skipped/parsed by the switch needing it");
+				mgmkassert(is_action or is_switch, "Values for switches should be skipped/parsed by the switch needing it");
 
 				auto matches = match(arg);
 				if (not matches.any()) {
@@ -1344,6 +1411,7 @@ namespace mgmake::cli {
 						bool move_next = false; // If we need to move the iterator after consuming an arg
 						if (const auto seperator = arg.find_first_of("="); seperator != std::string_view::npos) {
 							value_text = arg.substr(seperator+1);
+							arg = arg.substr(0, seperator);
 						} else {
 							// Get the next arg
 							auto next_it = std::next(it);
@@ -1355,25 +1423,31 @@ namespace mgmake::cli {
 							move_next = true;
 						}
 
-						// parse it
-						using vp = value_parser<value_type>;
-						auto result = vp::parse(value_text);
-						if (not result.has_value()) {
-							return std::unexpected(std::format("Error parsing value for arg '{}': {}", arg, result.error()));
-						}
-
 						// assign
-						assign_type::set(opts, result.value());
-						std::println("set {} to {}", opt_t::name_value.view(), result.value().string());
+						auto result = opt_t::handle_assign(opts, arg, value_text);
+						if (not result) {
+							return std::unexpected(std::format("opt_t::handle_assign failed: {}", result.error()));
+						}
 
 						// Move the iterator
 						if (move_next)
 							it = std::next(it);
 						return true;
-					} else {
-						return std::unexpected{"Not implemented"};
 					}
+					
+					// If the option invokes a callback
+					if constexpr (opt_t::is_callback) {
+						auto result = opt_t::handle_callback(opts, arg);
+						if (not result) {
+							return std::unexpected(std::format("opt_t::handle_callback failed: {}", result.error()));
+						}
+
+						return true;
+					}
+
+					return std::unexpected("Not implemented");
 				}, index);
+
 				if (not result.has_value()) {
 					return std::unexpected(result.error());
 				}
@@ -1426,6 +1500,10 @@ namespace mgmake::cli {
 
         // parse cmd at runtime
         if (auto result = p::parse(cmd)) {
+			auto opts = result.value();
+			if (opts.m_action == action::kind::help) {
+				std::println("Help menu");
+			}
             return sys::exit_code::success;
         } else {
             std::println(stderr, "{}", result.error());

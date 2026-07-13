@@ -3,9 +3,13 @@
 #ifndef MGMAKE_CLI_OPTION_HXX
 #define MGMAKE_CLI_OPTION_HXX
 
+#include "value_parser.hxx"
+
 #include "../detail/assert.hxx"
 #include "../meta/member_access.hxx"
 #include "../meta/type_builder.hxx"
+
+#include <expected>
 
 namespace mgmake::cli {
     enum struct option_mode {
@@ -28,6 +32,7 @@ namespace mgmake::cli {
         MGMAKE_META_TYPE_CONSUMER_FIELD(assign_hint, meta::static_string{ "value" });
 	    using set_type = typename storage_t::template at<meta::type_value<meta::static_string{ "set" }>, false>;
 	    MGMAKE_META_TYPE_CONSUMER_FIELD(action, false);
+	    MGMAKE_META_TYPE_CONSUMER_FIELD(flag, true);
 
 		static inline constexpr bool match(std::string_view arg) {
 			if (arg.empty()) {
@@ -42,10 +47,12 @@ namespace mgmake::cli {
 			}
 
 			// Parse as switch
-			if (arg.starts_with("--")) {
-				return match_long(arg.substr(2));
-			} else if (arg.starts_with("-")) {
-				return match_short(arg.substr(1));
+			if constexpr (flag_value) {
+				if (arg.starts_with("--")) {
+					return match_long(arg.substr(2));
+				} else if (arg.starts_with("-")) {
+					return match_short(arg.substr(1));
+				}
 			}
 			return false;
 		}
@@ -59,9 +66,17 @@ namespace mgmake::cli {
 			return arg.size() == 1 and arg.front() == short_name_value;
 		}
 
-		static inline constexpr auto handle_action(std::string_view arg) {
-			mgmkassert(match(arg), "handling an action with the incorrect arg");
-			mgmkassert(action_value, "switch option is being handled as an action");
+		static inline constexpr bool is_callback = not std::is_same_v<std::decay_t<decltype(callback_value)>, std::nullptr_t>;
+		static inline constexpr std::expected<void, std::string> handle_callback(auto& opts, std::string_view arg) {
+			mgmkassert(is_callback, "option_impl::handle_callback called for non-callback option");
+			mgmkassert(match(arg), "handling a callback for the incorrect arg");
+
+			if constexpr (is_callback) {
+				callback_value(opts);
+				return {};
+			} else {
+				return std::unexpected("option_impl::handle_callback called for an option with no callback");
+			}
 		}
 
 		static inline constexpr auto is_assign = [] -> bool {
@@ -70,19 +85,25 @@ namespace mgmake::cli {
 			}
 			return false;
 		}();
-
-		static inline constexpr auto handle_switch(std::string_view arg) {
-			mgmkassert(match(arg), "handling a switch with the incorrect arg");
-			mgmkassert(not is_assign, "handling a value assign switch as a normal switch");
-		}
-
-		static inline constexpr auto handle_assign(std::string_view arg, std::string_view value) {
+		static inline constexpr std::expected<void, std::string> handle_assign(auto& opts, std::string_view arg, std::string_view value) {
 			mgmkassert(match(arg), "handling a switch with the incorrect arg");
 			mgmkassert(is_assign, "handling a normal switch as a value assign switch");
 
 			if constexpr (is_assign) {
+				// What is the expected value type?
+				using value_type = assign_type::value_type;
 
+				// parse it
+				using vp = value_parser<value_type>;
+				auto result = vp::parse(value);
+				if (not result.has_value()) {
+					return std::unexpected(std::format("Error parsing value for arg '{}': {}", arg, result.error()));
+				}
+
+				// assign
+				assign_type::set(opts, result.value());
 			}
+			return {};
 		}
     };
 
@@ -103,10 +124,11 @@ namespace mgmake::cli {
         MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, assign_hint, meta::static_string);
 		// Sets the value at the member to the default value.
 		template<typename member_t = meta::member_access<>, auto value_v = nullptr>
-        using set = callback<[](auto& obj) {
-			member_t::set(obj, value_v);
+        using set = callback<[](auto& opts) {
+			member_t::set(opts, value_v);
 		}>;
 		MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, action, bool);
+		MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, flag, bool); // aka switch
 
         using build = typename builder_t::template build<option_impl>;
     };

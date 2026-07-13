@@ -11,6 +11,7 @@
 #include <print>
 
 namespace mgmake::cli {
+	// Actions
     using help_option = option
         ::name<"help">::short_name<'h'>
         ::description<"Show help.">
@@ -18,6 +19,14 @@ namespace mgmake::cli {
 		::set<meta::member_access<&options::m_action>, action::kind::help>
 		::build;
 	
+	using build_option = option
+		::name<"build">
+		::description<"Build the project.">
+		::action<true>::flag<false>
+		::set<meta::member_access<&options::m_action>, action::kind::build>
+		::build;
+	
+	// Switches
 	using verbose_option = option
 		::name<"verbose">::short_name<'v'>
 		::description<"Print commands before executing them.">
@@ -43,6 +52,7 @@ namespace mgmake::cli {
     // options
     using default_options = meta::type_list<
         help_option,
+		build_option,
 		verbose_option,
 		dry_run_option,
 		build_dir_option

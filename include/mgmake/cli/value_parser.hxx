@@ -4,6 +4,7 @@
 #define MGMAKE_CLI_VALUE_PARSER_HXX
 
 #include <expected>
+#include <filesystem>
 #include <format>
 #include <string>
 #include <string_view>
