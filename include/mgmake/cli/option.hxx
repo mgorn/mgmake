@@ -29,8 +29,6 @@ namespace mgmake::cli {
 	    MGMAKE_META_TYPE_CONSUMER_FIELD(mode, option_mode::deduce);
 	    MGMAKE_META_TYPE_CONSUMER_FIELD(callback, nullptr);
 	    using assign_type = typename storage_t::template at<meta::type_value<meta::static_string{ "assign" }>, false>;
-        MGMAKE_META_TYPE_CONSUMER_FIELD(assign_hint, meta::static_string{ "value" });
-	    using set_type = typename storage_t::template at<meta::type_value<meta::static_string{ "set" }>, false>;
 	    MGMAKE_META_TYPE_CONSUMER_FIELD(action, false);
 	    MGMAKE_META_TYPE_CONSUMER_FIELD(flag, true);
 
@@ -121,7 +119,6 @@ namespace mgmake::cli {
 		// pass a `meta::member_access<>` for the member to assign.
 		template<typename member_t = meta::member_access<>>
         using assign = option_builder<typename builder_type::template set<"assign", member_t>>;
-        MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, assign_hint, meta::static_string);
 		// Sets the value at the member to the default value.
 		template<typename member_t = meta::member_access<>, auto value_v = nullptr>
         using set = callback<[](auto& opts) {

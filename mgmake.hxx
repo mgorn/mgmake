@@ -852,8 +852,6 @@ namespace mgmake::cli {
 	    MGMAKE_META_TYPE_CONSUMER_FIELD(mode, option_mode::deduce);
 	    MGMAKE_META_TYPE_CONSUMER_FIELD(callback, nullptr);
 	    using assign_type = typename storage_t::template at<meta::type_value<meta::static_string{ "assign" }>, false>;
-        MGMAKE_META_TYPE_CONSUMER_FIELD(assign_hint, meta::static_string{ "value" });
-	    using set_type = typename storage_t::template at<meta::type_value<meta::static_string{ "set" }>, false>;
 	    MGMAKE_META_TYPE_CONSUMER_FIELD(action, false);
 	    MGMAKE_META_TYPE_CONSUMER_FIELD(flag, true);
 
@@ -944,7 +942,6 @@ namespace mgmake::cli {
 		// pass a `meta::member_access<>` for the member to assign.
 		template<typename member_t = meta::member_access<>>
         using assign = option_builder<typename builder_type::template set<"assign", member_t>>;
-        MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, assign_hint, meta::static_string);
 		// Sets the value at the member to the default value.
 		template<typename member_t = meta::member_access<>, auto value_v = nullptr>
         using set = callback<[](auto& opts) {
@@ -1056,7 +1053,7 @@ namespace mgmake::cli {
 		::name<"build-dir">
 		::description<"Set the build directory.">
 		::assign<meta::member_access<&options::m_build_dir>>
-		::assign_hint<"path">
+		// ::assign_hint<"path"> - Derive based on type..?
 		::build;
 
     // Type list of default options
@@ -1314,39 +1311,7 @@ namespace mgmake::cli {
 			// The resulting options
 			options opts{};
 
-			// Make the action parser
-			//using action_parser = parser<actions_type>;
-			//using action_match_t = action_parser::matches_type;
-
 			auto args = cmd.user_args();
-			/*
-			auto has_action = args.size() > 0 and not args.at(0).starts_with("-");
-			action_match_t action_matches{};
-			// Have action? -> match it
-			if (has_action) {
-				auto action = args.at(0);
-
-				// Any matches on actions?
-				action_matches = action_parser::match(action);
-				if (not action_matches.any()) {
-					return std::unexpected{ std::format("Unknown action: '{}'", action) };
-				}
-
-				// args should now only be the switches
-				args = args.subspan(1);
-			}
-			// Now we hold on to the matches until we parse the rest of the options
-			*/
-
-			// TODO: Figure out what to do about parsing values and assign switches
-			// Iterate assign switches seperately?
-			// Pass switch & value args together - DONE
-			// Use the `assign_type` to know if the option is expecting a value - DONE
-			// Use `set` to know the default? or if it is used without a value?
-			// Use the `member_access::value_type` to know the expected type? - Done?
-			// automatically handle value/assign hints from the value type?
-			//   (E.g. a `std::filesystem::path` would say `--switch=path` instead of just `--switch=value`)
-			//   (E.g. maybe also `std::string` would say `--switch=text`?)
 
 			// Match switches
 			for (auto it = args.begin(); it != args.end(); ++it) {
@@ -1356,6 +1321,7 @@ namespace mgmake::cli {
 				auto is_short = arg.starts_with("-");
 				auto is_switch = is_long or is_short;
 				auto is_action = it == args.begin() and not is_switch; // First and isn't switch? -> Action
+				// Invalid usage errors + hints
 				if (not is_switch and not is_action) {
 					std::string error_hint = "";
 
@@ -1392,10 +1358,12 @@ namespace mgmake::cli {
 				}
 				mgmkassert(is_action or is_switch, "Values for switches should be skipped/parsed by the switch needing it");
 
+				// Shrimply doesn't exit?
 				auto matches = match(arg);
 				if (not matches.any()) {
 					return std::unexpected(std::format("Unknown argument: '{}'", arg));
 				}
+				// If this happens, there's a conflict with option names (either long or short)
 				mgmkassert(matches.count() == 1, "Matched arg to more than one option?");
 
 				auto index = detail::index_bit(matches);

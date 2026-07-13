@@ -43,7 +43,7 @@ namespace mgmake::cli {
 		::name<"build-dir">
 		::description<"Set the build directory.">
 		::assign<meta::member_access<&options::m_build_dir>>
-		::assign_hint<"path">
+		// ::assign_hint<"path"> - Derive based on type..?
 		::build;
 
     // Type list of default options
