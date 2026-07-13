@@ -56,10 +56,10 @@ namespace mgmake::cli {
 
 			// TODO: Figure out what to do about parsing values and assign switches
 			// Iterate assign switches seperately?
-			// Pass switch & value args together
-			// Use the `assign_type` to know if the option is expecting a value
+			// Pass switch & value args together - DONE
+			// Use the `assign_type` to know if the option is expecting a value - DONE
 			// Use `set` to know the default? or if it is used without a value?
-			// Use the `member_access::value_type` to know the expected type?
+			// Use the `member_access::value_type` to know the expected type? - Done?
 			// automatically handle value/assign hints from the value type?
 			//   (E.g. a `std::filesystem::path` would say `--switch=path` instead of just `--switch=value`)
 			//   (E.g. maybe also `std::string` would say `--switch=text`?)
