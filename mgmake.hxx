@@ -26,6 +26,20 @@
 #define MGMAKE_CLI_DEFAULT_OPTIONS_HXX
 
 
+// ===== begin include/mgmake/cli/default_actions.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CLI_DEFAULT_ACTIONS_HXX
+#define MGMAKE_CLI_DEFAULT_ACTIONS_HXX
+
+
+// ===== begin include/mgmake/cli/action.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CLI_ACTION_HXX
+#define MGMAKE_CLI_ACTION_HXX
+
+
 // ===== begin include/mgmake/cli/option.hxx =====
 #pragma once
 
@@ -49,15 +63,22 @@
 
 namespace mgmake::cli {
 	template<typename type_t>
-	struct value_parser;
+	struct value_parser {
+		// Hint for the value type in help menu
+		static inline constexpr std::string_view help_hint = "value";
+	};
 
 	template<> struct value_parser<std::string> {
+		static inline constexpr std::string_view help_hint = "text";
+
 		[[nodiscard]] static std::expected<std::string, std::string> parse(std::string_view text) {
 			return std::string{ text };
 		}
 	};
 
 	template<> struct value_parser<int> {
+		static inline constexpr std::string_view help_hint = "integer";
+
 		[[nodiscard]] static std::expected<int, std::string> parse(std::string_view text) {
 			if (text.empty()) {
 				return std::unexpected(std::format("invalid integer value '{}' (empty)", text));
@@ -73,6 +94,8 @@ namespace mgmake::cli {
 	};
 
 	template<> struct value_parser<std::filesystem::path> {
+		static inline constexpr std::string_view help_hint = "path";
+
 		[[nodiscard]] static std::expected<std::filesystem::path, std::string> parse(std::string_view text) {
 			return std::filesystem::path{ text };
 		}
@@ -835,21 +858,12 @@ namespace mgmake::meta {
 #include <expected>
 
 namespace mgmake::cli {
-    enum struct option_mode {
-        deduce, // Auto deduce the mode based on the definition
-        flag, // bool toggle on/off flag
-        assign, // set text, int value, etc. assign the option value
-        append, // append to the option list value. E.g. std::vector<std::string>
-        callback // invoke a callback function when the option is passed
-    };
-
     // Actual option impl, consume the configuration in the type map
     template<typename storage_t = meta::type_map<>>
     struct option_impl {
         MGMAKE_META_TYPE_CONSUMER_FIELD(name, meta::static_string{ "" });
         MGMAKE_META_TYPE_CONSUMER_FIELD(description, meta::static_string{ "" });
 	    MGMAKE_META_TYPE_CONSUMER_FIELD(short_name, '\0');
-	    MGMAKE_META_TYPE_CONSUMER_FIELD(mode, option_mode::deduce);
 	    MGMAKE_META_TYPE_CONSUMER_FIELD(callback, nullptr);
 	    using assign_type = typename storage_t::template at<meta::type_value<meta::static_string{ "assign" }>, false>;
 	    MGMAKE_META_TYPE_CONSUMER_FIELD(action, false);
@@ -926,6 +940,16 @@ namespace mgmake::cli {
 			}
 			return {};
 		}
+
+		static inline constexpr std::expected<void, std::string> handle_action(auto& opts, std::string_view arg) {
+			mgmkassert(match(arg), "handling an action with the incorrect arg");
+			mgmkassert(action_value, "handling a normal switch as an action");
+
+			// TODO: use hash
+			opts.m_action_id = 1; // name_value.hash();
+
+			return {};
+		}
     };
 
     // Build a compile-time map for the option settings
@@ -936,7 +960,6 @@ namespace mgmake::cli {
         MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, name, meta::static_string);
         MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, description, meta::static_string);
         MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, short_name, char);
-        MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, mode, option_mode);
         MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, callback, auto);
 		// option accepts a value (`--switch=value` or `--switch value`) and assigns its value to the option member
 		// pass a `meta::member_access<>` for the member to assign.
@@ -950,7 +973,7 @@ namespace mgmake::cli {
 		MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, action, bool);
 		MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, flag, bool); // aka switch
 
-        using build = typename builder_t::template build<option_impl>;
+        using build = typename builder_type::template build<option_impl>;
     };
     // default builder alias
     using option = option_builder<>;
@@ -959,44 +982,102 @@ namespace mgmake::cli {
 #endif // MGMAKE_CLI_OPTION_HXX// ===== end include/mgmake/cli/option.hxx =====
 
 
+#include <cstdint>
+
+/*
+ * Why are actions seperate from normal options? (Why can't they just be callback options?)
+ *
+ * Option callbacks are invoked during parsing and are functions to initialize the `cli::options` structure.
+ *
+ * The flow:
+ * main -> parse -> cli::options -> actions
+ *			|-> match
+ *			|-> invoke callbacks
+ *
+ * but options have a `action` setting? What's with that?
+ * You still need to provide the actions as options to the CLI parser.
+ * They simply assign the action value in the `cli::options` structure.
+ * Later on, that value is consumed to invoke the respective action handler.
+ *
+ * To make an action:
+ *		1) Create a CLI option for the action (see `default_actions.hxx` for examples)
+ *		2) Assign a handler for the action
+ * 
+ * NOTE: You only provide the CLI option when making the action. Do not make a second similar one to the parser manually.
+ */
+
+namespace mgmake::cli {
+	template<typename storage_t = meta::type_map<>>
+	struct action_impl {
+		// Get the CLI option for the action
+	    using option_type = typename storage_t::template at<meta::type_value<meta::static_string{ "option" }>, false>;
+		static_assert(option_type::action_value, "The CLI option for actions need to have `::action<true>`");
+
+		// Get the handler for the action
+	    MGMAKE_META_TYPE_CONSUMER_FIELD(handler, nullptr);
+		static inline constexpr bool valid_handler = not std::is_same_v<std::decay_t<decltype(handler_value)>, std::nullptr_t>;
+	};
+
+	template<typename builder_t = meta::type_builder<>>
+	struct action_builder {
+        using builder_type = builder_t;
+
+		// The CLI option for the action
+		template<typename option_t = option>
+        using option = action_builder<typename builder_type::template set<"option", option_t>>;
+		// The function that handles the action
+        MGMAKE_META_TYPE_BUILDER_FIELD(action_builder, handler, auto);
+
+		using build = typename builder_type::template build<action_impl>;
+	};
+	using action = action_builder<>;
+}
+
+#endif // MGMAKE_CLI_ACTION_HXX// ===== end include/mgmake/cli/action.hxx =====
+
+
+namespace mgmake::cli {
+	using help_action = action
+		::option<option
+			::name<"help">::short_name<'h'>
+			::description<"Show help.">
+			::action<true>
+			::build>
+		::handler<[](auto& opts) {
+			// TODO: Generate help from parser
+			std::println("Help menu");
+		}>
+		::build;
+	
+	using build_action = action
+		::option<option
+			::name<"build">
+			::description<"Build the project.">
+			::action<true>::flag<false>
+			::build>
+		::handler<[](auto& opts) {
+			// TODO: This would be the entrypoint/root for build
+			std::println("Build action");
+		}>
+		::build;
+	
+	using default_actions = meta::type_list<
+		help_action,
+		build_action
+	>;
+}
+
+#endif // MGMAKE_CLI_DEFAULT_ACTIONS_HXX// ===== end include/mgmake/cli/default_actions.hxx =====
+
+// skipped duplicate include: include/mgmake/cli/option.hxx
+
 // ===== begin include/mgmake/cli/options.hxx =====
 #pragma once
 
 #ifndef MGMAKE_CLI_OPTIONS_HXX
 #define MGMAKE_CLI_OPTIONS_HXX
 
-
-// ===== begin include/mgmake/cli/action.hxx =====
-#pragma once
-
-#ifndef MGMAKE_CLI_ACTION_HXX
-#define MGMAKE_CLI_ACTION_HXX
-
-#include <cstdint>
-
-namespace mgmake::cli {
-    struct action {
-        enum struct kind : uint8_t {
-            // meta actions, no cli required
-            help,
-            version,
-
-            // normal actions, require cli
-            tools,
-            clean,
-            generate,
-            build, // default (see options.hxx)
-            run,
-            graph,
-
-            // # of action kinds std::to_underlying(kind::count)
-            count
-        };
-    };
-}
-
-#endif // MGMAKE_CLI_ACTION_HXX// ===== end include/mgmake/cli/action.hxx =====
-
+// skipped duplicate include: include/mgmake/cli/action.hxx
 
 #include <filesystem>
 
@@ -1004,7 +1085,7 @@ namespace mgmake::cli {
 	// Store parsed CLI options
 	struct options {
 		// Build action by default
-		action::kind m_action = action::kind::build;
+		std::size_t m_action_id = 0;//meta::static_string{"build"}.hash();
 
 		bool m_verbose = false;
 		bool m_dry_run = false;
@@ -1021,20 +1102,7 @@ namespace mgmake::cli {
 #include <print>
 
 namespace mgmake::cli {
-	// Actions
-    using help_option = option
-        ::name<"help">::short_name<'h'>
-        ::description<"Show help.">
-		::action<true>
-		::set<meta::member_access<&options::m_action>, action::kind::help>
-		::build;
-	
-	using build_option = option
-		::name<"build">
-		::description<"Build the project.">
-		::action<true>::flag<false>
-		::set<meta::member_access<&options::m_action>, action::kind::build>
-		::build;
+	// Actions in `default_actions.hxx`
 	
 	// Switches
 	using verbose_option = option
@@ -1056,17 +1124,20 @@ namespace mgmake::cli {
 		// ::assign_hint<"path"> - Derive based on type..?
 		::build;
 
+	// Get the list of action options
+	using action_options = default_actions::template fold<[]<typename state_t, typename action_t>() consteval {
+		return std::type_identity<typename state_t::template append<typename action_t::option_type>>{};
+	}, meta::type_list<>>;
+
     // Type list of default options
     // this way you can add your own option to default_options
     // before passing the list to the entry for your own CLI
     // options
     using default_options = meta::type_list<
-        help_option,
-		build_option,
 		verbose_option,
 		dry_run_option,
 		build_dir_option
-    >;
+    >::append_list<action_options>; // Append the action options
 }
 
 #endif // MGMAKE_CLI_DEFAULT_OPTIONS_HXX// ===== end include/mgmake/cli/default_options.hxx =====
@@ -1372,6 +1443,8 @@ namespace mgmake::cli {
 					if constexpr (opt_t::is_assign) {
 						// What is the expected value type?
 						using assign_type = opt_t::assign_type;
+						// TODO: If value_type is a std::vector or other container,
+						// we need to keep reading each arg, parse them, and store...
 						using value_type = assign_type::value_type;
 
 						// Is it `--switch=value` or `--switch value`?
@@ -1413,7 +1486,17 @@ namespace mgmake::cli {
 						return true;
 					}
 
-					return std::unexpected("Not implemented");
+					// If the option is an action
+					if constexpr (opt_t::action_value) {
+						auto result = opt_t::handle_action(opts, arg);
+						if (not result) {
+							return std::unexpected(std::format("opt_t::handle_action failed: {}", result.error()));
+						}
+
+						return true;
+					}
+
+					return std::unexpected("cli::parser::parse: Not implemented");
 				}, index);
 
 				if (not result.has_value()) {
@@ -1469,9 +1552,11 @@ namespace mgmake::cli {
         // parse cmd at runtime
         if (auto result = p::parse(cmd)) {
 			auto opts = result.value();
+			/*
 			if (opts.m_action == action::kind::help) {
 				std::println("Help menu");
 			}
+			*/
             return sys::exit_code::success;
         } else {
             std::println(stderr, "{}", result.error());

@@ -12,21 +12,12 @@
 #include <expected>
 
 namespace mgmake::cli {
-    enum struct option_mode {
-        deduce, // Auto deduce the mode based on the definition
-        flag, // bool toggle on/off flag
-        assign, // set text, int value, etc. assign the option value
-        append, // append to the option list value. E.g. std::vector<std::string>
-        callback // invoke a callback function when the option is passed
-    };
-
     // Actual option impl, consume the configuration in the type map
     template<typename storage_t = meta::type_map<>>
     struct option_impl {
         MGMAKE_META_TYPE_CONSUMER_FIELD(name, meta::static_string{ "" });
         MGMAKE_META_TYPE_CONSUMER_FIELD(description, meta::static_string{ "" });
 	    MGMAKE_META_TYPE_CONSUMER_FIELD(short_name, '\0');
-	    MGMAKE_META_TYPE_CONSUMER_FIELD(mode, option_mode::deduce);
 	    MGMAKE_META_TYPE_CONSUMER_FIELD(callback, nullptr);
 	    using assign_type = typename storage_t::template at<meta::type_value<meta::static_string{ "assign" }>, false>;
 	    MGMAKE_META_TYPE_CONSUMER_FIELD(action, false);
@@ -103,6 +94,16 @@ namespace mgmake::cli {
 			}
 			return {};
 		}
+
+		static inline constexpr std::expected<void, std::string> handle_action(auto& opts, std::string_view arg) {
+			mgmkassert(match(arg), "handling an action with the incorrect arg");
+			mgmkassert(action_value, "handling a normal switch as an action");
+
+			// TODO: use hash
+			opts.m_action_id = 1; // name_value.hash();
+
+			return {};
+		}
     };
 
     // Build a compile-time map for the option settings
@@ -113,7 +114,6 @@ namespace mgmake::cli {
         MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, name, meta::static_string);
         MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, description, meta::static_string);
         MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, short_name, char);
-        MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, mode, option_mode);
         MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, callback, auto);
 		// option accepts a value (`--switch=value` or `--switch value`) and assigns its value to the option member
 		// pass a `meta::member_access<>` for the member to assign.
@@ -127,7 +127,7 @@ namespace mgmake::cli {
 		MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, action, bool);
 		MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, flag, bool); // aka switch
 
-        using build = typename builder_t::template build<option_impl>;
+        using build = typename builder_type::template build<option_impl>;
     };
     // default builder alias
     using option = option_builder<>;

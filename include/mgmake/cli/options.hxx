@@ -11,7 +11,7 @@ namespace mgmake::cli {
 	// Store parsed CLI options
 	struct options {
 		// Build action by default
-		action::kind m_action = action::kind::build;
+		std::size_t m_action_id = 0;//meta::static_string{"build"}.hash();
 
 		bool m_verbose = false;
 		bool m_dry_run = false;

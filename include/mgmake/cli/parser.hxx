@@ -94,6 +94,8 @@ namespace mgmake::cli {
 					if constexpr (opt_t::is_assign) {
 						// What is the expected value type?
 						using assign_type = opt_t::assign_type;
+						// TODO: If value_type is a std::vector or other container,
+						// we need to keep reading each arg, parse them, and store...
 						using value_type = assign_type::value_type;
 
 						// Is it `--switch=value` or `--switch value`?
@@ -135,7 +137,17 @@ namespace mgmake::cli {
 						return true;
 					}
 
-					return std::unexpected("Not implemented");
+					// If the option is an action
+					if constexpr (opt_t::action_value) {
+						auto result = opt_t::handle_action(opts, arg);
+						if (not result) {
+							return std::unexpected(std::format("opt_t::handle_action failed: {}", result.error()));
+						}
+
+						return true;
+					}
+
+					return std::unexpected("cli::parser::parse: Not implemented");
 				}, index);
 
 				if (not result.has_value()) {

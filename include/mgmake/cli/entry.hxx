@@ -22,9 +22,11 @@ namespace mgmake::cli {
         // parse cmd at runtime
         if (auto result = p::parse(cmd)) {
 			auto opts = result.value();
+			/*
 			if (opts.m_action == action::kind::help) {
 				std::println("Help menu");
 			}
+			*/
             return sys::exit_code::success;
         } else {
             std::println(stderr, "{}", result.error());
