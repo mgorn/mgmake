@@ -19,13 +19,6 @@
 #define MGMAKE_CLI_ENTRY_HXX
 
 
-// ===== begin include/mgmake/cli/default_options.hxx =====
-#pragma once
-
-#ifndef MGMAKE_CLI_DEFAULT_OPTIONS_HXX
-#define MGMAKE_CLI_DEFAULT_OPTIONS_HXX
-
-
 // ===== begin include/mgmake/cli/default_actions.hxx =====
 #pragma once
 
@@ -200,6 +193,48 @@ template<typename message_t>
 
 #endif // MGMAKE_DETAIL_ASSERT_HXX
 // ===== end include/mgmake/detail/assert.hxx =====
+
+
+// ===== begin include/mgmake/detail/index_bit.hxx =====
+#pragma once
+
+// skipped duplicate include: include/mgmake/detail/assert.hxx
+
+#include <bit>
+#include <bitset>
+#include <cstddef>
+#include <limits>
+#include <utility>
+
+namespace mgmake::detail {
+	// Returns the index of the single set bit.
+	template<std::size_t N>
+	[[nodiscard]] constexpr std::size_t index_bit(std::bitset<N> bits) noexcept {
+		static_assert(N > 0);
+
+		using chunk_t = unsigned long long;
+		constexpr std::size_t chunk_bits = std::numeric_limits<chunk_t>::digits;
+
+		// Select only the lowest chunk so that `to_ullong()` cannot overflow.
+		const auto chunk_mask = ~(~std::bitset<N>{} << chunk_bits);
+
+		mgmkassert(bits.count() == 1, "index_bit requires a bitset with exactly 1 bit set");
+
+		for (std::size_t offset = 0; offset < N; offset += chunk_bits) {
+			const auto selected_chunk = bits & chunk_mask;
+
+			if (selected_chunk.any()) {
+				const auto chunk = selected_chunk.to_ullong();
+
+				return offset + static_cast<std::size_t>(std::countr_zero(chunk));
+			}
+
+			bits >>= chunk_bits;
+		}
+
+		std::unreachable();
+	}
+}// ===== end include/mgmake/detail/index_bit.hxx =====
 
 
 // ===== begin include/mgmake/meta/member_access.hxx =====
@@ -585,6 +620,7 @@ namespace mgmake::meta {
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <string_view>
 
 // static_string carries compile-time strings through templates without relying on runtime storage.
@@ -618,6 +654,25 @@ namespace mgmake::meta {
         constexpr operator std::string_view() const noexcept {
             return view();
         }
+
+		template<std::unsigned_integral hash_t = std::size_t>
+        [[nodiscard]] constexpr hash_t hash() const noexcept {
+            constexpr hash_t offset_basis = sizeof(hash_t) <= 4
+				? static_cast<hash_t>(2166136261u)
+				: static_cast<hash_t>(14695981039346656037ull);
+
+            constexpr hash_t prime = sizeof(hash_t) <= 4
+				? static_cast<hash_t>(16777619u)
+				: static_cast<hash_t>(1099511628211ull);
+
+            auto result = offset_basis;
+            for (const auto c : view()) {
+                result ^= static_cast<hash_t>(static_cast<uint8_t>(c));
+                result *= prime;
+            }
+
+            return result;
+        }
     };
 
     template<std::size_t N1, std::size_t N2>
@@ -648,6 +703,17 @@ namespace mgmake::meta {
 
         return result;
     }
+}
+
+namespace std {
+    template<std::size_t N>
+    struct hash<::mgmake::meta::static_string<N>> {
+        [[nodiscard]] constexpr std::size_t operator()(
+            const ::mgmake::meta::static_string<N>& value
+        ) const noexcept {
+            return value.hash();
+        }
+    };
 }
 
 #endif // MGMAKE_META_STATIC_STRING_HXX// ===== end include/mgmake/meta/static_string.hxx =====
@@ -941,13 +1007,16 @@ namespace mgmake::cli {
 			return {};
 		}
 
+		template<typename dispatcher_t>
 		static inline constexpr std::expected<void, std::string> handle_action(auto& opts, std::string_view arg) {
 			mgmkassert(match(arg), "handling an action with the incorrect arg");
 			mgmkassert(action_value, "handling a normal switch as an action");
 
-			// TODO: use hash
-			opts.m_action_id = 1; // name_value.hash();
-
+			auto matches = dispatcher_t::match(arg);
+			if (not matches.any()) {
+				return std::unexpected(std::format("Unknown action '{}' (cli::option_impl::handle_action no match from dispatcher_t::match for arg)", arg));
+			}
+			opts.m_action = detail::index_bit(matches);
 			return {};
 		}
     };
@@ -1016,6 +1085,20 @@ namespace mgmake::cli {
 		// Get the handler for the action
 	    MGMAKE_META_TYPE_CONSUMER_FIELD(handler, nullptr);
 		static inline constexpr bool valid_handler = not std::is_same_v<std::decay_t<decltype(handler_value)>, std::nullptr_t>;
+
+		static inline constexpr auto name() {
+			return option_type::name_value;
+		}
+		static inline constexpr auto hash() {
+			return name.hash();
+		}
+		static inline constexpr bool match(std::string_view arg) {
+			return name() == arg;
+		}
+		static inline constexpr auto invoke(auto& opts) {
+			static_assert(valid_handler, "Invoking action with an invalid handler");
+			return handler_value(opts);
+		}
 	};
 
 	template<typename builder_t = meta::type_builder<>>
@@ -1036,16 +1119,40 @@ namespace mgmake::cli {
 #endif // MGMAKE_CLI_ACTION_HXX// ===== end include/mgmake/cli/action.hxx =====
 
 
+// skipped duplicate include: include/mgmake/meta/type_list.hxx
+
+// ===== begin include/mgmake/sys/exit_code.hxx =====
+#pragma once
+
+#ifndef MGMAKE_SYS_EXIT_CODE_HXX
+#define MGMAKE_SYS_EXIT_CODE_HXX
+
+namespace mgmake::sys {
+    enum struct exit_code : int {
+        success,
+        action_failure,
+        usage_error
+    };
+}
+
+#endif// ===== end include/mgmake/sys/exit_code.hxx =====
+
+
 namespace mgmake::cli {
 	using help_action = action
 		::option<option
 			::name<"help">::short_name<'h'>
 			::description<"Show help.">
 			::action<true>
+			::callback<[](auto& opts) {
+				// This overrides the action with the help action
+				opts.m_action = 0;
+			}>
 			::build>
-		::handler<[](auto& opts) {
+		::handler<[](auto& opts) -> std::expected<sys::exit_code, std::string> {
 			// TODO: Generate help from parser
 			std::println("Help menu");
+			return sys::exit_code::success;
 		}>
 		::build;
 	
@@ -1055,9 +1162,10 @@ namespace mgmake::cli {
 			::description<"Build the project.">
 			::action<true>::flag<false>
 			::build>
-		::handler<[](auto& opts) {
+		::handler<[](auto& opts) -> std::expected<sys::exit_code, std::string> {
 			// TODO: This would be the entrypoint/root for build
 			std::println("Build action");
+			return sys::exit_code::success;
 		}>
 		::build;
 	
@@ -1069,6 +1177,14 @@ namespace mgmake::cli {
 
 #endif // MGMAKE_CLI_DEFAULT_ACTIONS_HXX// ===== end include/mgmake/cli/default_actions.hxx =====
 
+
+// ===== begin include/mgmake/cli/default_options.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CLI_DEFAULT_OPTIONS_HXX
+#define MGMAKE_CLI_DEFAULT_OPTIONS_HXX
+
+// skipped duplicate include: include/mgmake/cli/default_actions.hxx
 // skipped duplicate include: include/mgmake/cli/option.hxx
 
 // ===== begin include/mgmake/cli/options.hxx =====
@@ -1077,20 +1193,24 @@ namespace mgmake::cli {
 #ifndef MGMAKE_CLI_OPTIONS_HXX
 #define MGMAKE_CLI_OPTIONS_HXX
 
-// skipped duplicate include: include/mgmake/cli/action.hxx
+// skipped duplicate include: include/mgmake/cli/default_actions.hxx
 
 #include <filesystem>
+#include <optional>
 
 namespace mgmake::cli {
 	// Store parsed CLI options
 	struct options {
-		// Build action by default
-		std::size_t m_action_id = 0;//meta::static_string{"build"}.hash();
+		std::optional<std::size_t> m_action = default_actions::index<build_action>();
 
 		bool m_verbose = false;
 		bool m_dry_run = false;
 
 		std::filesystem::path m_build_dir = std::filesystem::current_path() / ".build";
+
+		inline constexpr auto action() const {
+			return m_action;
+		}
 	};
 }
 
@@ -1142,6 +1262,46 @@ namespace mgmake::cli {
 
 #endif // MGMAKE_CLI_DEFAULT_OPTIONS_HXX// ===== end include/mgmake/cli/default_options.hxx =====
 
+
+// ===== begin include/mgmake/cli/dispatcher.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CLI_DISPATCHER_HXX
+#define MGMAKE_CLI_DISPATCHER_HXX
+
+// skipped duplicate include: include/mgmake/cli/options.hxx
+
+// skipped duplicate include: include/mgmake/sys/exit_code.hxx
+
+// cli::dispatcher
+// consumes the cli::options and executes the required action(s)
+
+namespace mgmake::cli {
+	template<typename list_t = meta::type_list<>>
+	struct dispatcher {
+		static inline constexpr std::expected<sys::exit_code, std::string> invoke(const cli::options& opts) {
+			if (not opts.action().has_value()) {
+				return std::unexpected("cli::dispatcher::invoke cannot invoke without an action!");
+			}
+			return list_t::type_switch([&]<typename action_t> -> std::expected<sys::exit_code, std::string> {
+				static_assert(action_t::valid_handler, "action_t handler is invalid");
+				return action_t::invoke(opts);
+			}, opts.action().value());
+		}
+
+		using matches_type = std::bitset<list_t::size()>;
+		static inline constexpr matches_type match(std::string_view arg) {
+			return []<std::size_t... Is>(std::index_sequence<Is...>, std::string_view arg) {
+				matches_type matches{};
+				(matches.set(Is, list_t::template type_at<Is>::match(arg)), ...);
+				return matches;
+			}(std::make_index_sequence<list_t::size()>{}, arg);
+		}
+	};
+}
+
+#endif // MGMAKE_CLI_DISPATCHER_HXX// ===== end include/mgmake/cli/dispatcher.hxx =====
+
 // skipped duplicate include: include/mgmake/cli/options.hxx
 
 // ===== begin include/mgmake/cli/parser.hxx =====
@@ -1152,48 +1312,7 @@ namespace mgmake::cli {
 
 // skipped duplicate include: include/mgmake/cli/options.hxx
 
-
-// ===== begin include/mgmake/detail/index_bit.hxx =====
-#pragma once
-
-// skipped duplicate include: include/mgmake/detail/assert.hxx
-
-#include <bit>
-#include <bitset>
-#include <cstddef>
-#include <limits>
-#include <utility>
-
-namespace mgmake::detail {
-	// Returns the index of the single set bit.
-	template<std::size_t N>
-	[[nodiscard]] constexpr std::size_t index_bit(std::bitset<N> bits) noexcept {
-		static_assert(N > 0);
-
-		using chunk_t = unsigned long long;
-		constexpr std::size_t chunk_bits = std::numeric_limits<chunk_t>::digits;
-
-		// Select only the lowest chunk so that `to_ullong()` cannot overflow.
-		const auto chunk_mask = ~(~std::bitset<N>{} << chunk_bits);
-
-		mgmkassert(bits.count() == 1, "index_bit requires a bitset with exactly 1 bit set");
-
-		for (std::size_t offset = 0; offset < N; offset += chunk_bits) {
-			const auto selected_chunk = bits & chunk_mask;
-
-			if (selected_chunk.any()) {
-				const auto chunk = selected_chunk.to_ullong();
-
-				return offset + static_cast<std::size_t>(std::countr_zero(chunk));
-			}
-
-			bits >>= chunk_bits;
-		}
-
-		std::unreachable();
-	}
-}// ===== end include/mgmake/detail/index_bit.hxx =====
-
+// skipped duplicate include: include/mgmake/detail/index_bit.hxx
 // skipped duplicate include: include/mgmake/meta/type_list.hxx
 
 // ===== begin include/mgmake/sys/shell.hxx =====
@@ -1378,6 +1497,7 @@ namespace mgmake::cli {
 			return not opt_t::action_value;
 		}>;
 
+		template<typename dispatcher_t>
         static inline constexpr std::expected<options, std::string> parse(const sys::shell& cmd) {
 			// The resulting options
 			options opts{};
@@ -1488,7 +1608,7 @@ namespace mgmake::cli {
 
 					// If the option is an action
 					if constexpr (opt_t::action_value) {
-						auto result = opt_t::handle_action(opts, arg);
+						auto result = opt_t::template handle_action<dispatcher_t>(opts, arg);
 						if (not result) {
 							return std::unexpected(std::format("opt_t::handle_action failed: {}", result.error()));
 						}
@@ -1521,42 +1641,23 @@ namespace mgmake::cli {
 #endif // MGMAKE_CLI_PARSER_HXX// ===== end include/mgmake/cli/parser.hxx =====
 
 
-
-// ===== begin include/mgmake/sys/exit_code.hxx =====
-#pragma once
-
-#ifndef MGMAKE_SYS_EXIT_CODE_HXX
-#define MGMAKE_SYS_EXIT_CODE_HXX
-
-namespace mgmake::sys {
-    enum struct exit_code : int {
-        success,
-        action_failure,
-        usage_error
-    };
-}
-
-#endif// ===== end include/mgmake/sys/exit_code.hxx =====
-
+// skipped duplicate include: include/mgmake/sys/exit_code.hxx
 // skipped duplicate include: include/mgmake/sys/shell.hxx
 
 #include <print>
 #include <utility>
 
 namespace mgmake::cli {
-    template<auto project_v = nullptr, auto toolchains_v = nullptr, typename options_t = default_options>
+    template<auto project_v = nullptr, auto toolchains_v = nullptr, typename actions_t = default_actions, typename options_t = default_options>
     inline sys::exit_code entry(sys::shell cmd) {
-        // construct the parser at compile time :)
+        // construct the parser & dispatcher at compile time :)
+		using d = dispatcher<actions_t>;
         using p = parser<options_t>;
 
         // parse cmd at runtime
-        if (auto result = p::parse(cmd)) {
+        if (auto result = p::template parse<d>(cmd)) {
 			auto opts = result.value();
-			/*
-			if (opts.m_action == action::kind::help) {
-				std::println("Help menu");
-			}
-			*/
+			d::invoke(opts);
             return sys::exit_code::success;
         } else {
             std::println(stderr, "{}", result.error());
@@ -1564,9 +1665,9 @@ namespace mgmake::cli {
         }
     }
 
-    template<auto project_v = nullptr, auto toolchains_v = nullptr, typename options_t = default_options>
+    template<auto project_v = nullptr, auto toolchains_v = nullptr, typename actions_t = default_actions, typename options_t = default_options>
     inline sys::exit_code entry(int argc, char* argv[]) {
-        return entry<project_v, toolchains_v, options_t>(sys::shell::from_args(argc, argv));
+        return entry<project_v, toolchains_v, actions_t, options_t>(sys::shell::from_args(argc, argv));
     }
 }
 

@@ -6,6 +6,7 @@
 #include "value_parser.hxx"
 
 #include "../detail/assert.hxx"
+#include "../detail/index_bit.hxx"
 #include "../meta/member_access.hxx"
 #include "../meta/type_builder.hxx"
 
@@ -95,13 +96,16 @@ namespace mgmake::cli {
 			return {};
 		}
 
+		template<typename dispatcher_t>
 		static inline constexpr std::expected<void, std::string> handle_action(auto& opts, std::string_view arg) {
 			mgmkassert(match(arg), "handling an action with the incorrect arg");
 			mgmkassert(action_value, "handling a normal switch as an action");
 
-			// TODO: use hash
-			opts.m_action_id = 1; // name_value.hash();
-
+			auto matches = dispatcher_t::match(arg);
+			if (not matches.any()) {
+				return std::unexpected(std::format("Unknown action '{}' (cli::option_impl::handle_action no match from dispatcher_t::match for arg)", arg));
+			}
+			opts.m_action = detail::index_bit(matches);
 			return {};
 		}
     };

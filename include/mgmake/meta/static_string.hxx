@@ -5,6 +5,7 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <string_view>
 
 // static_string carries compile-time strings through templates without relying on runtime storage.
@@ -38,6 +39,25 @@ namespace mgmake::meta {
         constexpr operator std::string_view() const noexcept {
             return view();
         }
+
+		template<std::unsigned_integral hash_t = std::size_t>
+        [[nodiscard]] constexpr hash_t hash() const noexcept {
+            constexpr hash_t offset_basis = sizeof(hash_t) <= 4
+				? static_cast<hash_t>(2166136261u)
+				: static_cast<hash_t>(14695981039346656037ull);
+
+            constexpr hash_t prime = sizeof(hash_t) <= 4
+				? static_cast<hash_t>(16777619u)
+				: static_cast<hash_t>(1099511628211ull);
+
+            auto result = offset_basis;
+            for (const auto c : view()) {
+                result ^= static_cast<hash_t>(static_cast<uint8_t>(c));
+                result *= prime;
+            }
+
+            return result;
+        }
     };
 
     template<std::size_t N1, std::size_t N2>
@@ -68,6 +88,17 @@ namespace mgmake::meta {
 
         return result;
     }
+}
+
+namespace std {
+    template<std::size_t N>
+    struct hash<::mgmake::meta::static_string<N>> {
+        [[nodiscard]] constexpr std::size_t operator()(
+            const ::mgmake::meta::static_string<N>& value
+        ) const noexcept {
+            return value.hash();
+        }
+    };
 }
 
 #endif // MGMAKE_META_STATIC_STRING_HXX

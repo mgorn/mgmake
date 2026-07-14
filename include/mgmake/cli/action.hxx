@@ -39,6 +39,20 @@ namespace mgmake::cli {
 		// Get the handler for the action
 	    MGMAKE_META_TYPE_CONSUMER_FIELD(handler, nullptr);
 		static inline constexpr bool valid_handler = not std::is_same_v<std::decay_t<decltype(handler_value)>, std::nullptr_t>;
+
+		static inline constexpr auto name() {
+			return option_type::name_value;
+		}
+		static inline constexpr auto hash() {
+			return name.hash();
+		}
+		static inline constexpr bool match(std::string_view arg) {
+			return name() == arg;
+		}
+		static inline constexpr auto invoke(auto& opts) {
+			static_assert(valid_handler, "Invoking action with an invalid handler");
+			return handler_value(opts);
+		}
 	};
 
 	template<typename builder_t = meta::type_builder<>>

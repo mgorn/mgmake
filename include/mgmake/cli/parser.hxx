@@ -29,6 +29,7 @@ namespace mgmake::cli {
 			return not opt_t::action_value;
 		}>;
 
+		template<typename dispatcher_t>
         static inline constexpr std::expected<options, std::string> parse(const sys::shell& cmd) {
 			// The resulting options
 			options opts{};
@@ -139,7 +140,7 @@ namespace mgmake::cli {
 
 					// If the option is an action
 					if constexpr (opt_t::action_value) {
-						auto result = opt_t::handle_action(opts, arg);
+						auto result = opt_t::template handle_action<dispatcher_t>(opts, arg);
 						if (not result) {
 							return std::unexpected(std::format("opt_t::handle_action failed: {}", result.error()));
 						}
