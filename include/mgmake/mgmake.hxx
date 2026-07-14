@@ -5,4 +5,6 @@
 
 #include "cli/entry.hxx"
 
+namespace mgmk = mgmake;
+
 #endif // MGMAKE_MGMAKE_HXX

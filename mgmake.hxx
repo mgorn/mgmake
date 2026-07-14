@@ -1937,6 +1937,8 @@ int main(int argc, char* argv[]) { \
 #endif // MGMAKE_CLI_ENTRY_HXX// ===== end include/mgmake/cli/entry.hxx =====
 
 
+namespace mgmk = mgmake;
+
 #endif // MGMAKE_MGMAKE_HXX
 // ===== end include/mgmake/mgmake.hxx =====
 
