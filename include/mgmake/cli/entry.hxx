@@ -37,7 +37,7 @@ namespace mgmake::cli {
 
     template<typename config_builder_t = config>
     inline sys::exit_code entry(int argc, char* argv[]) {
-        return entry<config_t>(sys::shell::from_args(argc, argv));
+        return entry<config_builder_t>(sys::shell::from_args(argc, argv));
     }
 }
 

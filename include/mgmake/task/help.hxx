@@ -3,9 +3,12 @@
 #ifndef MGMAKE_TASK_HELP_HXX
 #define MGMAKE_TASK_HELP_HXX
 
+#include "task_traits.hxx"
+
 #include "../cli/option.hxx"
 #include "../sys/exit_code.hxx"
 
+#include <sstream>
 #include <string>
 
 namespace mgmake::task {
@@ -31,8 +34,9 @@ namespace mgmake::task {
 			using options_type = config_type::options_type;
 			
 			std::println("\nTasks:");
-			static constexpr auto task_help = []<typename act_t>(auto& cmd){
-				std::println("\t{:<10} {}", act_t::name().view(), act_t::description().view());
+			static constexpr auto task_help = []<typename task_t>(auto& cmd){
+				using traits_type = task_traits<task_t>;
+				std::println("\t{:<10} {}", traits_type::name(), traits_type::description());
 			};
 
 			[]<std::size_t... Is>(std::index_sequence<Is...>, auto& cmd) {

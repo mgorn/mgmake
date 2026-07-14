@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef MGMAKE_SYS_SHELL_HXX
+#define MGMAKE_SYS_SHELL_HXX
+
 #include <algorithm>   // std::ranges::find_first_of
 #include <array>       // std::array
 #include <cstddef>     // std::size_t
@@ -157,3 +160,5 @@ namespace mgmake::sys {
         std::vector<std::string> m_args{};
     };
 }
+
+#endif // MGMAKE_SYS_SHELL_HXX

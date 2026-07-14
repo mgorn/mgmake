@@ -885,8 +885,8 @@ namespace mgmake::meta {
 namespace mgmake::meta {
     template<typename storage_t = type_map<>>
     struct type_builder {
-        template<static_string key_v>
-        using get = typename storage_t::template at<type_value<key_v>>;
+        template<static_string key_v, bool check_v = true>
+        using get = typename storage_t::template at<type_value<key_v>, check_v>;
 
         template<static_string key_v, typename value_t>
         using set = type_builder<typename storage_t::template emplace<type_value<key_v>, value_t>>;
@@ -910,42 +910,6 @@ namespace mgmake::meta {
 		typename builder_t::template set<key_v, alias_t##_t> \
 	>
 
-#define MGMAKE_TYPE_CONSUMER_TYPE_FIELD(alias_t, default_t) \
-	MGMAKE_TYPE_CONSUMER_TYPE_FIELD_AS( \
-		alias_t, \
-		::mgmake::meta::static_string{#alias_t}, \
-		default_t \
-	)
-
-#define MGMAKE_TYPE_CONSUMER_TYPE_FIELD_AS(alias_t, key_v, default_t) \
-	using alias_t##_type = typename storage_t::template at< \
-		::mgmake::meta::type_value<key_v>, \
-		false \
-	>; \
-	using alias_t = std::conditional_t< \
-		std::same_as<alias_t##_type, void>, \
-		default_t, \
-		alias_t##_type \
-	>
-
-#define MGMAKE_TYPE_BUILDER_VALUE_FIELD(wrapper_t, alias_t) \
-	MGMAKE_TYPE_BUILDER_VALUE_FIELD_AS( \
-		wrapper_t, \
-		alias_t, \
-		::mgmake::meta::static_string{#alias_t} \
-	)
-
-#define MGMAKE_TYPE_BUILDER_VALUE_FIELD_AS(wrapper_t, alias_t, key_v) \
-	MGMAKE_TYPE_BUILDER_TYPE_FIELD_AS( \
-		wrapper_t, \
-		alias_t##_type, \
-		key_v \
-	); \
-	template<auto alias_t##_v> \
-	using alias_t = alias_t##_type< \
-		::mgmake::meta::type_value<alias_t##_v> \
-	>
-
 #define MGMAKE_TYPE_BUILDER_VALUE_FIELD(wrapper_t, alias_t, value_t) \
 	MGMAKE_TYPE_BUILDER_VALUE_FIELD_AS( \
 		wrapper_t, \
@@ -963,6 +927,24 @@ namespace mgmake::meta {
 	template<value_t alias_t##_v> \
 	using alias_t = alias_t##_type< \
 		::mgmake::meta::type_value<alias_t##_v> \
+	>
+
+#define MGMAKE_TYPE_CONSUMER_TYPE_FIELD(alias_t, default_t) \
+	MGMAKE_TYPE_CONSUMER_TYPE_FIELD_AS( \
+		alias_t, \
+		::mgmake::meta::static_string{#alias_t}, \
+		default_t \
+	)
+
+#define MGMAKE_TYPE_CONSUMER_TYPE_FIELD_AS(alias_t, key_v, default_t) \
+	using alias_t##_type = typename storage_t::template at< \
+		::mgmake::meta::type_value<key_v>, \
+		false \
+	>; \
+	using alias_t = std::conditional_t< \
+		std::same_as<alias_t##_type, void>, \
+		default_t, \
+		alias_t##_type \
 	>
 
 #define MGMAKE_TYPE_CONSUMER_VALUE_FIELD(alias_t, default_v) \
@@ -1163,9 +1145,60 @@ namespace mgmake::task {
 #ifndef MGMAKE_TASK_HELP_HXX
 #define MGMAKE_TASK_HELP_HXX
 
+
+// ===== begin include/mgmake/task/task_traits.hxx =====
+#pragma once
+
+#ifndef MGMAKE_TASK_TASK_TRAITS_HXX
+#define MGMAKE_TASK_TASK_TRAITS_HXX
+
+#include <concepts>
+#include <expected>
+#include <string>
+
+// Forward decl if needed
+namespace mgmake::cli {
+	struct options;
+}
+namespace mgmake::sys {
+	struct shell;
+}
+
+namespace mgmake::task {
+	template<typename task_t, typename config_t>
+	concept task_handler = requires(const sys::shell& cmd, const cli::options& opts) {
+		{
+			task_t::template handle<config_t>(cmd, opts)
+		} -> std::same_as<std::expected<sys::exit_code, std::string>>;
+	};
+
+	template<typename task_t>
+	struct task_traits {
+		using task_type = task_t;
+		using option_type = task_type::option_type;
+		template<typename config_t>
+		static constexpr bool valid_handler = task_handler<task_type, config_t>;
+
+		static constexpr std::string_view name() {
+			return option_type::name_value.view();
+		}
+		static constexpr std::string_view description() {
+			return option_type::description_value.view();
+		}
+
+		static constexpr bool match(std::string_view arg) {
+			return option_type::match(arg);
+		}
+	};
+}
+
+#endif // MGMAKE_TASK_TASK_HXX// ===== end include/mgmake/task/task_traits.hxx =====
+
+
 // skipped duplicate include: include/mgmake/cli/option.hxx
 // skipped duplicate include: include/mgmake/sys/exit_code.hxx
 
+#include <sstream>
 #include <string>
 
 namespace mgmake::task {
@@ -1191,8 +1224,9 @@ namespace mgmake::task {
 			using options_type = config_type::options_type;
 			
 			std::println("\nTasks:");
-			static constexpr auto task_help = []<typename act_t>(auto& cmd){
-				std::println("\t{:<10} {}", act_t::name().view(), act_t::description().view());
+			static constexpr auto task_help = []<typename task_t>(auto& cmd){
+				using traits_type = task_traits<task_t>;
+				std::println("\t{:<10} {}", traits_type::name(), traits_type::description());
 			};
 
 			[]<std::size_t... Is>(std::index_sequence<Is...>, auto& cmd) {
@@ -1311,6 +1345,9 @@ namespace mgmake::cli {
 
 // ===== begin include/mgmake/sys/shell.hxx =====
 #pragma once
+
+#ifndef MGMAKE_SYS_SHELL_HXX
+#define MGMAKE_SYS_SHELL_HXX
 
 #include <algorithm>   // std::ranges::find_first_of
 #include <array>       // std::array
@@ -1468,7 +1505,9 @@ namespace mgmake::sys {
 
         std::vector<std::string> m_args{};
     };
-}// ===== end include/mgmake/sys/shell.hxx =====
+}
+
+#endif // MGMAKE_SYS_SHELL_HXX// ===== end include/mgmake/sys/shell.hxx =====
 
 
 #include <bitset>
@@ -1644,8 +1683,9 @@ namespace mgmake::cli {
 #ifndef MGMAKE_TASK_DISPATCHER_HXX
 #define MGMAKE_TASK_DISPATCHER_HXX
 
-// skipped duplicate include: include/mgmake/cli/options.hxx
+// skipped duplicate include: include/mgmake/task/task_traits.hxx
 
+// skipped duplicate include: include/mgmake/cli/options.hxx
 // skipped duplicate include: include/mgmake/sys/exit_code.hxx
 // skipped duplicate include: include/mgmake/sys/shell.hxx
 
@@ -1664,8 +1704,10 @@ namespace mgmake::task {
 				return std::unexpected("cli::dispatcher::invoke cannot invoke without a task!");
 			}
 			return list_type::type_switch([&]<typename task_t> -> std::expected<sys::exit_code, std::string> {
-				static_assert(task_t::valid_handler, "task_t handler is invalid");
-				return task_t::template invoke<config_type>(cmd, opts);
+				using traits_type = task_traits<task_t>;
+				static_assert(traits_type::template valid_handler<config_type>, "task is missing a handle function");
+
+				return task_t::template handle<config_type>(cmd, opts);
 			}, opts.task().value());
 		}
 
@@ -1673,7 +1715,7 @@ namespace mgmake::task {
 		static inline constexpr matches_type match(std::string_view arg) {
 			return []<std::size_t... Is>(std::index_sequence<Is...>, std::string_view arg) {
 				matches_type matches{};
-				(matches.set(Is, list_type::template type_at<Is>::match(arg)), ...);
+				(matches.set(Is, task_traits<typename list_type::template type_at<Is>>::match(arg)), ...);
 				return matches;
 			}(std::make_index_sequence<list_type::size()>{}, arg);
 		}
@@ -1738,49 +1780,85 @@ namespace mgmake::cli {
 #endif // MGMAKE_CLI_DEFAULT_OPTIONS_HXX// ===== end include/mgmake/cli/default_options.hxx =====
 
 // skipped duplicate include: include/mgmake/meta/type_builder.hxx
+
+// ===== begin include/mgmake/meta/type_or.hxx =====
+#pragma once
+
+#ifndef MGMAKE_META_TYPE_OR_HXX
+#define MGMAKE_META_TYPE_OR_HXX
+
+#include <type_traits>
+
+// If the type is void, return the default type instead
+
+namespace mgmake::meta {
+    template<typename type_t, typename default_t, typename none_t = void>
+    struct type_or {
+        using type = std::remove_cvref_t<std::invoke_result_t<decltype([] consteval {
+			if constexpr (std::is_same_v<type_t, none_t>) {
+				return std::type_identity<default_t>{};
+			} else {
+				return std::type_identity<type_t>{};
+			}
+		})>>::type;
+
+		static_assert(not std::is_same_v<default_t, none_t>, "If your default_t is none_t, you don't need `meta::type_or`...");
+    };
+
+	template<typename type_t, typename default_t, typename none_t = void>
+	using type_or_t = type_or<type_t, default_t, none_t>::type;
+}
+
+#endif // MGMAKE_META_TYPE_OR_HXX// ===== end include/mgmake/meta/type_or.hxx =====
+
 // skipped duplicate include: include/mgmake/task/default_tasks.hxx
 
-namespace mgmake::cli {
+namespace mgmake {
 	template<typename storage_t = meta::type_map<>>
 	struct config_impl {
-		MGMAKE_TYPE_BUILDER_VALUE_FIELD(project, nullptr);
-		MGMAKE_TYPE_BUILDER_VALUE_FIELD(toolchains, nullptr);
-		MGMAKE_TYPE_BUILDER_TYPE_FIELD(tasks, void);
-		MGMAKE_TYPE_BUILDER_TYPE_FIELD(options, void);
+		MGMAKE_TYPE_CONSUMER_VALUE_FIELD(project, nullptr);
+		MGMAKE_TYPE_CONSUMER_VALUE_FIELD(toolchains, nullptr);
+		MGMAKE_TYPE_CONSUMER_TYPE_FIELD(tasks, void);
+		MGMAKE_TYPE_CONSUMER_TYPE_FIELD(options, void);
 	};
 
 	template<typename builder_t = meta::type_builder<>>
     struct config_builder {
 		using builder_type = builder_t;
 
-		MGMAKE_TYPE_BUILDER_VALUE_FIELD(config_builder, project);
-		MGMAKE_TYPE_BUILDER_VALUE_FIELD(config_builder, toolchains);
+		MGMAKE_TYPE_BUILDER_VALUE_FIELD(config_builder, project, auto);
+		MGMAKE_TYPE_BUILDER_VALUE_FIELD(config_builder, toolchains, auto);
 		MGMAKE_TYPE_BUILDER_TYPE_FIELD(config_builder, tasks);
 		MGMAKE_TYPE_BUILDER_TYPE_FIELD(config_builder, options);
 
-		using build = std::decay_t<std::invoke_result_t<[] {
+		using build = std::decay_t<std::invoke_result_t<decltype([] consteval {
 			/* Automatically add task options to options */
 			// Get the tasks
-			using tasks_type = builder_type::get<"tasks">;
+			using tasks_type = meta::type_or_t<typename builder_type::template get<"tasks", false>, task::default_tasks>;
 			// Get the options
-			using options_type = builder_type::get<"options">;
+			using options_type = meta::type_or_t<typename builder_type::template get<"options", false>, cli::default_options>;
 
-			// Get the list of task options
-			using task_options = tasks_type::template fold<[]<typename state_t, typename task_t>() consteval {
+			// Collect the option associated with every task.
+			using task_options = typename tasks_type::template fold<[]<typename state_t, typename task_t>() consteval {
 				return std::type_identity<typename state_t::template append<typename task_t::option_type>>{};
 			}, meta::type_list<>>;
 
+			// Append the contents of task_options, not task_options itself.
+			using actual_options_type = typename options_type::template append_list<task_options>;
+
 			// Create a new config builder with the task options appended
-			using actual_config_builder = config_builder::options<options_type::append<task_options>>;
+			// Update the existing builder directly. Creating another config_builder
+			// specialization here would recursively instantiate its build alias.
+			using actual_builder_type = typename builder_type::template set<"options", actual_options_type>;
 
 			// Use the builder type from that instead
-			using result_type = typename actual_config_builder::builder_type::template build<config_impl>;
+			using result_type = typename actual_builder_type::template build<config_impl>;
 
-			// Now we have a builder where options has options from tasks appended
+			// Now we have a config where options has task options appended
 			return result_type{};
-		}>>;
-	}
-	using config = config_builder<>::tasks<default_tasks>::options<default_options>;
+		})>>;
+	};
+	using config = config_builder<>::tasks<task::default_tasks>::options<cli::default_options>;
 }
 
 #endif // MGMAKE_CONFIG_HXX// ===== end include/mgmake/config.hxx =====
@@ -1812,7 +1890,7 @@ namespace mgmake::cli {
 
     template<typename config_builder_t = config>
     inline sys::exit_code entry(int argc, char* argv[]) {
-        return entry<config_t>(sys::shell::from_args(argc, argv));
+        return entry<config_builder_t>(sys::shell::from_args(argc, argv));
     }
 }
 
