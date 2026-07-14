@@ -84,6 +84,25 @@ namespace mgmake::meta {
 			>::type;
 		};
 
+		template<typename current_list_t, typename... other_types_t>
+		struct prepend_types_unique_type {
+			using type = current_list_t;
+		};
+
+		template<typename current_list_t, typename first_t, typename... rest_t>
+		struct prepend_types_unique_type<current_list_t, first_t, rest_t...> {
+			using next_list_t = std::conditional_t<
+				current_list_t::template has<first_t>(),
+				current_list_t,
+				typename current_list_t::template prepend<first_t>
+			>;
+
+			using type = typename prepend_types_unique_type<
+				next_list_t,
+				rest_t...
+			>::type;
+		};
+
 	public:
 		template<typename... other_types_t>
 		using append_types_unique = typename append_types_unique_type<
@@ -101,8 +120,17 @@ namespace mgmake::meta {
 		template<typename type_t, bool check = true>
 		using append_unique = typename append_unique_type<type_t, check>::type;
 
+		template<typename... other_types_t>
+		using prepend_types = type_list<other_types_t..., types_t...>;
+
 		template<typename type_t>
-		using prepend = type_list<type_t, types_t...>;
+		using prepend = prepend_types<type_t>;
+
+		template<typename... other_types_t>
+		using prepend_types_unique = typename prepend_types_unique_type<
+			type_list<types_t...>,
+			other_types_t...
+		>::type;
 
 		template<typename type_t, bool check = true>
 		struct prepend_unique_type {
@@ -123,6 +151,12 @@ namespace mgmake::meta {
 
 		template<typename other_list_t>
 		using append_list_unique = typename other_list_t::template apply<append_types_unique>;
+
+		template<typename other_list_t>
+		using prepend_list = typename other_list_t::template apply<prepend_types>;
+
+		template<typename other_list_t>
+		using prepend_list_unique = typename other_list_t::template apply<prepend_types_unique>;
 
 		// Invoke a variadic template with this list's stored type pack.
 		template<template<typename...> typename pack_t>

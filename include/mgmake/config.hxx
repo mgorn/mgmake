@@ -39,7 +39,7 @@ namespace mgmake {
 			}, meta::type_list<>>;
 
 			// Append the contents of task_options, not task_options itself.
-			using actual_options_type = typename options_type::template append_list<task_options>;
+			using actual_options_type = typename options_type::template prepend_list<task_options>;
 
 			// Create a new config builder with the task options appended
 			// Update the existing builder directly. Creating another config_builder
