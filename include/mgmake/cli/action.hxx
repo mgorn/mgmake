@@ -46,12 +46,16 @@ namespace mgmake::cli {
 		static inline constexpr auto hash() {
 			return name.hash();
 		}
+		static inline constexpr auto description() {
+			return option_type::description_value;
+		}
 		static inline constexpr bool match(std::string_view arg) {
 			return name() == arg;
 		}
-		static inline constexpr auto invoke(auto& opts) {
+		template<typename config_t = void> // The mgmake config
+		static inline constexpr auto invoke(auto& cmd, auto& opts) {
 			static_assert(valid_handler, "Invoking action with an invalid handler");
-			return handler_value(opts);
+			return handler_value.template operator()<config_t>(cmd, opts);
 		}
 	};
 

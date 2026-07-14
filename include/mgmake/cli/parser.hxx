@@ -159,13 +159,13 @@ namespace mgmake::cli {
             return opts;
         }
 
-		using matches_type = std::bitset<list_t::size()>;
+		using matches_type = std::bitset<list_type::size()>;
 		static inline constexpr matches_type match(std::string_view arg) {
 			return []<std::size_t... Is>(std::index_sequence<Is...>, std::string_view arg) {
 				matches_type matches{};
-				(matches.set(Is, list_t::template type_at<Is>::match(arg)), ...);
+				(matches.set(Is, list_type::template type_at<Is>::match(arg)), ...);
 				return matches;
-			}(std::make_index_sequence<list_t::size()>{}, arg);
+			}(std::make_index_sequence<list_type::size()>{}, arg);
 		}
     };
 }

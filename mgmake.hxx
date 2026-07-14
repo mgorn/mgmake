@@ -19,6 +19,13 @@
 #define MGMAKE_CLI_ENTRY_HXX
 
 
+// ===== begin include/mgmake/cli/config.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CLI_CONFIG_HXX
+#define MGMAKE_CLI_CONFIG_HXX
+
+
 // ===== begin include/mgmake/cli/default_actions.hxx =====
 #pragma once
 
@@ -1092,12 +1099,16 @@ namespace mgmake::cli {
 		static inline constexpr auto hash() {
 			return name.hash();
 		}
+		static inline constexpr auto description() {
+			return option_type::description_value;
+		}
 		static inline constexpr bool match(std::string_view arg) {
 			return name() == arg;
 		}
-		static inline constexpr auto invoke(auto& opts) {
+		template<typename config_t = void> // The mgmake config
+		static inline constexpr auto invoke(auto& cmd, auto& opts) {
 			static_assert(valid_handler, "Invoking action with an invalid handler");
-			return handler_value(opts);
+			return handler_value.template operator()<config_t>(cmd, opts);
 		}
 	};
 
@@ -1138,6 +1149,8 @@ namespace mgmake::sys {
 #endif// ===== end include/mgmake/sys/exit_code.hxx =====
 
 
+#include <sstream>
+
 namespace mgmake::cli {
 	using help_action = action
 		::option<option
@@ -1149,9 +1162,44 @@ namespace mgmake::cli {
 				opts.m_action = 0;
 			}>
 			::build>
-		::handler<[](auto& opts) -> std::expected<sys::exit_code, std::string> {
-			// TODO: Generate help from parser
-			std::println("Help menu");
+		::handler<[]<typename config_t>(auto& cmd, auto& opts) -> std::expected<sys::exit_code, std::string> {
+			using config_type = config_t;
+
+			std::println("Usage:");
+			std::println("\t{} [action] [options]", cmd.program_name());
+			using actions_type = config_type::actions_type;
+			using options_type = config_type::options_type;
+			
+			std::println("\nActions:");
+			static constexpr auto action_help = []<typename act_t>(auto& cmd){
+				std::println("\t{:<10} {}", act_t::name().view(), act_t::description().view());
+			};
+
+			[]<std::size_t... Is>(std::index_sequence<Is...>, auto& cmd) {
+				(action_help.template operator()<typename actions_type::template type_at<Is>>(cmd), ...);
+			}(std::make_index_sequence<actions_type::size()>{}, cmd);
+
+			std::println("\nOptions:");
+			static constexpr auto option_help = []<typename opt_t>{
+				// Only print switches, actions will be shown first
+				if constexpr (opt_t::flag_value) {
+					std::stringstream ss;
+					if constexpr (opt_t::short_name_value != '\0') {
+						std::print(ss, "-{}, ", opt_t::short_name_value);
+					}
+					std::print(ss, "--{}", opt_t::name_value.view());
+					if constexpr (opt_t::is_assign) {
+						using vp = value_parser<typename opt_t::assign_type::value_type>;
+						std::print(ss, "=<{}>", vp::help_hint);
+					}
+					std::println("\t{:<24} {}", ss.str(), opt_t::description_value.view());
+				}
+			};
+
+			[]<std::size_t... Is>(std::index_sequence<Is...>) {
+				(option_help.template operator()<typename options_type::template type_at<Is>>(), ...);
+			}(std::make_index_sequence<options_type::size()>{});
+
 			return sys::exit_code::success;
 		}>
 		::build;
@@ -1162,7 +1210,7 @@ namespace mgmake::cli {
 			::description<"Build the project.">
 			::action<true>::flag<false>
 			::build>
-		::handler<[](auto& opts) -> std::expected<sys::exit_code, std::string> {
+		::handler<[]<typename config_t>(auto& cmd, auto& opts) -> std::expected<sys::exit_code, std::string> {
 			// TODO: This would be the entrypoint/root for build
 			std::println("Build action");
 			return sys::exit_code::success;
@@ -1263,6 +1311,32 @@ namespace mgmake::cli {
 #endif // MGMAKE_CLI_DEFAULT_OPTIONS_HXX// ===== end include/mgmake/cli/default_options.hxx =====
 
 
+namespace mgmake::cli {
+	template<auto project_v = nullptr, auto toolchains_v = nullptr, typename actions_t = default_actions, typename options_t = default_options>
+	struct config_impl {
+		static inline constexpr auto project_value = project_v;
+		static inline constexpr auto toolchains_value = toolchains_v;
+		using actions_type = actions_t;
+		using options_type = options_t;
+
+		template<auto new_project_v>
+		using project = config_impl<new_project_v, toolchains_value, actions_type, options_type>;
+
+		template<auto new_toolchains_v>
+		using toolchains = config_impl<project_value, new_toolchains_v, actions_type, options_type>;
+
+		template<typename new_actions_t>
+		using actions = config_impl<project_value, toolchains_value, new_actions_t, options_type>;
+
+		template<typename new_options_t>
+		using options = config_impl<project_value, toolchains_value, actions_type, new_options_t>;
+	};
+	using config = config_impl<>;
+}
+
+#endif // MGMAKE_CLI_CONFIG_HXX// ===== end include/mgmake/cli/config.hxx =====
+
+
 // ===== begin include/mgmake/cli/dispatcher.hxx =====
 #pragma once
 
@@ -1272,48 +1346,6 @@ namespace mgmake::cli {
 // skipped duplicate include: include/mgmake/cli/options.hxx
 
 // skipped duplicate include: include/mgmake/sys/exit_code.hxx
-
-// cli::dispatcher
-// consumes the cli::options and executes the required action(s)
-
-namespace mgmake::cli {
-	template<typename list_t = meta::type_list<>>
-	struct dispatcher {
-		static inline constexpr std::expected<sys::exit_code, std::string> invoke(const cli::options& opts) {
-			if (not opts.action().has_value()) {
-				return std::unexpected("cli::dispatcher::invoke cannot invoke without an action!");
-			}
-			return list_t::type_switch([&]<typename action_t> -> std::expected<sys::exit_code, std::string> {
-				static_assert(action_t::valid_handler, "action_t handler is invalid");
-				return action_t::invoke(opts);
-			}, opts.action().value());
-		}
-
-		using matches_type = std::bitset<list_t::size()>;
-		static inline constexpr matches_type match(std::string_view arg) {
-			return []<std::size_t... Is>(std::index_sequence<Is...>, std::string_view arg) {
-				matches_type matches{};
-				(matches.set(Is, list_t::template type_at<Is>::match(arg)), ...);
-				return matches;
-			}(std::make_index_sequence<list_t::size()>{}, arg);
-		}
-	};
-}
-
-#endif // MGMAKE_CLI_DISPATCHER_HXX// ===== end include/mgmake/cli/dispatcher.hxx =====
-
-// skipped duplicate include: include/mgmake/cli/options.hxx
-
-// ===== begin include/mgmake/cli/parser.hxx =====
-#pragma once
-
-#ifndef MGMAKE_CLI_PARSER_HXX
-#define MGMAKE_CLI_PARSER_HXX
-
-// skipped duplicate include: include/mgmake/cli/options.hxx
-
-// skipped duplicate include: include/mgmake/detail/index_bit.hxx
-// skipped duplicate include: include/mgmake/meta/type_list.hxx
 
 // ===== begin include/mgmake/sys/shell.hxx =====
 #pragma once
@@ -1477,6 +1509,53 @@ namespace mgmake::sys {
 }// ===== end include/mgmake/sys/shell.hxx =====
 
 
+// cli::dispatcher
+// consumes the cli::options and executes the required action(s)
+
+namespace mgmake::cli {
+	// The mgmake config
+    template<typename config_t>
+	struct dispatcher {
+		using config_type = config_t;
+		using list_type = config_type::actions_type;
+
+		static inline constexpr std::expected<sys::exit_code, std::string> invoke(const sys::shell& cmd, const cli::options& opts) {
+			if (not opts.action().has_value()) {
+				return std::unexpected("cli::dispatcher::invoke cannot invoke without an action!");
+			}
+			return list_type::type_switch([&]<typename action_t> -> std::expected<sys::exit_code, std::string> {
+				static_assert(action_t::valid_handler, "action_t handler is invalid");
+				return action_t::template invoke<config_type>(cmd, opts);
+			}, opts.action().value());
+		}
+
+		using matches_type = std::bitset<list_type::size()>;
+		static inline constexpr matches_type match(std::string_view arg) {
+			return []<std::size_t... Is>(std::index_sequence<Is...>, std::string_view arg) {
+				matches_type matches{};
+				(matches.set(Is, list_type::template type_at<Is>::match(arg)), ...);
+				return matches;
+			}(std::make_index_sequence<list_type::size()>{}, arg);
+		}
+	};
+}
+
+#endif // MGMAKE_CLI_DISPATCHER_HXX// ===== end include/mgmake/cli/dispatcher.hxx =====
+
+// skipped duplicate include: include/mgmake/cli/options.hxx
+
+// ===== begin include/mgmake/cli/parser.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CLI_PARSER_HXX
+#define MGMAKE_CLI_PARSER_HXX
+
+// skipped duplicate include: include/mgmake/cli/options.hxx
+
+// skipped duplicate include: include/mgmake/detail/index_bit.hxx
+// skipped duplicate include: include/mgmake/meta/type_list.hxx
+// skipped duplicate include: include/mgmake/sys/shell.hxx
+
 #include <bitset>
 #include <expected>
 #include <optional>
@@ -1627,13 +1706,13 @@ namespace mgmake::cli {
             return opts;
         }
 
-		using matches_type = std::bitset<list_t::size()>;
+		using matches_type = std::bitset<list_type::size()>;
 		static inline constexpr matches_type match(std::string_view arg) {
 			return []<std::size_t... Is>(std::index_sequence<Is...>, std::string_view arg) {
 				matches_type matches{};
-				(matches.set(Is, list_t::template type_at<Is>::match(arg)), ...);
+				(matches.set(Is, list_type::template type_at<Is>::match(arg)), ...);
 				return matches;
-			}(std::make_index_sequence<list_t::size()>{}, arg);
+			}(std::make_index_sequence<list_type::size()>{}, arg);
 		}
     };
 }
@@ -1648,16 +1727,16 @@ namespace mgmake::cli {
 #include <utility>
 
 namespace mgmake::cli {
-    template<auto project_v = nullptr, auto toolchains_v = nullptr, typename actions_t = default_actions, typename options_t = default_options>
+    template<typename config_t = config>
     inline sys::exit_code entry(sys::shell cmd) {
         // construct the parser & dispatcher at compile time :)
-		using d = dispatcher<actions_t>;
-        using p = parser<options_t>;
+		using d = dispatcher<config_t>;
+        using p = parser<typename config_t::options_type>;
 
         // parse cmd at runtime
         if (auto result = p::template parse<d>(cmd)) {
 			auto opts = result.value();
-			d::invoke(opts);
+			d::invoke(cmd, opts);
             return sys::exit_code::success;
         } else {
             std::println(stderr, "{}", result.error());
@@ -1665,12 +1744,13 @@ namespace mgmake::cli {
         }
     }
 
-    template<auto project_v = nullptr, auto toolchains_v = nullptr, typename actions_t = default_actions, typename options_t = default_options>
+    template<typename config_t = config>
     inline sys::exit_code entry(int argc, char* argv[]) {
-        return entry<project_v, toolchains_v, actions_t, options_t>(sys::shell::from_args(argc, argv));
+        return entry<config_t>(sys::shell::from_args(argc, argv));
     }
 }
 
+// Pass a `cli::config` type with your project
 #define MGMK_ENTRY(...) \
 int main(int argc, char* argv[]) { \
     return std::to_underlying(::mgmake::cli::entry<__VA_ARGS__>(argc, argv)); \
