@@ -16,21 +16,21 @@ namespace mgmake::cli {
     // Actual option impl, consume the configuration in the type map
     template<typename storage_t = meta::type_map<>>
     struct option_impl {
-        MGMAKE_META_TYPE_CONSUMER_FIELD(name, meta::static_string{ "" });
-        MGMAKE_META_TYPE_CONSUMER_FIELD(description, meta::static_string{ "" });
-	    MGMAKE_META_TYPE_CONSUMER_FIELD(short_name, '\0');
-	    MGMAKE_META_TYPE_CONSUMER_FIELD(callback, nullptr);
-	    using assign_type = typename storage_t::template at<meta::type_value<meta::static_string{ "assign" }>, false>;
-	    MGMAKE_META_TYPE_CONSUMER_FIELD(action, false);
-	    MGMAKE_META_TYPE_CONSUMER_FIELD(flag, true);
+        MGMAKE_TYPE_CONSUMER_VALUE_FIELD(name, meta::static_string{ "" });
+        MGMAKE_TYPE_CONSUMER_VALUE_FIELD(description, meta::static_string{ "" });
+	    MGMAKE_TYPE_CONSUMER_VALUE_FIELD(short_name, '\0');
+	    MGMAKE_TYPE_CONSUMER_VALUE_FIELD(callback, nullptr);
+		MGMAKE_TYPE_CONSUMER_TYPE_FIELD(assign, void);
+	    MGMAKE_TYPE_CONSUMER_VALUE_FIELD(task, false);
+	    MGMAKE_TYPE_CONSUMER_VALUE_FIELD(flag, true);
 
 		static inline constexpr bool match(std::string_view arg) {
 			if (arg.empty()) {
 				return false;
 			}
 
-			// If the option is an action
-			if constexpr (action_value) {
+			// If the option is a task
+			if constexpr (task_value) {
 				if (arg == name_value) {
 					return true;
 				}
@@ -97,15 +97,15 @@ namespace mgmake::cli {
 		}
 
 		template<typename dispatcher_t>
-		static inline constexpr std::expected<void, std::string> handle_action(auto& opts, std::string_view arg) {
-			mgmkassert(match(arg), "handling an action with the incorrect arg");
-			mgmkassert(action_value, "handling a normal switch as an action");
+		static inline constexpr std::expected<void, std::string> handle_task(auto& opts, std::string_view arg) {
+			mgmkassert(match(arg), "handling a task with the incorrect arg");
+			mgmkassert(task_value, "handling a normal switch as a task");
 
 			auto matches = dispatcher_t::match(arg);
 			if (not matches.any()) {
-				return std::unexpected(std::format("Unknown action '{}' (cli::option_impl::handle_action no match from dispatcher_t::match for arg)", arg));
+				return std::unexpected(std::format("Unknown task '{}' (cli::option_impl::handle_task no match from dispatcher_t::match for arg)", arg));
 			}
-			opts.m_action = detail::index_bit(matches);
+			opts.m_task = detail::index_bit(matches);
 			return {};
 		}
     };
@@ -115,21 +115,20 @@ namespace mgmake::cli {
     struct option_builder {
         using builder_type = builder_t;
 
-        MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, name, meta::static_string);
-        MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, description, meta::static_string);
-        MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, short_name, char);
-        MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, callback, auto);
+        MGMAKE_TYPE_BUILDER_VALUE_FIELD(option_builder, name, meta::static_string);
+        MGMAKE_TYPE_BUILDER_VALUE_FIELD(option_builder, description, meta::static_string);
+        MGMAKE_TYPE_BUILDER_VALUE_FIELD(option_builder, short_name, char);
+        MGMAKE_TYPE_BUILDER_VALUE_FIELD(option_builder, callback, auto);
 		// option accepts a value (`--switch=value` or `--switch value`) and assigns its value to the option member
 		// pass a `meta::member_access<>` for the member to assign.
-		template<typename member_t = meta::member_access<>>
-        using assign = option_builder<typename builder_type::template set<"assign", member_t>>;
+		MGMAKE_TYPE_BUILDER_TYPE_FIELD(option_builder, assign);
 		// Sets the value at the member to the default value.
 		template<typename member_t = meta::member_access<>, auto value_v = nullptr>
         using set = callback<[](auto& opts) {
 			member_t::set(opts, value_v);
 		}>;
-		MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, action, bool);
-		MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, flag, bool); // aka switch
+		MGMAKE_TYPE_BUILDER_VALUE_FIELD(option_builder, task, bool);
+		MGMAKE_TYPE_BUILDER_VALUE_FIELD(option_builder, flag, bool); // aka switch
 
         using build = typename builder_type::template build<option_impl>;
     };

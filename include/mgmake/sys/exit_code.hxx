@@ -6,7 +6,7 @@
 namespace mgmake::sys {
     enum struct exit_code : int {
         success,
-        action_failure,
+        task_failure,
         usage_error
     };
 }

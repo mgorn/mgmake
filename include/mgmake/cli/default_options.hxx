@@ -3,7 +3,6 @@
 #ifndef MGMAKE_CLI_DEFAULT_OPTIONS_HXX
 #define MGMAKE_CLI_DEFAULT_OPTIONS_HXX
 
-#include "default_actions.hxx"
 #include "option.hxx"
 #include "options.hxx"
 
@@ -12,9 +11,6 @@
 #include <print>
 
 namespace mgmake::cli {
-	// Actions in `default_actions.hxx`
-	
-	// Switches
 	using verbose_option = option
 		::name<"verbose">::short_name<'v'>
 		::description<"Print commands before executing them.">
@@ -33,21 +29,17 @@ namespace mgmake::cli {
 		::assign<meta::member_access<&options::m_build_dir>>
 		// ::assign_hint<"path"> - Derive based on type..?
 		::build;
-
-	// Get the list of action options
-	using action_options = default_actions::template fold<[]<typename state_t, typename action_t>() consteval {
-		return std::type_identity<typename state_t::template append<typename action_t::option_type>>{};
-	}, meta::type_list<>>;
-
+	
     // Type list of default options
-    // this way you can add your own option to default_options
-    // before passing the list to the entry for your own CLI
-    // options
+	//
+    // this way you can add your own options to 
+    // default_options before passing the list 
+    // to your mgmake config for your own CLI
     using default_options = meta::type_list<
 		verbose_option,
 		dry_run_option,
 		build_dir_option
-    >::append_list<action_options>; // Append the action options
+    >;
 }
 
 #endif // MGMAKE_CLI_DEFAULT_OPTIONS_HXX

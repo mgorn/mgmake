@@ -19,25 +19,18 @@
 #define MGMAKE_CLI_ENTRY_HXX
 
 
-// ===== begin include/mgmake/cli/config.hxx =====
+// ===== begin include/mgmake/cli/options.hxx =====
 #pragma once
 
-#ifndef MGMAKE_CLI_CONFIG_HXX
-#define MGMAKE_CLI_CONFIG_HXX
+#ifndef MGMAKE_CLI_OPTIONS_HXX
+#define MGMAKE_CLI_OPTIONS_HXX
 
 
-// ===== begin include/mgmake/cli/default_actions.hxx =====
+// ===== begin include/mgmake/task/build.hxx =====
 #pragma once
 
-#ifndef MGMAKE_CLI_DEFAULT_ACTIONS_HXX
-#define MGMAKE_CLI_DEFAULT_ACTIONS_HXX
-
-
-// ===== begin include/mgmake/cli/action.hxx =====
-#pragma once
-
-#ifndef MGMAKE_CLI_ACTION_HXX
-#define MGMAKE_CLI_ACTION_HXX
+#ifndef MGMAKE_TASK_BUILD_HXX
+#define MGMAKE_TASK_BUILD_HXX
 
 
 // ===== begin include/mgmake/cli/option.hxx =====
@@ -904,26 +897,88 @@ namespace mgmake::meta {
 }
 
 // When defining builder fields, ensure `builder_t` is the name of the `meta::type_builder`
-#define MGMAKE_META_TYPE_BUILDER_FIELD(wrapper_t, alias_t, ...) \
-	MGMAKE_META_TYPE_BUILDER_FIELD_AS(wrapper_t, alias_t, ::mgmake::meta::static_string{ #alias_t }, __VA_ARGS__)
+#define MGMAKE_TYPE_BUILDER_TYPE_FIELD(wrapper_t, alias_t) \
+	MGMAKE_TYPE_BUILDER_TYPE_FIELD_AS( \
+		wrapper_t, \
+		alias_t, \
+		::mgmake::meta::static_string{#alias_t} \
+	)
 
-#define MGMAKE_META_TYPE_BUILDER_FIELD_AS(wrapper_t, alias_t, key_v, ...) \
-	template<__VA_ARGS__ alias_t##_v> \
+#define MGMAKE_TYPE_BUILDER_TYPE_FIELD_AS(wrapper_t, alias_t, key_v) \
+	template<typename alias_t##_t> \
 	using alias_t = wrapper_t< \
-		typename builder_t::template set<key_v, meta::type_value<alias_t##_v>> \
+		typename builder_t::template set<key_v, alias_t##_t> \
 	>
 
-// When defining consumers, ensure `storage_t` is the name of the `meta::type_map`
-#define MGMAKE_META_TYPE_CONSUMER_FIELD(alias_t, default_v) \
-    MGMAKE_META_TYPE_CONSUMER_FIELD_AS(alias_t, ::mgmake::meta::static_string{ #alias_t }, default_v)
+#define MGMAKE_TYPE_CONSUMER_TYPE_FIELD(alias_t, default_t) \
+	MGMAKE_TYPE_CONSUMER_TYPE_FIELD_AS( \
+		alias_t, \
+		::mgmake::meta::static_string{#alias_t}, \
+		default_t \
+	)
 
-#define MGMAKE_META_TYPE_CONSUMER_FIELD_AS(alias_t, key_v, default_v) \
-    using alias_t##_type = typename storage_t::template at< \
-        ::mgmake::meta::type_value<key_v>, \
-        false \
-    >; \
-    static constexpr auto alias_t##_value = \
-        ::mgmake::meta::type_value_or<alias_t##_type, default_v>::value
+#define MGMAKE_TYPE_CONSUMER_TYPE_FIELD_AS(alias_t, key_v, default_t) \
+	using alias_t##_type = typename storage_t::template at< \
+		::mgmake::meta::type_value<key_v>, \
+		false \
+	>; \
+	using alias_t = std::conditional_t< \
+		std::same_as<alias_t##_type, void>, \
+		default_t, \
+		alias_t##_type \
+	>
+
+#define MGMAKE_TYPE_BUILDER_VALUE_FIELD(wrapper_t, alias_t) \
+	MGMAKE_TYPE_BUILDER_VALUE_FIELD_AS( \
+		wrapper_t, \
+		alias_t, \
+		::mgmake::meta::static_string{#alias_t} \
+	)
+
+#define MGMAKE_TYPE_BUILDER_VALUE_FIELD_AS(wrapper_t, alias_t, key_v) \
+	MGMAKE_TYPE_BUILDER_TYPE_FIELD_AS( \
+		wrapper_t, \
+		alias_t##_type, \
+		key_v \
+	); \
+	template<auto alias_t##_v> \
+	using alias_t = alias_t##_type< \
+		::mgmake::meta::type_value<alias_t##_v> \
+	>
+
+#define MGMAKE_TYPE_BUILDER_VALUE_FIELD(wrapper_t, alias_t, value_t) \
+	MGMAKE_TYPE_BUILDER_VALUE_FIELD_AS( \
+		wrapper_t, \
+		alias_t, \
+		value_t, \
+		::mgmake::meta::static_string{#alias_t} \
+	)
+
+#define MGMAKE_TYPE_BUILDER_VALUE_FIELD_AS(wrapper_t, alias_t, value_t, key_v) \
+	MGMAKE_TYPE_BUILDER_TYPE_FIELD_AS( \
+		wrapper_t, \
+		alias_t##_type, \
+		key_v \
+	); \
+	template<value_t alias_t##_v> \
+	using alias_t = alias_t##_type< \
+		::mgmake::meta::type_value<alias_t##_v> \
+	>
+
+#define MGMAKE_TYPE_CONSUMER_VALUE_FIELD(alias_t, default_v) \
+	MGMAKE_TYPE_CONSUMER_VALUE_FIELD_AS( \
+		alias_t, \
+		::mgmake::meta::static_string{#alias_t}, \
+		default_v \
+	)
+
+#define MGMAKE_TYPE_CONSUMER_VALUE_FIELD_AS(alias_t, key_v, default_v) \
+	MGMAKE_TYPE_CONSUMER_TYPE_FIELD_AS( \
+		alias_t##_type, \
+		key_v, \
+		::mgmake::meta::type_value<default_v> \
+	); \
+	static inline constexpr auto alias_t##_value = alias_t##_type::value
 
 #endif // MGMAKE_META_TYPE_BUILDER_HXX// ===== end include/mgmake/meta/type_builder.hxx =====
 
@@ -934,21 +989,21 @@ namespace mgmake::cli {
     // Actual option impl, consume the configuration in the type map
     template<typename storage_t = meta::type_map<>>
     struct option_impl {
-        MGMAKE_META_TYPE_CONSUMER_FIELD(name, meta::static_string{ "" });
-        MGMAKE_META_TYPE_CONSUMER_FIELD(description, meta::static_string{ "" });
-	    MGMAKE_META_TYPE_CONSUMER_FIELD(short_name, '\0');
-	    MGMAKE_META_TYPE_CONSUMER_FIELD(callback, nullptr);
-	    using assign_type = typename storage_t::template at<meta::type_value<meta::static_string{ "assign" }>, false>;
-	    MGMAKE_META_TYPE_CONSUMER_FIELD(action, false);
-	    MGMAKE_META_TYPE_CONSUMER_FIELD(flag, true);
+        MGMAKE_TYPE_CONSUMER_VALUE_FIELD(name, meta::static_string{ "" });
+        MGMAKE_TYPE_CONSUMER_VALUE_FIELD(description, meta::static_string{ "" });
+	    MGMAKE_TYPE_CONSUMER_VALUE_FIELD(short_name, '\0');
+	    MGMAKE_TYPE_CONSUMER_VALUE_FIELD(callback, nullptr);
+		MGMAKE_TYPE_CONSUMER_TYPE_FIELD(assign, void);
+	    MGMAKE_TYPE_CONSUMER_VALUE_FIELD(task, false);
+	    MGMAKE_TYPE_CONSUMER_VALUE_FIELD(flag, true);
 
 		static inline constexpr bool match(std::string_view arg) {
 			if (arg.empty()) {
 				return false;
 			}
 
-			// If the option is an action
-			if constexpr (action_value) {
+			// If the option is a task
+			if constexpr (task_value) {
 				if (arg == name_value) {
 					return true;
 				}
@@ -1015,15 +1070,15 @@ namespace mgmake::cli {
 		}
 
 		template<typename dispatcher_t>
-		static inline constexpr std::expected<void, std::string> handle_action(auto& opts, std::string_view arg) {
-			mgmkassert(match(arg), "handling an action with the incorrect arg");
-			mgmkassert(action_value, "handling a normal switch as an action");
+		static inline constexpr std::expected<void, std::string> handle_task(auto& opts, std::string_view arg) {
+			mgmkassert(match(arg), "handling a task with the incorrect arg");
+			mgmkassert(task_value, "handling a normal switch as a task");
 
 			auto matches = dispatcher_t::match(arg);
 			if (not matches.any()) {
-				return std::unexpected(std::format("Unknown action '{}' (cli::option_impl::handle_action no match from dispatcher_t::match for arg)", arg));
+				return std::unexpected(std::format("Unknown task '{}' (cli::option_impl::handle_task no match from dispatcher_t::match for arg)", arg));
 			}
-			opts.m_action = detail::index_bit(matches);
+			opts.m_task = detail::index_bit(matches);
 			return {};
 		}
     };
@@ -1033,21 +1088,20 @@ namespace mgmake::cli {
     struct option_builder {
         using builder_type = builder_t;
 
-        MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, name, meta::static_string);
-        MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, description, meta::static_string);
-        MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, short_name, char);
-        MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, callback, auto);
+        MGMAKE_TYPE_BUILDER_VALUE_FIELD(option_builder, name, meta::static_string);
+        MGMAKE_TYPE_BUILDER_VALUE_FIELD(option_builder, description, meta::static_string);
+        MGMAKE_TYPE_BUILDER_VALUE_FIELD(option_builder, short_name, char);
+        MGMAKE_TYPE_BUILDER_VALUE_FIELD(option_builder, callback, auto);
 		// option accepts a value (`--switch=value` or `--switch value`) and assigns its value to the option member
 		// pass a `meta::member_access<>` for the member to assign.
-		template<typename member_t = meta::member_access<>>
-        using assign = option_builder<typename builder_type::template set<"assign", member_t>>;
+		MGMAKE_TYPE_BUILDER_TYPE_FIELD(option_builder, assign);
 		// Sets the value at the member to the default value.
 		template<typename member_t = meta::member_access<>, auto value_v = nullptr>
         using set = callback<[](auto& opts) {
 			member_t::set(opts, value_v);
 		}>;
-		MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, action, bool);
-		MGMAKE_META_TYPE_BUILDER_FIELD(option_builder, flag, bool); // aka switch
+		MGMAKE_TYPE_BUILDER_VALUE_FIELD(option_builder, task, bool);
+		MGMAKE_TYPE_BUILDER_VALUE_FIELD(option_builder, flag, bool); // aka switch
 
         using build = typename builder_type::template build<option_impl>;
     };
@@ -1058,80 +1112,6 @@ namespace mgmake::cli {
 #endif // MGMAKE_CLI_OPTION_HXX// ===== end include/mgmake/cli/option.hxx =====
 
 
-#include <cstdint>
-
-/*
- * Why are actions seperate from normal options? (Why can't they just be callback options?)
- *
- * Option callbacks are invoked during parsing and are functions to initialize the `cli::options` structure.
- *
- * The flow:
- * main -> parse -> cli::options -> actions
- *			|-> match
- *			|-> invoke callbacks
- *
- * but options have a `action` setting? What's with that?
- * You still need to provide the actions as options to the CLI parser.
- * They simply assign the action value in the `cli::options` structure.
- * Later on, that value is consumed to invoke the respective action handler.
- *
- * To make an action:
- *		1) Create a CLI option for the action (see `default_actions.hxx` for examples)
- *		2) Assign a handler for the action
- * 
- * NOTE: You only provide the CLI option when making the action. Do not make a second similar one to the parser manually.
- */
-
-namespace mgmake::cli {
-	template<typename storage_t = meta::type_map<>>
-	struct action_impl {
-		// Get the CLI option for the action
-	    using option_type = typename storage_t::template at<meta::type_value<meta::static_string{ "option" }>, false>;
-		static_assert(option_type::action_value, "The CLI option for actions need to have `::action<true>`");
-
-		// Get the handler for the action
-	    MGMAKE_META_TYPE_CONSUMER_FIELD(handler, nullptr);
-		static inline constexpr bool valid_handler = not std::is_same_v<std::decay_t<decltype(handler_value)>, std::nullptr_t>;
-
-		static inline constexpr auto name() {
-			return option_type::name_value;
-		}
-		static inline constexpr auto hash() {
-			return name.hash();
-		}
-		static inline constexpr auto description() {
-			return option_type::description_value;
-		}
-		static inline constexpr bool match(std::string_view arg) {
-			return name() == arg;
-		}
-		template<typename config_t = void> // The mgmake config
-		static inline constexpr auto invoke(auto& cmd, auto& opts) {
-			static_assert(valid_handler, "Invoking action with an invalid handler");
-			return handler_value.template operator()<config_t>(cmd, opts);
-		}
-	};
-
-	template<typename builder_t = meta::type_builder<>>
-	struct action_builder {
-        using builder_type = builder_t;
-
-		// The CLI option for the action
-		template<typename option_t = option>
-        using option = action_builder<typename builder_type::template set<"option", option_t>>;
-		// The function that handles the action
-        MGMAKE_META_TYPE_BUILDER_FIELD(action_builder, handler, auto);
-
-		using build = typename builder_type::template build<action_impl>;
-	};
-	using action = action_builder<>;
-}
-
-#endif // MGMAKE_CLI_ACTION_HXX// ===== end include/mgmake/cli/action.hxx =====
-
-
-// skipped duplicate include: include/mgmake/meta/type_list.hxx
-
 // ===== begin include/mgmake/sys/exit_code.hxx =====
 #pragma once
 
@@ -1141,7 +1121,7 @@ namespace mgmake::cli {
 namespace mgmake::sys {
     enum struct exit_code : int {
         success,
-        action_failure,
+        task_failure,
         usage_error
     };
 }
@@ -1149,39 +1129,79 @@ namespace mgmake::sys {
 #endif// ===== end include/mgmake/sys/exit_code.hxx =====
 
 
-#include <sstream>
+namespace mgmake::task {
+	struct build {
+		using option_type = cli::option
+			::name<"build">
+			::description<"Build the project.">
+			::task<true>::flag<false>
+			::build;
+		
+		template<typename config_t>
+		static inline constexpr std::expected<sys::exit_code, std::string> handle(auto& cmd, auto& opts) {
+			// TODO: This would be the entrypoint/root for build
+			std::println("Build task");
+			return sys::exit_code::success;
+		}
+	};
+}
 
-namespace mgmake::cli {
-	using help_action = action
-		::option<option
+#endif // MGMAKE_TASK_BUILD_HXX// ===== end include/mgmake/task/build.hxx =====
+
+
+// ===== begin include/mgmake/task/default_tasks.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CLI_DEFAULT_TASKS_HXX
+#define MGMAKE_CLI_DEFAULT_TASKS_HXX
+
+// skipped duplicate include: include/mgmake/task/build.hxx
+
+// ===== begin include/mgmake/task/help.hxx =====
+#pragma once
+
+#ifndef MGMAKE_TASK_HELP_HXX
+#define MGMAKE_TASK_HELP_HXX
+
+// skipped duplicate include: include/mgmake/cli/option.hxx
+// skipped duplicate include: include/mgmake/sys/exit_code.hxx
+
+#include <string>
+
+namespace mgmake::task {
+	struct help {
+		using option_type = cli::option
 			::name<"help">::short_name<'h'>
 			::description<"Show help.">
-			::action<true>
+			::task<true>
+			//::set<meta::member_access<&cli::options::m_task>, 0>
 			::callback<[](auto& opts) {
-				// This overrides the action with the help action
-				opts.m_action = 0;
+				// Set index with callback bc cyclical include :(
+				opts.m_task = 0;
 			}>
-			::build>
-		::handler<[]<typename config_t>(auto& cmd, auto& opts) -> std::expected<sys::exit_code, std::string> {
+			::build;
+		
+		template<typename config_t>
+		static inline constexpr std::expected<sys::exit_code, std::string> handle(auto& cmd, auto& opts) {
 			using config_type = config_t;
 
 			std::println("Usage:");
-			std::println("\t{} [action] [options]", cmd.program_name());
-			using actions_type = config_type::actions_type;
+			std::println("\t{} [task] [options]", cmd.program_name());
+			using tasks_type = config_type::tasks_type;
 			using options_type = config_type::options_type;
 			
-			std::println("\nActions:");
-			static constexpr auto action_help = []<typename act_t>(auto& cmd){
+			std::println("\nTasks:");
+			static constexpr auto task_help = []<typename act_t>(auto& cmd){
 				std::println("\t{:<10} {}", act_t::name().view(), act_t::description().view());
 			};
 
 			[]<std::size_t... Is>(std::index_sequence<Is...>, auto& cmd) {
-				(action_help.template operator()<typename actions_type::template type_at<Is>>(cmd), ...);
-			}(std::make_index_sequence<actions_type::size()>{}, cmd);
+				(task_help.template operator()<typename tasks_type::template type_at<Is>>(cmd), ...);
+			}(std::make_index_sequence<tasks_type::size()>{}, cmd);
 
 			std::println("\nOptions:");
 			static constexpr auto option_help = []<typename opt_t>{
-				// Only print switches, actions will be shown first
+				// Only print switches, tasks will be shown first
 				if constexpr (opt_t::flag_value) {
 					std::stringstream ss;
 					if constexpr (opt_t::short_name_value != '\0') {
@@ -1189,7 +1209,7 @@ namespace mgmake::cli {
 					}
 					std::print(ss, "--{}", opt_t::name_value.view());
 					if constexpr (opt_t::is_assign) {
-						using vp = value_parser<typename opt_t::assign_type::value_type>;
+						using vp = cli::value_parser<typename opt_t::assign_type::value_type>;
 						std::print(ss, "=<{}>", vp::help_hint);
 					}
 					std::println("\t{:<24} {}", ss.str(), opt_t::description_value.view());
@@ -1201,47 +1221,60 @@ namespace mgmake::cli {
 			}(std::make_index_sequence<options_type::size()>{});
 
 			return sys::exit_code::success;
-		}>
-		::build;
-	
-	using build_action = action
-		::option<option
-			::name<"build">
-			::description<"Build the project.">
-			::action<true>::flag<false>
-			::build>
-		::handler<[]<typename config_t>(auto& cmd, auto& opts) -> std::expected<sys::exit_code, std::string> {
-			// TODO: This would be the entrypoint/root for build
-			std::println("Build action");
-			return sys::exit_code::success;
-		}>
-		::build;
-	
-	using default_actions = meta::type_list<
-		help_action,
-		build_action
+		}
+	};
+}
+
+#endif // MGMAKE_TASK_HELP_HXX// ===== end include/mgmake/task/help.hxx =====
+
+
+// skipped duplicate include: include/mgmake/meta/type_list.hxx
+// skipped duplicate include: include/mgmake/sys/exit_code.hxx
+
+#include <sstream>
+
+/*
+ * Why are tasks seperate from normal options? (Why can't they just be callback options?)
+ *
+ * Option callbacks are invoked during parsing and are functions to initialize the `cli::options` structure.
+ *
+ * The flow:
+ * main -> parse -> cli::options -> tasks
+ *			|-> match
+ *			|-> invoke callbacks
+ *
+ * but options have a `task` setting? What's with that?
+ * You still need to provide the tasks as options to the CLI parser.
+ * They simply assign the task value in the `cli::options` structure.
+ * Later on, that value is consumed to invoke the respective task handler.
+ *
+ * To make a task:
+ *		1) Create a struct for your task
+ *		2) Create an option alias with your desired settings
+ *		3) Use the `::task<true>` option in your option alias
+ *		3) Create a `handle` function:
+ *```
+ * template<typename config_t>
+ * static inline constexpr std::expected<sys::exit_code, std::string> handle(const sys::shell& cmd, const sli::options& opts)
+ *```
+ * 
+ * NOTE: You only provide the CLI option when making the task. Do not pass them as options in your config seperately.
+ */
+
+namespace mgmake::task {
+	// Type list of default tasks
+	//
+    // this way you can add your own tasks to 
+    // default_tasks before passing the list 
+    // to your mgmake config for your own CLI
+	using default_tasks = meta::type_list<
+		task::help,
+		task::build
 	>;
 }
 
-#endif // MGMAKE_CLI_DEFAULT_ACTIONS_HXX// ===== end include/mgmake/cli/default_actions.hxx =====
+#endif // MGMAKE_CLI_DEFAULT_TASKS_HXX// ===== end include/mgmake/task/default_tasks.hxx =====
 
-
-// ===== begin include/mgmake/cli/default_options.hxx =====
-#pragma once
-
-#ifndef MGMAKE_CLI_DEFAULT_OPTIONS_HXX
-#define MGMAKE_CLI_DEFAULT_OPTIONS_HXX
-
-// skipped duplicate include: include/mgmake/cli/default_actions.hxx
-// skipped duplicate include: include/mgmake/cli/option.hxx
-
-// ===== begin include/mgmake/cli/options.hxx =====
-#pragma once
-
-#ifndef MGMAKE_CLI_OPTIONS_HXX
-#define MGMAKE_CLI_OPTIONS_HXX
-
-// skipped duplicate include: include/mgmake/cli/default_actions.hxx
 
 #include <filesystem>
 #include <optional>
@@ -1249,15 +1282,15 @@ namespace mgmake::cli {
 namespace mgmake::cli {
 	// Store parsed CLI options
 	struct options {
-		std::optional<std::size_t> m_action = default_actions::index<build_action>();
+		std::optional<std::size_t> m_task = task::default_tasks::index<task::build>();
 
 		bool m_verbose = false;
 		bool m_dry_run = false;
 
 		std::filesystem::path m_build_dir = std::filesystem::current_path() / ".build";
 
-		inline constexpr auto action() const {
-			return m_action;
+		inline constexpr auto task() const {
+			return m_task;
 		}
 	};
 }
@@ -1265,87 +1298,16 @@ namespace mgmake::cli {
 #endif // MGMAKE_CLI_OPTIONS_HXX// ===== end include/mgmake/cli/options.hxx =====
 
 
-// skipped duplicate include: include/mgmake/meta/type_list.hxx
-
-#include <print>
-
-namespace mgmake::cli {
-	// Actions in `default_actions.hxx`
-	
-	// Switches
-	using verbose_option = option
-		::name<"verbose">::short_name<'v'>
-		::description<"Print commands before executing them.">
-		::set<meta::member_access<&options::m_verbose>, true>
-		::build;
-	
-	using dry_run_option = option
-		::name<"dry-run">
-		::description<"Print commands without executing them.">
-		::set<meta::member_access<&options::m_dry_run>, true>
-		::build;
-
-	using build_dir_option = option
-		::name<"build-dir">
-		::description<"Set the build directory.">
-		::assign<meta::member_access<&options::m_build_dir>>
-		// ::assign_hint<"path"> - Derive based on type..?
-		::build;
-
-	// Get the list of action options
-	using action_options = default_actions::template fold<[]<typename state_t, typename action_t>() consteval {
-		return std::type_identity<typename state_t::template append<typename action_t::option_type>>{};
-	}, meta::type_list<>>;
-
-    // Type list of default options
-    // this way you can add your own option to default_options
-    // before passing the list to the entry for your own CLI
-    // options
-    using default_options = meta::type_list<
-		verbose_option,
-		dry_run_option,
-		build_dir_option
-    >::append_list<action_options>; // Append the action options
-}
-
-#endif // MGMAKE_CLI_DEFAULT_OPTIONS_HXX// ===== end include/mgmake/cli/default_options.hxx =====
-
-
-namespace mgmake::cli {
-	template<auto project_v = nullptr, auto toolchains_v = nullptr, typename actions_t = default_actions, typename options_t = default_options>
-	struct config_impl {
-		static inline constexpr auto project_value = project_v;
-		static inline constexpr auto toolchains_value = toolchains_v;
-		using actions_type = actions_t;
-		using options_type = options_t;
-
-		template<auto new_project_v>
-		using project = config_impl<new_project_v, toolchains_value, actions_type, options_type>;
-
-		template<auto new_toolchains_v>
-		using toolchains = config_impl<project_value, new_toolchains_v, actions_type, options_type>;
-
-		template<typename new_actions_t>
-		using actions = config_impl<project_value, toolchains_value, new_actions_t, options_type>;
-
-		template<typename new_options_t>
-		using options = config_impl<project_value, toolchains_value, actions_type, new_options_t>;
-	};
-	using config = config_impl<>;
-}
-
-#endif // MGMAKE_CLI_CONFIG_HXX// ===== end include/mgmake/cli/config.hxx =====
-
-
-// ===== begin include/mgmake/cli/dispatcher.hxx =====
+// ===== begin include/mgmake/cli/parser.hxx =====
 #pragma once
 
-#ifndef MGMAKE_CLI_DISPATCHER_HXX
-#define MGMAKE_CLI_DISPATCHER_HXX
+#ifndef MGMAKE_CLI_PARSER_HXX
+#define MGMAKE_CLI_PARSER_HXX
 
 // skipped duplicate include: include/mgmake/cli/options.hxx
 
-// skipped duplicate include: include/mgmake/sys/exit_code.hxx
+// skipped duplicate include: include/mgmake/detail/index_bit.hxx
+// skipped duplicate include: include/mgmake/meta/type_list.hxx
 
 // ===== begin include/mgmake/sys/shell.hxx =====
 #pragma once
@@ -1509,53 +1471,6 @@ namespace mgmake::sys {
 }// ===== end include/mgmake/sys/shell.hxx =====
 
 
-// cli::dispatcher
-// consumes the cli::options and executes the required action(s)
-
-namespace mgmake::cli {
-	// The mgmake config
-    template<typename config_t>
-	struct dispatcher {
-		using config_type = config_t;
-		using list_type = config_type::actions_type;
-
-		static inline constexpr std::expected<sys::exit_code, std::string> invoke(const sys::shell& cmd, const cli::options& opts) {
-			if (not opts.action().has_value()) {
-				return std::unexpected("cli::dispatcher::invoke cannot invoke without an action!");
-			}
-			return list_type::type_switch([&]<typename action_t> -> std::expected<sys::exit_code, std::string> {
-				static_assert(action_t::valid_handler, "action_t handler is invalid");
-				return action_t::template invoke<config_type>(cmd, opts);
-			}, opts.action().value());
-		}
-
-		using matches_type = std::bitset<list_type::size()>;
-		static inline constexpr matches_type match(std::string_view arg) {
-			return []<std::size_t... Is>(std::index_sequence<Is...>, std::string_view arg) {
-				matches_type matches{};
-				(matches.set(Is, list_type::template type_at<Is>::match(arg)), ...);
-				return matches;
-			}(std::make_index_sequence<list_type::size()>{}, arg);
-		}
-	};
-}
-
-#endif // MGMAKE_CLI_DISPATCHER_HXX// ===== end include/mgmake/cli/dispatcher.hxx =====
-
-// skipped duplicate include: include/mgmake/cli/options.hxx
-
-// ===== begin include/mgmake/cli/parser.hxx =====
-#pragma once
-
-#ifndef MGMAKE_CLI_PARSER_HXX
-#define MGMAKE_CLI_PARSER_HXX
-
-// skipped duplicate include: include/mgmake/cli/options.hxx
-
-// skipped duplicate include: include/mgmake/detail/index_bit.hxx
-// skipped duplicate include: include/mgmake/meta/type_list.hxx
-// skipped duplicate include: include/mgmake/sys/shell.hxx
-
 #include <bitset>
 #include <expected>
 #include <optional>
@@ -1567,13 +1482,13 @@ namespace mgmake::cli {
     struct parser {
 		using list_type = list_t;
 
-		// Action options (first arg, no - or --)
-		using actions_type = typename list_type::template filter<[]<typename opt_t> -> bool {
-			return opt_t::action_value;
+		// Task options (first arg, no - or --)
+		using tasks_type = typename list_type::template filter<[]<typename opt_t> -> bool {
+			return opt_t::task_value;
 		}>;
 		// Switch option (- or -- prefix)
 		using switches_type = typename list_type::template filter<[]<typename opt_t> -> bool {
-			return not opt_t::action_value;
+			return not opt_t::task_value;
 		}>;
 
 		template<typename dispatcher_t>
@@ -1590,9 +1505,9 @@ namespace mgmake::cli {
 				auto is_long = arg.starts_with("--");
 				auto is_short = arg.starts_with("-");
 				auto is_switch = is_long or is_short;
-				auto is_action = it == args.begin() and not is_switch; // First and isn't switch? -> Action
+				auto is_task = it == args.begin() and not is_switch; // First and isn't switch? -> Task
 				// Invalid usage errors + hints
-				if (not is_switch and not is_action) {
+				if (not is_switch and not is_task) {
 					std::string error_hint = "";
 
 					// 1) See if it could have been a short switch
@@ -1611,13 +1526,13 @@ namespace mgmake::cli {
 						}
 					}
 
-					// 3) See if the arg is meant to be used as an action
+					// 3) See if the arg is meant to be used as an task
 					if (error_hint.empty()) {
-						using action_parser = parser<actions_type>;
-						auto matches = action_parser::match(arg);
+						using task_parser = parser<tasks_type>;
+						auto matches = task_parser::match(arg);
 						if (matches.any()) {
 							auto corrected = std::format("{} {} ...", cmd.program_name(), arg);
-							error_hint = std::format("'{}' is an action, did you mean '{}'?", arg, corrected);
+							error_hint = std::format("'{}' is a task, did you mean '{}'?", arg, corrected);
 						}
 					}
 
@@ -1626,7 +1541,7 @@ namespace mgmake::cli {
 					}
 					return std::unexpected(std::format("Invalid argument: {}", arg));
 				}
-				mgmkassert(is_action or is_switch, "Values for switches should be skipped/parsed by the switch needing it");
+				mgmkassert(is_task or is_switch, "Values for switches should be skipped/parsed by the switch needing it");
 
 				// Shrimply doesn't exit?
 				auto matches = match(arg);
@@ -1685,11 +1600,11 @@ namespace mgmake::cli {
 						return true;
 					}
 
-					// If the option is an action
-					if constexpr (opt_t::action_value) {
-						auto result = opt_t::template handle_action<dispatcher_t>(opts, arg);
+					// If the option is a task
+					if constexpr (opt_t::task_value) {
+						auto result = opt_t::template handle_task<dispatcher_t>(opts, arg);
 						if (not result) {
-							return std::unexpected(std::format("opt_t::handle_action failed: {}", result.error()));
+							return std::unexpected(std::format("opt_t::handle_task failed: {}", result.error()));
 						}
 
 						return true;
@@ -1723,15 +1638,166 @@ namespace mgmake::cli {
 // skipped duplicate include: include/mgmake/sys/exit_code.hxx
 // skipped duplicate include: include/mgmake/sys/shell.hxx
 
+// ===== begin include/mgmake/task/dispatcher.hxx =====
+#pragma once
+
+#ifndef MGMAKE_TASK_DISPATCHER_HXX
+#define MGMAKE_TASK_DISPATCHER_HXX
+
+// skipped duplicate include: include/mgmake/cli/options.hxx
+
+// skipped duplicate include: include/mgmake/sys/exit_code.hxx
+// skipped duplicate include: include/mgmake/sys/shell.hxx
+
+// task::dispatcher
+// consumes the cli::options and executes the required task(s)
+
+namespace mgmake::task {
+	// The mgmake config
+    template<typename config_t>
+	struct dispatcher {
+		using config_type = config_t;
+		using list_type = config_type::tasks_type;
+
+		static inline constexpr std::expected<sys::exit_code, std::string> invoke(const sys::shell& cmd, const cli::options& opts) {
+			if (not opts.task().has_value()) {
+				return std::unexpected("cli::dispatcher::invoke cannot invoke without a task!");
+			}
+			return list_type::type_switch([&]<typename task_t> -> std::expected<sys::exit_code, std::string> {
+				static_assert(task_t::valid_handler, "task_t handler is invalid");
+				return task_t::template invoke<config_type>(cmd, opts);
+			}, opts.task().value());
+		}
+
+		using matches_type = std::bitset<list_type::size()>;
+		static inline constexpr matches_type match(std::string_view arg) {
+			return []<std::size_t... Is>(std::index_sequence<Is...>, std::string_view arg) {
+				matches_type matches{};
+				(matches.set(Is, list_type::template type_at<Is>::match(arg)), ...);
+				return matches;
+			}(std::make_index_sequence<list_type::size()>{}, arg);
+		}
+	};
+}
+
+#endif // MGMAKE_TASK_DISPATCHER_HXX// ===== end include/mgmake/task/dispatcher.hxx =====
+
+
+// ===== begin include/mgmake/config.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CONFIG_HXX
+#define MGMAKE_CONFIG_HXX
+
+
+// ===== begin include/mgmake/cli/default_options.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CLI_DEFAULT_OPTIONS_HXX
+#define MGMAKE_CLI_DEFAULT_OPTIONS_HXX
+
+// skipped duplicate include: include/mgmake/cli/option.hxx
+// skipped duplicate include: include/mgmake/cli/options.hxx
+
+// skipped duplicate include: include/mgmake/meta/type_list.hxx
+
+#include <print>
+
+namespace mgmake::cli {
+	using verbose_option = option
+		::name<"verbose">::short_name<'v'>
+		::description<"Print commands before executing them.">
+		::set<meta::member_access<&options::m_verbose>, true>
+		::build;
+	
+	using dry_run_option = option
+		::name<"dry-run">
+		::description<"Print commands without executing them.">
+		::set<meta::member_access<&options::m_dry_run>, true>
+		::build;
+
+	using build_dir_option = option
+		::name<"build-dir">
+		::description<"Set the build directory.">
+		::assign<meta::member_access<&options::m_build_dir>>
+		// ::assign_hint<"path"> - Derive based on type..?
+		::build;
+	
+    // Type list of default options
+	//
+    // this way you can add your own options to 
+    // default_options before passing the list 
+    // to your mgmake config for your own CLI
+    using default_options = meta::type_list<
+		verbose_option,
+		dry_run_option,
+		build_dir_option
+    >;
+}
+
+#endif // MGMAKE_CLI_DEFAULT_OPTIONS_HXX// ===== end include/mgmake/cli/default_options.hxx =====
+
+// skipped duplicate include: include/mgmake/meta/type_builder.hxx
+// skipped duplicate include: include/mgmake/task/default_tasks.hxx
+
+namespace mgmake::cli {
+	template<typename storage_t = meta::type_map<>>
+	struct config_impl {
+		MGMAKE_TYPE_BUILDER_VALUE_FIELD(project, nullptr);
+		MGMAKE_TYPE_BUILDER_VALUE_FIELD(toolchains, nullptr);
+		MGMAKE_TYPE_BUILDER_TYPE_FIELD(tasks, void);
+		MGMAKE_TYPE_BUILDER_TYPE_FIELD(options, void);
+	};
+
+	template<typename builder_t = meta::type_builder<>>
+    struct config_builder {
+		using builder_type = builder_t;
+
+		MGMAKE_TYPE_BUILDER_VALUE_FIELD(config_builder, project);
+		MGMAKE_TYPE_BUILDER_VALUE_FIELD(config_builder, toolchains);
+		MGMAKE_TYPE_BUILDER_TYPE_FIELD(config_builder, tasks);
+		MGMAKE_TYPE_BUILDER_TYPE_FIELD(config_builder, options);
+
+		using build = std::decay_t<std::invoke_result_t<[] {
+			/* Automatically add task options to options */
+			// Get the tasks
+			using tasks_type = builder_type::get<"tasks">;
+			// Get the options
+			using options_type = builder_type::get<"options">;
+
+			// Get the list of task options
+			using task_options = tasks_type::template fold<[]<typename state_t, typename task_t>() consteval {
+				return std::type_identity<typename state_t::template append<typename task_t::option_type>>{};
+			}, meta::type_list<>>;
+
+			// Create a new config builder with the task options appended
+			using actual_config_builder = config_builder::options<options_type::append<task_options>>;
+
+			// Use the builder type from that instead
+			using result_type = typename actual_config_builder::builder_type::template build<config_impl>;
+
+			// Now we have a builder where options has options from tasks appended
+			return result_type{};
+		}>>;
+	}
+	using config = config_builder<>::tasks<default_tasks>::options<default_options>;
+}
+
+#endif // MGMAKE_CONFIG_HXX// ===== end include/mgmake/config.hxx =====
+
+
 #include <print>
 #include <utility>
 
 namespace mgmake::cli {
-    template<typename config_t = config>
+    template<typename config_builder_t = config>
     inline sys::exit_code entry(sys::shell cmd) {
+		// Finalize the given config
+		using config_type = config_builder_t::build;
+
         // construct the parser & dispatcher at compile time :)
-		using d = dispatcher<config_t>;
-        using p = parser<typename config_t::options_type>;
+		using d = task::dispatcher<config_type>;
+        using p = parser<typename config_type::options_type>;
 
         // parse cmd at runtime
         if (auto result = p::template parse<d>(cmd)) {
@@ -1744,7 +1810,7 @@ namespace mgmake::cli {
         }
     }
 
-    template<typename config_t = config>
+    template<typename config_builder_t = config>
     inline sys::exit_code entry(int argc, char* argv[]) {
         return entry<config_t>(sys::shell::from_args(argc, argv));
     }

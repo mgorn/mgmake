@@ -1,31 +1,31 @@
 #pragma once
 
-#ifndef MGMAKE_CLI_DISPATCHER_HXX
-#define MGMAKE_CLI_DISPATCHER_HXX
+#ifndef MGMAKE_TASK_DISPATCHER_HXX
+#define MGMAKE_TASK_DISPATCHER_HXX
 
-#include "options.hxx"
+#include "../cli/options.hxx"
 
 #include "../sys/exit_code.hxx"
 #include "../sys/shell.hxx"
 
-// cli::dispatcher
-// consumes the cli::options and executes the required action(s)
+// task::dispatcher
+// consumes the cli::options and executes the required task(s)
 
-namespace mgmake::cli {
+namespace mgmake::task {
 	// The mgmake config
     template<typename config_t>
 	struct dispatcher {
 		using config_type = config_t;
-		using list_type = config_type::actions_type;
+		using list_type = config_type::tasks_type;
 
 		static inline constexpr std::expected<sys::exit_code, std::string> invoke(const sys::shell& cmd, const cli::options& opts) {
-			if (not opts.action().has_value()) {
-				return std::unexpected("cli::dispatcher::invoke cannot invoke without an action!");
+			if (not opts.task().has_value()) {
+				return std::unexpected("cli::dispatcher::invoke cannot invoke without a task!");
 			}
-			return list_type::type_switch([&]<typename action_t> -> std::expected<sys::exit_code, std::string> {
-				static_assert(action_t::valid_handler, "action_t handler is invalid");
-				return action_t::template invoke<config_type>(cmd, opts);
-			}, opts.action().value());
+			return list_type::type_switch([&]<typename task_t> -> std::expected<sys::exit_code, std::string> {
+				static_assert(task_t::valid_handler, "task_t handler is invalid");
+				return task_t::template invoke<config_type>(cmd, opts);
+			}, opts.task().value());
 		}
 
 		using matches_type = std::bitset<list_type::size()>;
@@ -39,4 +39,4 @@ namespace mgmake::cli {
 	};
 }
 
-#endif // MGMAKE_CLI_DISPATCHER_HXX
+#endif // MGMAKE_TASK_DISPATCHER_HXX

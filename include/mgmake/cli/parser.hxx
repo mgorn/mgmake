@@ -20,13 +20,13 @@ namespace mgmake::cli {
     struct parser {
 		using list_type = list_t;
 
-		// Action options (first arg, no - or --)
-		using actions_type = typename list_type::template filter<[]<typename opt_t> -> bool {
-			return opt_t::action_value;
+		// Task options (first arg, no - or --)
+		using tasks_type = typename list_type::template filter<[]<typename opt_t> -> bool {
+			return opt_t::task_value;
 		}>;
 		// Switch option (- or -- prefix)
 		using switches_type = typename list_type::template filter<[]<typename opt_t> -> bool {
-			return not opt_t::action_value;
+			return not opt_t::task_value;
 		}>;
 
 		template<typename dispatcher_t>
@@ -43,9 +43,9 @@ namespace mgmake::cli {
 				auto is_long = arg.starts_with("--");
 				auto is_short = arg.starts_with("-");
 				auto is_switch = is_long or is_short;
-				auto is_action = it == args.begin() and not is_switch; // First and isn't switch? -> Action
+				auto is_task = it == args.begin() and not is_switch; // First and isn't switch? -> Task
 				// Invalid usage errors + hints
-				if (not is_switch and not is_action) {
+				if (not is_switch and not is_task) {
 					std::string error_hint = "";
 
 					// 1) See if it could have been a short switch
@@ -64,13 +64,13 @@ namespace mgmake::cli {
 						}
 					}
 
-					// 3) See if the arg is meant to be used as an action
+					// 3) See if the arg is meant to be used as an task
 					if (error_hint.empty()) {
-						using action_parser = parser<actions_type>;
-						auto matches = action_parser::match(arg);
+						using task_parser = parser<tasks_type>;
+						auto matches = task_parser::match(arg);
 						if (matches.any()) {
 							auto corrected = std::format("{} {} ...", cmd.program_name(), arg);
-							error_hint = std::format("'{}' is an action, did you mean '{}'?", arg, corrected);
+							error_hint = std::format("'{}' is a task, did you mean '{}'?", arg, corrected);
 						}
 					}
 
@@ -79,7 +79,7 @@ namespace mgmake::cli {
 					}
 					return std::unexpected(std::format("Invalid argument: {}", arg));
 				}
-				mgmkassert(is_action or is_switch, "Values for switches should be skipped/parsed by the switch needing it");
+				mgmkassert(is_task or is_switch, "Values for switches should be skipped/parsed by the switch needing it");
 
 				// Shrimply doesn't exit?
 				auto matches = match(arg);
@@ -138,11 +138,11 @@ namespace mgmake::cli {
 						return true;
 					}
 
-					// If the option is an action
-					if constexpr (opt_t::action_value) {
-						auto result = opt_t::template handle_action<dispatcher_t>(opts, arg);
+					// If the option is a task
+					if constexpr (opt_t::task_value) {
+						auto result = opt_t::template handle_task<dispatcher_t>(opts, arg);
 						if (not result) {
-							return std::unexpected(std::format("opt_t::handle_action failed: {}", result.error()));
+							return std::unexpected(std::format("opt_t::handle_task failed: {}", result.error()));
 						}
 
 						return true;

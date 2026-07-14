@@ -3,23 +3,26 @@
 #ifndef MGMAKE_CLI_ENTRY_HXX
 #define MGMAKE_CLI_ENTRY_HXX
 
-#include "config.hxx"
-#include "dispatcher.hxx"
 #include "options.hxx"
 #include "parser.hxx"
 
 #include "../sys/exit_code.hxx"
 #include "../sys/shell.hxx"
+#include "../task/dispatcher.hxx"
+#include "../config.hxx"
 
 #include <print>
 #include <utility>
 
 namespace mgmake::cli {
-    template<typename config_t = config>
+    template<typename config_builder_t = config>
     inline sys::exit_code entry(sys::shell cmd) {
+		// Finalize the given config
+		using config_type = config_builder_t::build;
+
         // construct the parser & dispatcher at compile time :)
-		using d = dispatcher<config_t>;
-        using p = parser<typename config_t::options_type>;
+		using d = task::dispatcher<config_type>;
+        using p = parser<typename config_type::options_type>;
 
         // parse cmd at runtime
         if (auto result = p::template parse<d>(cmd)) {
@@ -32,7 +35,7 @@ namespace mgmake::cli {
         }
     }
 
-    template<typename config_t = config>
+    template<typename config_builder_t = config>
     inline sys::exit_code entry(int argc, char* argv[]) {
         return entry<config_t>(sys::shell::from_args(argc, argv));
     }
