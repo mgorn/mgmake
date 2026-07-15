@@ -25,12 +25,17 @@ namespace mgmake::cli {
         using p = parser<typename config_type::options_type>;
 
         // parse cmd at runtime
-        if (auto result = p::template parse<d>(cmd)) {
-			auto opts = result.value();
-			d::invoke(cmd, opts);
-            return sys::exit_code::success;
+        if (auto parse_result = p::template parse<d>(cmd)) {
+			auto opts = parse_result.value();
+
+			if (auto dispatch_result = d::invoke(cmd, opts)) {
+                return dispatch_result.value();
+            } else {
+                std::println(stderr, "{}", dispatch_result.error());
+                return sys::exit_code::task_failure;
+            }
         } else {
-            std::println(stderr, "{}", result.error());
+            std::println(stderr, "{}", parse_result.error());
             return sys::exit_code::usage_error;
         }
     }

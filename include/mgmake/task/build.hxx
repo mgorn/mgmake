@@ -6,6 +6,8 @@
 #include "../cli/option.hxx"
 #include "../sys/exit_code.hxx"
 
+#include <print>
+
 namespace mgmake::task {
 	struct build {
 		using option_type = cli::option
@@ -18,6 +20,7 @@ namespace mgmake::task {
 		static inline constexpr std::expected<sys::exit_code, std::string> handle(auto& cmd, auto& opts) {
 			// TODO: This would be the entrypoint/root for build
 			std::println("Build task");
+			std::println("Build dir: {}", opts.build_dir().string());
 			return sys::exit_code::success;
 		}
 	};

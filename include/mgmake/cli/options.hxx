@@ -22,6 +22,9 @@ namespace mgmake::cli {
 		inline constexpr auto task() const {
 			return m_task;
 		}
+		inline constexpr auto build_dir() const {
+			return m_build_dir;
+		}
 	};
 }
 

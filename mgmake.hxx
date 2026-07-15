@@ -1145,6 +1145,8 @@ namespace mgmake::sys {
 #endif// ===== end include/mgmake/sys/exit_code.hxx =====
 
 
+#include <print>
+
 namespace mgmake::task {
 	struct build {
 		using option_type = cli::option
@@ -1157,6 +1159,7 @@ namespace mgmake::task {
 		static inline constexpr std::expected<sys::exit_code, std::string> handle(auto& cmd, auto& opts) {
 			// TODO: This would be the entrypoint/root for build
 			std::println("Build task");
+			std::println("Build dir: {}", opts.build_dir().string());
 			return sys::exit_code::success;
 		}
 	};
@@ -1359,6 +1362,9 @@ namespace mgmake::cli {
 
 		inline constexpr auto task() const {
 			return m_task;
+		}
+		inline constexpr auto build_dir() const {
+			return m_build_dir;
 		}
 	};
 }
@@ -1912,12 +1918,17 @@ namespace mgmake::cli {
         using p = parser<typename config_type::options_type>;
 
         // parse cmd at runtime
-        if (auto result = p::template parse<d>(cmd)) {
-			auto opts = result.value();
-			d::invoke(cmd, opts);
-            return sys::exit_code::success;
+        if (auto parse_result = p::template parse<d>(cmd)) {
+			auto opts = parse_result.value();
+
+			if (auto dispatch_result = d::invoke(cmd, opts)) {
+                return dispatch_result.value();
+            } else {
+                std::println(stderr, "{}", dispatch_result.error());
+                return sys::exit_code::task_failure;
+            }
         } else {
-            std::println(stderr, "{}", result.error());
+            std::println(stderr, "{}", parse_result.error());
             return sys::exit_code::usage_error;
         }
     }
