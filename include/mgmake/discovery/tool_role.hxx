@@ -3,16 +3,31 @@
 #ifndef MGMAKE_DISCOVERY_TOOL_ROLE_HXX
 #define MGMAKE_DISCOVERY_TOOL_ROLE_HXX
 
+#include "../cli/option.hxx"
+#include "../meta/static_string.hxx"
+#include "../meta/type_builder.hxx"
+#include "../meta/type_list.hxx"
+#include "../meta/type_map.hxx"
+
 namespace mgmake::discovery {
 	template<typename storage_t = meta::type_map<>>
 	struct tool_role_impl {
+		MGMAKE_TYPE_CONSUMER_VALUE_FIELD(logical, meta::static_string{ "" });
+		MGMAKE_TYPE_CONSUMER_VALUE_FIELD(name, meta::static_string{ "" });
+		MGMAKE_TYPE_CONSUMER_VALUE_FIELD(env, meta::static_string{ "" });
 
+		using option_type = option
+			::name<logical_value>
+			::description<std::format("Override the {} tool", name_value.view())>
+			::build;
 	};
 
 	template<typename builder_t = meta::type_builder<>>
 	struct tool_role_builder {
 		using builder_type = builder_t;
 
+		// Logical name, for the override option ("cc", "cxx")
+		MGMAKE_TYPE_BUILDER_VALUE_FIELD(tool_role_builder, logical, meta::static_string);
 		// Role name ("C Compiler", "C++ Compiler", etc)
 		MGMAKE_TYPE_BUILDER_VALUE_FIELD(tool_role_builder, name, meta::static_string);
 		// Environment variable override ("MGMK_CC", "MGMK_CXX", etc)
@@ -60,6 +75,47 @@ namespace mgmake::discovery {
 	using tar_role = tool_role::name<"Tar">::env<"MGMK_TAR">::build;
 	using exe_wrapper_role = tool_role::name<"Executable Wrapper">::env<"MGMK_EXE_WRAPPER">::build;
 	using emulator_role = tool_role::name<"Emulator">::env<"MGMK_EMULATOR">::build;
+
+	using default_tool_roles = meta::type_list<
+		cc_role,
+		cxx_role,
+		objc_role,
+		objcxx_role,
+		assembler_role,
+		cuda_compiler_role,
+		hip_compiler_role,
+		resource_compiler_role,
+		midl_compiler_role,
+		archiver_role,
+		ranlib_role,
+		librarian_role,
+		linker_role,
+		shared_linker_role,
+		dll_tool_role,
+		manifest_tool_role,
+		strip_role,
+		objcopy_role,
+		objdump_role,
+		nm_role,
+		readelf_role,
+		debug_symbol_tool_role,
+		lipo_role,
+		install_name_tool_role,
+		codesign_role,
+		ninja_role,
+		make_role,
+		msbuild_role,
+		xcodebuild_role,
+		cmake_role,
+		pkg_config_role,
+		git_role,
+		curl_role,
+		wget_role,
+		unzip_role,
+		tar_role,
+		exe_wrapper_role,
+		emulator_role
+	>;
 }
 
 #endif // MGMAKE_DISCOVERY_TOOL_ROLE_HXX
