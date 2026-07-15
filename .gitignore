@@ -50,3 +50,4 @@
 .DS_Store
 /.vscode
 /.cxxmg-cache
+/.build-old

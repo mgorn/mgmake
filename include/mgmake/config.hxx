@@ -11,8 +11,8 @@
 namespace mgmake {
 	template<typename storage_t = meta::type_map<>>
 	struct config_impl {
-		MGMAKE_TYPE_CONSUMER_VALUE_FIELD(project, nullptr);
-		MGMAKE_TYPE_CONSUMER_VALUE_FIELD(toolchains, nullptr);
+		MGMAKE_TYPE_CONSUMER_TYPE_FIELD(project, void);
+		MGMAKE_TYPE_CONSUMER_TYPE_FIELD(toolchains, void);
 		MGMAKE_TYPE_CONSUMER_TYPE_FIELD(tasks, void);
 		MGMAKE_TYPE_CONSUMER_TYPE_FIELD(options, void);
 	};
@@ -21,8 +21,8 @@ namespace mgmake {
     struct config_builder {
 		using builder_type = builder_t;
 
-		MGMAKE_TYPE_BUILDER_VALUE_FIELD(config_builder, project, auto);
-		MGMAKE_TYPE_BUILDER_VALUE_FIELD(config_builder, toolchains, auto);
+		MGMAKE_TYPE_BUILDER_TYPE_FIELD(config_builder, project);
+		MGMAKE_TYPE_BUILDER_TYPE_FIELD(config_builder, toolchains);
 		MGMAKE_TYPE_BUILDER_TYPE_FIELD(config_builder, tasks);
 		MGMAKE_TYPE_BUILDER_TYPE_FIELD(config_builder, options);
 
