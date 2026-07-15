@@ -90,7 +90,11 @@ namespace mgmake::cli {
 		static inline constexpr std::string_view help_hint = "path";
 
 		[[nodiscard]] static std::expected<std::filesystem::path, std::string> parse(std::string_view text) {
-			return std::filesystem::path{ text };
+			std::filesystem::path path{ text };
+			if (path.is_absolute()) {
+				return path;
+			}
+			return std::filesystem::current_path() / path;
 		}
 	};
 }
