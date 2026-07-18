@@ -4,9 +4,35 @@ using namespace mgmk;
 using namespace mgmk::spec;
 
 /* Define the project spec */
+using glmproj = cmake::name<"glm">
+	::fetch<fetch::git
+		::name<"glm-src">
+		::url<"https://github.com/g-truc/glm.git">>
+	::define<"GLM_BUILD_LIBRARY", "ON">
+	::define<"GLM_BUILD_TESTS", "OFF">
+	::define<"GLM_BUILD_INSTALL", "ON">
+	::install;
+using glm = glmproj::library
+	::name<"glm">;
+
+using sdlproj = cmake::name<"sdl">
+	::fetch<fetch::git
+		::name<"sdl-src">
+		::url<"https://github.com/libsdl-org/SDL.git">
+		::tag<"release-3.4.x">>
+	::define<"SDL_EXAMPLES", "OFF">
+	::define<"SDL_WERROR", "OFF">
+	::define<"SDL_SHARED_DEFAULT", "OFF">
+	::define<"BUILD_SHARED_LIBS", "OFF">
+	::install;
+using sdl = sdlproj::library
+	::name<"SDL3-static">;
+
 using testlib = library::name<"testlib">
 	::type<library_type::interface>
-	::include_dirs<"test">;
+	::include_dirs<"test">
+	::link<glm>
+	::link<sdl>;
 
 using builder = executable::name<"build">
 	::sources<"build.cxx">

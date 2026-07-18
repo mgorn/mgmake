@@ -6,11 +6,6 @@
 #include "../meta/type_builder.hxx"
 
 namespace mgmake::spec {
-	template<typename storage_t = meta::type_map<>>
-	struct target_impl {
-
-	};
-
 	enum struct target_type {
 		none,
 		executable,
@@ -22,6 +17,20 @@ namespace mgmake::spec {
 		static_lib,
 		shared_lib,
 		interface
+	};
+
+	template<typename storage_t = meta::type_map<>>
+	struct target_impl {
+		using storage_type = storage_t;
+
+		MGMAKE_TYPE_CONSUMER_VALUE_FIELD(name, meta::static_string{ "" });
+		MGMAKE_TYPE_CONSUMER_VALUE_FIELD(target_type, target_type::none);
+		MGMAKE_TYPE_CONSUMER_VALUE_FIELD(library_type, library_type::none);
+		MGMAKE_TYPE_CONSUMER_TYPE_FIELD(sources, meta::type_list<>);
+		MGMAKE_TYPE_CONSUMER_TYPE_FIELD(include_dirs, meta::type_list<>);
+		MGMAKE_TYPE_CONSUMER_TYPE_FIELD(links, meta::type_list<>);
+
+		
 	};
 
 	template<typename builder_t = meta::type_builder<>>

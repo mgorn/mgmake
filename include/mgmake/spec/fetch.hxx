@@ -21,7 +21,11 @@ namespace mgmake::spec {
 	};
 
 	template<typename storage_t = meta::type_map<>>
-	struct git_fetch_impl {};
+	struct git_fetch_impl {
+		using storage_type = storage_t;
+
+		
+	};
 	template<typename storage_t = meta::type_map<>>
 	struct archive_fetch_impl {};
 	template<typename storage_t = meta::type_map<>>

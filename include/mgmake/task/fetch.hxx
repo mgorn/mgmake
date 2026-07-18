@@ -19,7 +19,7 @@ namespace mgmake::task {
 		
 		template<typename config_t>
 		static inline constexpr std::expected<sys::exit_code, std::string> handle(auto& cmd, const auto& opts) {
-			// TODO: This would be the entrypoint/root for clean
+			// TODO: This would be the entrypoint/root for fetch
 			std::println("Fetch task");
 			return sys::exit_code::success;
 		}

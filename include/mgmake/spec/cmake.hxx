@@ -7,20 +7,31 @@
 
 namespace mgmake::spec {
 	template<typename storage_t>
-	struct cmake_target_impl {};
+	struct cmake_target_impl {
+		using storage_type = storage_t;
+
+		MGMAKE_TYPE_CONSUMER_VALUE_FIELD(name, meta::static_string{ "" });
+		MGMAKE_TYPE_CONSUMER_TYPE_FIELD(cmake_project, void);
+	};
+
+	template<typename builder_t = meta::type_builder<>>
+	struct cmake_target_builder {
+		using builder_type = builder_t;
+
+		MGMAKE_TYPE_BUILDER_VALUE_FIELD(cmake_target_builder, name, meta::static_string);
+		MGMAKE_TYPE_BUILDER_TYPE_FIELD(cmake_target_builder, cmake_project);
+
+		using build = typename builder_type::template build<cmake_target_impl>;
+	};
 
 	template<typename storage_t = meta::type_map<>>
 	struct cmake_impl {
-		template<typename builder_t = meta::type_builder<>>
-		struct cmake_target_builder {
-			using builder_type = builder_t;
+		using storage_type = storage_t;
 
-			MGMAKE_TYPE_BUILDER_VALUE_FIELD(cmake_target_builder, name, meta::static_string);
+		MGMAKE_TYPE_CONSUMER_VALUE_FIELD(name, meta::static_string{ "" });
+		MGMAKE_TYPE_CONSUMER_TYPE_FIELD(fetch, void);
 
-			using build = typename builder_type::template build<cmake_target_impl>;
-		};
-
-		using target = cmake_target_builder<>;
+		using target = cmake_target_builder<>::cmake_project<cmake_impl>;
 		using library = target;
 	};
 

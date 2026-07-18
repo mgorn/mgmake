@@ -8,7 +8,11 @@
 namespace mgmake::spec {
 	template<typename storage_t = meta::type_map<>>
 	struct project_impl {
+		using storage_type = storage_t;
 
+		MGMAKE_TYPE_CONSUMER_VALUE_FIELD(name, meta::static_string{ "" });
+		// Targets directly given to the project
+		MGMAKE_TYPE_CONSUMER_TYPE_FIELD(targets, meta::type_list<>);
 	};
 
 	template<typename builder_t = meta::type_builder<>>
