@@ -915,14 +915,23 @@ namespace mgmake::cli {
 
 		// Overloads for option types
 		template<typename opt_t>
+		static inline consteval decltype(auto) has() {
+			return has<opt_t::storage_key()>();
+		}
+		template<typename opt_t>
+		constexpr decltype(auto) get() {
+			static_assert(has<opt_t>(), "Missing storage key for option (was the option added to your options in your config?)");
+			return this->template get<opt_t::storage_key()>();
+		}
+		template<typename opt_t>
 		constexpr decltype(auto) get() const {
-			static_assert(has<opt_t::storage_key()>(), "Missing storage key for option (was the option added to your options in your config?)");
-			return get<opt_t::storage_key()>();
+			static_assert(has<opt_t>(), "Missing storage key for option (was the option added to your options in your config?)");
+			return this->template get<opt_t::storage_key()>();
 		}
 		template<typename opt_t>
 		constexpr void set(auto&& value) {
-			static_assert(has<opt_t::storage_key()>(), "Missing storage key for option (was the option added to your options in your config?)");
-			return m_storage.template set<opt_t::storage_key()>(value);
+			static_assert(has<opt_t>(), "Missing storage key for option (was the option added to your options in your config?)");
+			return this->template set<opt_t::storage_key()>(value);
 		}
 
 		// Value storage
@@ -1486,103 +1495,6 @@ namespace mgmake::sys {
 #define MGMAKE_TASK_DISPATCHER_HXX
 
 
-// ===== begin include/mgmake/task/task_traits.hxx =====
-#pragma once
-
-#ifndef MGMAKE_TASK_TASK_TRAITS_HXX
-#define MGMAKE_TASK_TASK_TRAITS_HXX
-
-#include <concepts>
-#include <expected>
-#include <string>
-
-// Forward decl if needed
-namespace mgmake::cli {
-	struct options;
-}
-namespace mgmake::sys {
-	struct shell;
-}
-
-namespace mgmake::task {
-	template<typename task_t, typename config_t>
-	concept task_handler = requires(const sys::shell& cmd, const cli::options& opts) {
-		{
-			task_t::template handle<config_t>(cmd, opts)
-		} -> std::same_as<std::expected<sys::exit_code, std::string>>;
-	};
-
-	template<typename task_t>
-	struct task_traits {
-		using task_type = task_t;
-		using option_type = task_type::option_type;
-		template<typename config_t>
-		static constexpr bool valid_handler = task_handler<task_type, config_t>;
-
-		static constexpr std::string_view name() {
-			return option_type::name_value.view();
-		}
-		static constexpr std::string_view description() {
-			return option_type::description_value.view();
-		}
-
-		static constexpr bool match(std::string_view arg) {
-			return option_type::match(arg);
-		}
-	};
-}
-
-#endif // MGMAKE_TASK_TASK_HXX// ===== end include/mgmake/task/task_traits.hxx =====
-
-
-// skipped duplicate include: include/mgmake/sys/exit_code.hxx
-// skipped duplicate include: include/mgmake/sys/shell.hxx
-
-// task::dispatcher
-// consumes the cli::options and executes the required task(s)
-
-namespace mgmake::task {
-	// The mgmake config
-    template<typename config_t>
-	struct dispatcher {
-		using config_type = config_t;
-		using list_type = config_type::tasks_type;
-
-		static inline constexpr std::expected<sys::exit_code, std::string> invoke(const sys::shell& cmd, const auto& opts) {
-			if constexpr (not opts.template has<"task">()) {
-				return std::unexpected("cli::dispatcher::invoke cannot invoke without a task!");
-			} else {
-				return list_type::type_switch([&]<typename task_t> -> std::expected<sys::exit_code, std::string> {
-					using traits_type = task_traits<task_t>;
-					static_assert(traits_type::template valid_handler<config_type>, "task is missing a handle function");
-
-					return task_t::template handle<config_type>(cmd, opts);
-				}, opts.template get<"task">());
-			}
-		}
-
-		using matches_type = std::bitset<list_type::size()>;
-		static inline constexpr matches_type match(std::string_view arg) {
-			return []<std::size_t... Is>(std::index_sequence<Is...>, std::string_view arg) {
-				matches_type matches{};
-				(matches.set(Is, task_traits<typename list_type::template type_at<Is>>::match(arg)), ...);
-				return matches;
-			}(std::make_index_sequence<list_type::size()>{}, arg);
-		}
-	};
-}
-
-#endif // MGMAKE_TASK_DISPATCHER_HXX// ===== end include/mgmake/task/dispatcher.hxx =====
-
-
-// ===== begin include/mgmake/config.hxx =====
-#pragma once
-
-#ifndef MGMAKE_CONFIG_HXX
-#define MGMAKE_CONFIG_HXX
-
-// skipped duplicate include: include/mgmake/cli/option_storage.hxx
-
 // ===== begin include/mgmake/cli/default_options.hxx =====
 #pragma once
 
@@ -2102,6 +2014,104 @@ namespace mgmake::cli {
 
 #endif // MGMAKE_CLI_DEFAULT_OPTIONS_HXX// ===== end include/mgmake/cli/default_options.hxx =====
 
+
+// ===== begin include/mgmake/task/task_traits.hxx =====
+#pragma once
+
+#ifndef MGMAKE_TASK_TASK_TRAITS_HXX
+#define MGMAKE_TASK_TASK_TRAITS_HXX
+
+#include <concepts>
+#include <expected>
+#include <string>
+
+// Forward decl if needed
+namespace mgmake::cli {
+	struct options;
+}
+namespace mgmake::sys {
+	struct shell;
+}
+
+namespace mgmake::task {
+	template<typename task_t, typename config_t>
+	concept task_handler = requires(const sys::shell& cmd, const cli::options& opts) {
+		{
+			task_t::template handle<config_t>(cmd, opts)
+		} -> std::same_as<std::expected<sys::exit_code, std::string>>;
+	};
+
+	template<typename task_t>
+	struct task_traits {
+		using task_type = task_t;
+		using option_type = task_type::option_type;
+		template<typename config_t>
+		static constexpr bool valid_handler = task_handler<task_type, config_t>;
+
+		static constexpr std::string_view name() {
+			return option_type::name_value.view();
+		}
+		static constexpr std::string_view description() {
+			return option_type::description_value.view();
+		}
+
+		static constexpr bool match(std::string_view arg) {
+			return option_type::match(arg);
+		}
+	};
+}
+
+#endif // MGMAKE_TASK_TASK_HXX// ===== end include/mgmake/task/task_traits.hxx =====
+
+
+// skipped duplicate include: include/mgmake/sys/exit_code.hxx
+// skipped duplicate include: include/mgmake/sys/shell.hxx
+
+// task::dispatcher
+// consumes the cli::options and executes the required task(s)
+
+namespace mgmake::task {
+	// The mgmake config
+    template<typename config_t>
+	struct dispatcher {
+		using config_type = config_t;
+		using list_type = config_type::tasks_type;
+
+		static inline constexpr std::expected<sys::exit_code, std::string> invoke(const sys::shell& cmd, const auto& opts) {
+			if constexpr (not opts.template has<cli::task_option>()) {
+				return std::unexpected("cli::dispatcher::invoke cannot invoke without a task!");
+			} else {
+				return list_type::type_switch([&]<typename task_t> -> std::expected<sys::exit_code, std::string> {
+					using traits_type = task_traits<task_t>;
+					static_assert(traits_type::template valid_handler<config_type>, "task is missing a handle function");
+
+					return task_t::template handle<config_type>(cmd, opts);
+				}, opts.template get<cli::task_option>());
+			}
+		}
+
+		using matches_type = std::bitset<list_type::size()>;
+		static inline constexpr matches_type match(std::string_view arg) {
+			return []<std::size_t... Is>(std::index_sequence<Is...>, std::string_view arg) {
+				matches_type matches{};
+				(matches.set(Is, task_traits<typename list_type::template type_at<Is>>::match(arg)), ...);
+				return matches;
+			}(std::make_index_sequence<list_type::size()>{}, arg);
+		}
+	};
+}
+
+#endif // MGMAKE_TASK_DISPATCHER_HXX// ===== end include/mgmake/task/dispatcher.hxx =====
+
+
+// ===== begin include/mgmake/config.hxx =====
+#pragma once
+
+#ifndef MGMAKE_CONFIG_HXX
+#define MGMAKE_CONFIG_HXX
+
+// skipped duplicate include: include/mgmake/cli/option_storage.hxx
+// skipped duplicate include: include/mgmake/cli/default_options.hxx
 // skipped duplicate include: include/mgmake/meta/type_builder.hxx
 
 // ===== begin include/mgmake/meta/type_or.hxx =====
@@ -2148,6 +2158,7 @@ namespace mgmake::meta {
 #ifndef MGMAKE_TASK_BUILD_HXX
 #define MGMAKE_TASK_BUILD_HXX
 
+// skipped duplicate include: include/mgmake/cli/default_options.hxx
 // skipped duplicate include: include/mgmake/sys/exit_code.hxx
 
 #include <print>
@@ -2168,9 +2179,12 @@ namespace mgmake::task {
 			std::println("Build dir: {}", opts.template get<cli::build_dir_option>().string());
 			std::println("Verbose: {}", opts.template get<cli::verbose_option>());
 			std::print("Target(s): ");
-			auto& targets = opts.template get<"targets">();
-			for (const auto& target : targets) {
-				std::print("{} ", target);
+			auto& targets = opts.template get<cli::targets_option>();
+			for (auto it = targets.begin(); it != targets.end(); ++it) {
+				std::print("{}", *it);
+				if (std::next(it) != targets.end()) {
+					std::print(", ");
+				}
 			}
 			std::println("");
 			return sys::exit_code::success;

@@ -84,14 +84,23 @@ namespace mgmake::cli {
 
 		// Overloads for option types
 		template<typename opt_t>
+		static inline consteval decltype(auto) has() {
+			return has<opt_t::storage_key()>();
+		}
+		template<typename opt_t>
+		constexpr decltype(auto) get() {
+			static_assert(has<opt_t>(), "Missing storage key for option (was the option added to your options in your config?)");
+			return this->template get<opt_t::storage_key()>();
+		}
+		template<typename opt_t>
 		constexpr decltype(auto) get() const {
-			static_assert(has<opt_t::storage_key()>(), "Missing storage key for option (was the option added to your options in your config?)");
-			return get<opt_t::storage_key()>();
+			static_assert(has<opt_t>(), "Missing storage key for option (was the option added to your options in your config?)");
+			return this->template get<opt_t::storage_key()>();
 		}
 		template<typename opt_t>
 		constexpr void set(auto&& value) {
-			static_assert(has<opt_t::storage_key()>(), "Missing storage key for option (was the option added to your options in your config?)");
-			return m_storage.template set<opt_t::storage_key()>(value);
+			static_assert(has<opt_t>(), "Missing storage key for option (was the option added to your options in your config?)");
+			return this->template set<opt_t::storage_key()>(value);
 		}
 
 		// Value storage

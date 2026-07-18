@@ -3,6 +3,7 @@
 #ifndef MGMAKE_TASK_DISPATCHER_HXX
 #define MGMAKE_TASK_DISPATCHER_HXX
 
+#include "../cli/default_options.hxx"
 #include "task_traits.hxx"
 
 #include "../sys/exit_code.hxx"
@@ -19,7 +20,7 @@ namespace mgmake::task {
 		using list_type = config_type::tasks_type;
 
 		static inline constexpr std::expected<sys::exit_code, std::string> invoke(const sys::shell& cmd, const auto& opts) {
-			if constexpr (not opts.template has<"task">()) {
+			if constexpr (not opts.template has<cli::task_option>()) {
 				return std::unexpected("cli::dispatcher::invoke cannot invoke without a task!");
 			} else {
 				return list_type::type_switch([&]<typename task_t> -> std::expected<sys::exit_code, std::string> {
@@ -27,7 +28,7 @@ namespace mgmake::task {
 					static_assert(traits_type::template valid_handler<config_type>, "task is missing a handle function");
 
 					return task_t::template handle<config_type>(cmd, opts);
-				}, opts.template get<"task">());
+				}, opts.template get<cli::task_option>());
 			}
 		}
 
