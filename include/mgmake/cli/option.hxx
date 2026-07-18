@@ -20,9 +20,26 @@ namespace mgmake::cli {
         MGMAKE_TYPE_CONSUMER_VALUE_FIELD(description, meta::static_string{ "" });
 	    MGMAKE_TYPE_CONSUMER_VALUE_FIELD(short_name, '\0');
 	    MGMAKE_TYPE_CONSUMER_VALUE_FIELD(callback, nullptr);
-		MGMAKE_TYPE_CONSUMER_TYPE_FIELD(assign, void);
+		MGMAKE_TYPE_CONSUMER_TYPE_FIELD(storage_pair, void);
+	    MGMAKE_TYPE_CONSUMER_VALUE_FIELD_AS(parse, meta::static_string{ "parse_value" }, false);
 	    MGMAKE_TYPE_CONSUMER_VALUE_FIELD(task, false);
 	    MGMAKE_TYPE_CONSUMER_VALUE_FIELD(flag, true);
+
+		static inline constexpr bool has_storage = not std::is_same_v<storage_pair, void>;
+		// The key for the storage value, else the option name
+		static inline constexpr decltype(auto) storage_key() {
+			if constexpr (has_storage) {
+				return storage_pair::key_type::value;
+			} else {
+				return name_value;
+			}
+		}
+		// The value for the storage, else void
+		using storage_value_type = std::invoke_result_t<decltype([] consteval {
+			if constexpr (has_storage) {
+				return std::type_identity<typename storage_pair::value_type>{};
+			}
+		})>::type;
 
 		static inline constexpr bool match(std::string_view arg) {
 			if (arg.empty()) {
@@ -68,30 +85,21 @@ namespace mgmake::cli {
 				return std::unexpected("option_impl::handle_callback called for an option with no callback");
 			}
 		}
-
-		static inline constexpr auto is_assign = [] -> bool {
-			if constexpr(not std::is_same_v<assign_type, void>) {
-				return assign_type::valid;
-			}
-			return false;
-		}();
-		static inline constexpr std::expected<void, std::string> handle_assign(auto& opts, std::string_view arg, std::string_view value) {
+ 
+		static inline constexpr std::expected<void, std::string> handle_parse(auto& opts, std::string_view arg, std::string_view value) {
 			mgmkassert(match(arg), "handling a switch with the incorrect arg");
-			mgmkassert(is_assign, "handling a normal switch as a value assign switch");
+			mgmkassert(parse_value, "handling a normal switch as a value parse switch");
 
-			if constexpr (is_assign) {
-				// What is the expected value type?
-				using value_type = assign_type::value_type;
-
-				// parse it
-				using vp = value_parser<value_type>;
+			if constexpr (parse_value) {
+				// parse the storage_value_type
+				using vp = value_parser<storage_value_type>;
 				auto result = vp::parse(value);
 				if (not result.has_value()) {
 					return std::unexpected(std::format("Error parsing value for arg '{}': {}", arg, result.error()));
 				}
 
 				// assign
-				assign_type::set(opts, result.value());
+				opts.template set<storage_key()>(result.value());
 			}
 			return {};
 		}
@@ -105,7 +113,7 @@ namespace mgmake::cli {
 			if (not matches.any()) {
 				return std::unexpected(std::format("Unknown task '{}' (cli::option_impl::handle_task no match from dispatcher_t::match for arg)", arg));
 			}
-			opts.m_task = detail::index_bit(matches);
+			opts.template set<"task">(detail::index_bit(matches));
 			return {};
 		}
     };
@@ -119,16 +127,26 @@ namespace mgmake::cli {
         MGMAKE_TYPE_BUILDER_VALUE_FIELD(option_builder, description, meta::static_string);
         MGMAKE_TYPE_BUILDER_VALUE_FIELD(option_builder, short_name, char);
         MGMAKE_TYPE_BUILDER_VALUE_FIELD(option_builder, callback, auto);
-		// option accepts a value (`--switch=value` or `--switch value`) and assigns its value to the option member
-		// pass a `meta::member_access<>` for the member to assign.
-		MGMAKE_TYPE_BUILDER_TYPE_FIELD(option_builder, assign);
-		// Sets the value at the member to the default value.
-		template<typename member_t = meta::member_access<>, auto value_v = nullptr>
+		// Takes a `meta::type_pair<meta::static_string, value_type>` for the option value storage
+		// This is what adds the key and value type to the `option_storage`
+        MGMAKE_TYPE_BUILDER_TYPE_FIELD(option_builder, storage_pair);
+		// If the option parses a value (`--switch=value` or `--switch value`) and stores it
+		MGMAKE_TYPE_BUILDER_VALUE_FIELD(option_builder, parse_value, bool);
+		// Set the option to set a specific value & assigns the storage pair
+		template<meta::static_string key_v, auto value_v = std::nullopt>
         using set = callback<[](auto& opts) {
-			member_t::set(opts, value_v);
-		}>;
+			static_assert(not std::is_same_v<decltype(value_v), std::nullopt_t>, "No value passed to `option::set<>` (Do we actually need to set the value to nullopt?)");
+			opts.template set<key_v>(value_v);
+		}>::template storage_pair<typename meta::type_pair<meta::type_value<key_v>, std::remove_cvref_t<decltype(value_v)>>>;
+		// Set the option to parse a value & assigns the storage pair
+		template<meta::static_string key_v, typename parse_t>
+		using parse = parse_value<true>::template storage_pair<typename meta::type_pair<meta::type_value<key_v>, parse_t>>;
 		MGMAKE_TYPE_BUILDER_VALUE_FIELD(option_builder, task, bool);
 		MGMAKE_TYPE_BUILDER_VALUE_FIELD(option_builder, flag, bool); // aka switch
+		// The option is only for reserving a key/value in storage
+		// this disables task and flag
+		template<meta::static_string key_v, typename value_t>
+		using storage = typename task<false>::template flag<false>::template storage_pair<typename meta::type_pair<meta::type_value<key_v>, value_t>>;
 
         using build = typename builder_type::template build<option_impl>;
     };

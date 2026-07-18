@@ -9,24 +9,19 @@
 #include <array>
 #include <concepts>
 #include <cstddef>
+#include <type_traits>
 
 namespace mgmake::meta {
 	template<typename storage_t = type_list<>>
 	struct type_map;
 
-	template<typename... pairs_t>
-	struct type_map<type_list<pairs_t...>> {
-		using storage_type = type_list<pairs_t...>;
-
-	private:
-		using key_list_type = type_list<typename pairs_t::key_type...>;
-
-		static_assert(
-			(key_list_type::template unique<typename pairs_t::key_type>() and ...),
-			"type_map storage cannot contain duplicate keys."
-		);
-
-	public:
+	template<typename... pair_ts>
+	struct type_map<type_list<pair_ts...>> {
+		using storage_type = type_list<pair_ts...>;
+		using key_types = type_list<typename pair_ts::key_type...>;
+		static_assert((key_types::template unique<typename pair_ts::key_type>() and ...), "type_map storage cannot contain duplicate keys.");
+		using value_types = type_list<typename pair_ts::value_type...>;
+		
 		static consteval std::size_t size() {
 			return storage_type::size();
 		}
@@ -34,7 +29,7 @@ namespace mgmake::meta {
 		template<typename key_t>
 		static consteval std::size_t key_index() {
 			constexpr std::array<bool, size()> matches {
-				std::same_as<key_t, typename pairs_t::key_type>...
+				std::same_as<key_t, typename pair_ts::key_type>...
 			};
 
 			for (std::size_t i = 0; i < matches.size(); ++i) {
@@ -48,7 +43,7 @@ namespace mgmake::meta {
 
 		template<typename key_t>
 		static consteval bool has() {
-			return key_index<key_t>() != size();
+			return key_index<key_t>() < size();
 		}
 
 	private:
@@ -87,7 +82,7 @@ namespace mgmake::meta {
         struct emplace_type {
             using type = std::conditional_t<
                 has<key_t>(),
-                type_map<type_list<replace_pair<pairs_t, key_t, value_t>...>>,
+                type_map<type_list<replace_pair<pair_ts, key_t, value_t>...>>,
                 type_map<typename storage_type::template append<type_pair<key_t, value_t>>>
             >;
         };

@@ -55,11 +55,7 @@ namespace mgmake::meta {
 	>
 
 #define MGMAKE_TYPE_CONSUMER_TYPE_FIELD(alias_t, default_t) \
-	MGMAKE_TYPE_CONSUMER_TYPE_FIELD_AS( \
-		alias_t, \
-		::mgmake::meta::static_string{#alias_t}, \
-		default_t \
-	)
+	MGMAKE_TYPE_CONSUMER_TYPE_FIELD_AS(alias_t, ::mgmake::meta::static_string{#alias_t}, default_t)
 
 #define MGMAKE_TYPE_CONSUMER_TYPE_FIELD_AS(alias_t, key_v, default_t) \
 	using alias_t##_type = typename storage_t::template at< \

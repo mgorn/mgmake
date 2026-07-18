@@ -5,7 +5,6 @@
 
 #include "task_traits.hxx"
 
-#include "../cli/options.hxx"
 #include "../sys/exit_code.hxx"
 #include "../sys/shell.hxx"
 
@@ -19,16 +18,17 @@ namespace mgmake::task {
 		using config_type = config_t;
 		using list_type = config_type::tasks_type;
 
-		static inline constexpr std::expected<sys::exit_code, std::string> invoke(const sys::shell& cmd, const cli::options& opts) {
-			if (not opts.task().has_value()) {
+		static inline constexpr std::expected<sys::exit_code, std::string> invoke(const sys::shell& cmd, const auto& opts) {
+			if constexpr (not opts.template has<"task">()) {
 				return std::unexpected("cli::dispatcher::invoke cannot invoke without a task!");
-			}
-			return list_type::type_switch([&]<typename task_t> -> std::expected<sys::exit_code, std::string> {
-				using traits_type = task_traits<task_t>;
-				static_assert(traits_type::template valid_handler<config_type>, "task is missing a handle function");
+			} else {
+				return list_type::type_switch([&]<typename task_t> -> std::expected<sys::exit_code, std::string> {
+					using traits_type = task_traits<task_t>;
+					static_assert(traits_type::template valid_handler<config_type>, "task is missing a handle function");
 
-				return task_t::template handle<config_type>(cmd, opts);
-			}, opts.task().value());
+					return task_t::template handle<config_type>(cmd, opts);
+				}, opts.template get<"task">());
+			}
 		}
 
 		using matches_type = std::bitset<list_type::size()>;

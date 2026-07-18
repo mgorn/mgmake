@@ -3,7 +3,7 @@
 #ifndef MGMAKE_CLI_PARSER_HXX
 #define MGMAKE_CLI_PARSER_HXX
 
-#include "options.hxx"
+#include "option_storage.hxx"
 
 #include "../detail/index_bit.hxx"
 #include "../meta/type_list.hxx"
@@ -16,9 +16,10 @@
 #include <utility>
 
 namespace mgmake::cli {
-    template<typename list_t = meta::type_list<>>
+    template<typename option_storage_t = option_storage<>>
     struct parser {
-		using list_type = list_t;
+		using option_storage_type = option_storage_t;
+		using list_type = option_storage_type::list_type;
 
 		// Task options (first arg, no - or --)
 		using tasks_type = typename list_type::template filter<[]<typename opt_t> -> bool {
@@ -30,9 +31,9 @@ namespace mgmake::cli {
 		}>;
 
 		template<typename dispatcher_t>
-        static inline constexpr std::expected<options, std::string> parse(const sys::shell& cmd) {
+        static inline constexpr std::expected<option_storage_type, std::string> parse(const sys::shell& cmd) {
 			// The resulting options
-			options opts{};
+			option_storage_type opts{};
 
 			auto args = cmd.user_args();
 
@@ -66,7 +67,7 @@ namespace mgmake::cli {
 
 					// 3) See if the arg is meant to be used as an task
 					if (error_hint.empty()) {
-						using task_parser = parser<tasks_type>;
+						using task_parser = parser<cli::option_storage<tasks_type>>;
 						auto matches = task_parser::match(arg);
 						if (matches.any()) {
 							auto corrected = std::format("{} {} ...", cmd.program_name(), arg);
@@ -92,12 +93,11 @@ namespace mgmake::cli {
 				auto index = detail::index_bit(matches);
 				auto result = list_type::type_switch([&]<typename opt_t> -> std::expected<bool, std::string> {
 					// If the option expects a value
-					if constexpr (opt_t::is_assign) {
+					if constexpr (opt_t::parse_value) {
 						// What is the expected value type?
-						using assign_type = opt_t::assign_type;
 						// TODO: If value_type is a std::vector or other container,
 						// we need to keep reading each arg, parse them, and store...
-						using value_type = assign_type::value_type;
+						using value_type = opt_t::storage_value_type;
 
 						// Is it `--switch=value` or `--switch value`?
 						std::string_view value_text{};
@@ -117,7 +117,7 @@ namespace mgmake::cli {
 						}
 
 						// assign
-						auto result = opt_t::handle_assign(opts, arg, value_text);
+						auto result = opt_t::handle_parse(opts, arg, value_text);
 						if (not result) {
 							return std::unexpected(std::format("opt_t::handle_assign failed: {}", result.error()));
 						}

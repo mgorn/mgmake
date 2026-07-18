@@ -46,8 +46,8 @@ namespace mgmake::task {
     // default_tasks before passing the list 
     // to your mgmake config for your own CLI
 	using default_tasks = meta::type_list<
-		task::help,
-		task::build
+		task::build, // The default task when none is specified
+		task::help
 	>;
 }
 

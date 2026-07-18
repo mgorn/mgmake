@@ -3,6 +3,7 @@
 #ifndef MGMAKE_CONFIG_HXX
 #define MGMAKE_CONFIG_HXX
 
+#include "cli/option_storage.hxx"
 #include "cli/default_options.hxx"
 #include "meta/type_builder.hxx"
 #include "meta/type_or.hxx"
@@ -14,7 +15,7 @@ namespace mgmake {
 		MGMAKE_TYPE_CONSUMER_TYPE_FIELD(project, void);
 		MGMAKE_TYPE_CONSUMER_TYPE_FIELD(toolchains, void);
 		MGMAKE_TYPE_CONSUMER_TYPE_FIELD(tasks, void);
-		MGMAKE_TYPE_CONSUMER_TYPE_FIELD(options, void);
+		MGMAKE_TYPE_CONSUMER_TYPE_FIELD(option_storage, cli::option_storage<>);
 	};
 
 	template<typename builder_t = meta::type_builder<>>
@@ -39,12 +40,16 @@ namespace mgmake {
 			}, meta::type_list<>>;
 
 			// Append the contents of task_options, not task_options itself.
-			using actual_options_type = typename options_type::template prepend_list<task_options>;
+			using full_options_list = typename options_type::template prepend_list<task_options>;
+
+			// IMPORTANT: wrap the list in option_storage
+			using options_storage_type = cli::option_storage<full_options_list>;
 
 			// Create a new config builder with the task options appended
 			// Update the existing builder directly. Creating another config_builder
 			// specialization here would recursively instantiate its build alias.
-			using actual_builder_type = typename builder_type::template set<"options", actual_options_type>;
+			// assign to option_storage key instead as well
+			using actual_builder_type = typename builder_type::template set<"option_storage", options_storage_type>;
 
 			// Use the builder type from that instead
 			using result_type = typename actual_builder_type::template build<config_impl>;

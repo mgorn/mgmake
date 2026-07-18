@@ -3,7 +3,6 @@
 #ifndef MGMAKE_CLI_ENTRY_HXX
 #define MGMAKE_CLI_ENTRY_HXX
 
-#include "options.hxx"
 #include "parser.hxx"
 
 #include "../sys/exit_code.hxx"
@@ -19,10 +18,11 @@ namespace mgmake::cli {
     inline sys::exit_code entry(sys::shell cmd) {
 		// Finalize the given config
 		using config_type = config_builder_t::build;
+		using opt_storage_type = typename config_type::option_storage_type;
 
         // construct the parser & dispatcher at compile time :)
 		using d = task::dispatcher<config_type>;
-        using p = parser<typename config_type::options_type>;
+        using p = parser<opt_storage_type>;
 
         // parse cmd at runtime
         if (auto parse_result = p::template parse<d>(cmd)) {

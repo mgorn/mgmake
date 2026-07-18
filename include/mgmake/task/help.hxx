@@ -16,12 +16,8 @@ namespace mgmake::task {
 		using option_type = cli::option
 			::name<"help">::short_name<'h'>
 			::description<"Show help.">
+			::set<"task", std::size_t{0}>
 			::task<true>
-			//::set<meta::member_access<&cli::options::m_task>, 0>
-			::callback<[](auto& opts) {
-				// Set index with callback bc cyclical include :(
-				opts.m_task = 0;
-			}>
 			::build;
 		
 		template<typename config_t>
@@ -31,7 +27,7 @@ namespace mgmake::task {
 			std::println("Usage:");
 			std::println("\t{} [task] [options]", cmd.program_name());
 			using tasks_type = config_type::tasks_type;
-			using options_type = config_type::options_type;
+			using options_type = config_type::option_storage::list_type;
 			
 			std::println("\nTasks:");
 			static constexpr auto task_help = []<typename task_t>(auto& cmd){
@@ -52,8 +48,8 @@ namespace mgmake::task {
 						std::print(ss, "-{}, ", opt_t::short_name_value);
 					}
 					std::print(ss, "--{}", opt_t::name_value.view());
-					if constexpr (opt_t::is_assign) {
-						using vp = cli::value_parser<typename opt_t::assign_type::value_type>;
+					if constexpr (opt_t::parse_value) {
+						using vp = cli::value_parser<typename opt_t::storage_value_type>;
 						std::print(ss, "=<{}>", vp::help_hint);
 					}
 					std::println("\t{:<24} {}", ss.str(), opt_t::description_value.view());

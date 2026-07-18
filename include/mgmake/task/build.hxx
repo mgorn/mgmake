@@ -3,7 +3,6 @@
 #ifndef MGMAKE_TASK_BUILD_HXX
 #define MGMAKE_TASK_BUILD_HXX
 
-#include "../cli/option.hxx"
 #include "../sys/exit_code.hxx"
 
 #include <print>
@@ -13,6 +12,7 @@ namespace mgmake::task {
 		using option_type = cli::option
 			::name<"build">
 			::description<"Build the project.">
+			::set<"task", std::size_t{1}>
 			::task<true>::flag<false>
 			::build;
 		
@@ -20,7 +20,7 @@ namespace mgmake::task {
 		static inline constexpr std::expected<sys::exit_code, std::string> handle(auto& cmd, auto& opts) {
 			// TODO: This would be the entrypoint/root for build
 			std::println("Build task");
-			std::println("Build dir: {}", opts.build_dir().string());
+			std::println("Build dir: {}", opts.template get<cli::build_dir_option>().string());
 			return sys::exit_code::success;
 		}
 	};

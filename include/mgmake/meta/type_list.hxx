@@ -3,6 +3,8 @@
 #ifndef MGMAKE_META_TYPE_LIST_HXX
 #define MGMAKE_META_TYPE_LIST_HXX
 
+#include "../detail/assert.hxx"
+
 #include <array>
 #include <concepts>
 #include <cstddef>
