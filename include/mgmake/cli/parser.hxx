@@ -28,7 +28,7 @@ namespace mgmake::cli {
 		}>;
 		// Switch option (- or -- prefix)
 		using switches_type = typename list_type::template filter<[]<typename opt_t> -> bool {
-			return not opt_t::task_value;
+			return opt_t::flag_value;
 		}>;
 
 		template<typename dispatcher_t>
@@ -103,7 +103,7 @@ namespace mgmake::cli {
 						std::size_t dist = -1;
 						if (error_hint.empty()) {
 							std::string closest = "";
-							list_type::for_each([&]<typename opt_t>{
+							switches_type::for_each([&]<typename opt_t>{
 								constexpr auto name = opt_t::name_value;
 								if (not name.empty()) {
 									auto name_dist = name.distance(arg_name);
@@ -129,7 +129,7 @@ namespace mgmake::cli {
 
 						// 2) Check if its contained in a name
 						if (error_hint.empty() or (dist > 1)) {
-							list_type::for_each([&]<typename opt_t>{
+							switches_type::for_each([&]<typename opt_t>{
 								constexpr auto name = opt_t::name_value;
 								// If arg is in name
 								if (name.contains(arg_name)) {
