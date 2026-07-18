@@ -36,7 +36,7 @@ namespace mgmake::spec {
 		// Takes a `meta::type_list` of `meta::type_value`s of `meta::static_string`s for include dirs
 		MGMAKE_TYPE_BUILDER_TYPE_FIELD_AS(target_builder, set_include_dirs, "include_dirs");
 		// Takes a `meta::type_list` of link dependencies, either targets or `meta::static_string`s for system libs
-		MGMAKE_TYPE_BUILDER_TYPE_FIELD_AS(target_builder, set_links, "links");
+		MGMAKE_TYPE_BUILDER_TYPE_FIELD_AS(target_builder, set_links_impl, "links");
 
 		template<target_type type_v>
 		using set_target_type = std::remove_cvref_t<std::invoke_result_t<decltype([] consteval {
@@ -85,6 +85,15 @@ namespace mgmake::spec {
 		template<meta::static_string include_v>
 		using include_dir = include_dirs<include_v>;
 
+		// Check if any links are builders and build them
+		template<typename links_t = meta::type_list<>>
+		using set_links = set_links_impl<typename links_t::template fold<[]<typename list_t, typename link_t> consteval {
+			if constexpr (meta::is_builder<link_t>) {
+				return std::type_identity<typename list_t::template append_unique<typename link_t::build>>{};
+			} else {
+				return std::type_identity<typename list_t::template append_unique<link_t>>{};
+			}
+		}, meta::type_list<>>>;
 		// Add multiple links
 		template<typename... link_ts>
 		using links = set_links<typename meta::type_or_t<typename builder_t::template get<"links", false>, meta::type_list<>>::template append_types_unique<link_ts...>>;

@@ -4,6 +4,8 @@
 #define MGMAKE_MGMAKE_HXX
 
 #include "cli/entry.hxx"
+#include "spec/cmake.hxx"
+#include "spec/fetch.hxx"
 #include "spec/project.hxx"
 #include "spec/target.hxx"
 #include "config.hxx"

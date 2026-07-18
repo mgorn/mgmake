@@ -1600,6 +1600,11 @@ namespace mgmake::meta {
         template<template<typename> typename consumer_t>
         using build = consumer_t<storage_t>;
     };
+
+	template<typename builder_t>
+	concept is_builder = requires {
+		typename builder_t::build;
+	};
 }
 
 // When defining builder fields, ensure `builder_t` is the name of the `meta::type_builder`
@@ -1913,7 +1918,7 @@ namespace mgmake::task {
 		using option_type = cli::option
 			::name<"build">
 			::description<"Build the project.">
-			::set<"task", std::size_t{1}>
+			::set<"task", std::size_t{0}>
 			::task<true>::flag<false>
 			::build;
 		
@@ -1949,7 +1954,7 @@ namespace mgmake::task {
 		using option_type = cli::option
 			::name<"help">::short_name<'h'>
 			::description<"Show help.">
-			::set<"task", std::size_t{0}>
+			::set<"task", std::size_t{1}>
 			::task<true>
 			::build;
 		
@@ -2149,6 +2154,137 @@ int main(int argc, char* argv[]) { \
 #endif // MGMAKE_CLI_ENTRY_HXX// ===== end include/mgmake/cli/entry.hxx =====
 
 
+// ===== begin include/mgmake/spec/cmake.hxx =====
+#pragma once
+
+#ifndef MGMAKE_SPEC_CMAKE_HXX
+#define MGMAKE_SPEC_CMAKE_HXX
+
+// skipped duplicate include: include/mgmake/meta/type_builder.hxx
+
+namespace mgmake::spec {
+	template<typename storage_t>
+	struct cmake_target_impl {};
+
+	template<typename storage_t = meta::type_map<>>
+	struct cmake_impl {
+		template<typename builder_t = meta::type_builder<>>
+		struct cmake_target_builder {
+			using builder_type = builder_t;
+
+			MGMAKE_TYPE_BUILDER_VALUE_FIELD(cmake_target_builder, name, meta::static_string);
+
+			using build = typename builder_type::template build<cmake_target_impl>;
+		};
+
+		using target = cmake_target_builder<>;
+		using library = target;
+	};
+
+	template<typename builder_t = meta::type_builder<>>
+	struct cmake_builder {
+		using builder_type = builder_t;
+
+		MGMAKE_TYPE_BUILDER_VALUE_FIELD(cmake_builder, name, meta::static_string);
+		MGMAKE_TYPE_BUILDER_TYPE_FIELD(cmake_builder, fetch);
+		// Sets the map of CMake variables to define
+		MGMAKE_TYPE_BUILDER_TYPE_FIELD_AS(cmake_builder, set_cmake_vars, "cmake_vars");
+		MGMAKE_TYPE_BUILDER_VALUE_FIELD(cmake_builder, set_install, bool);
+
+		template<meta::static_string var_v, meta::static_string val_v>
+		using define = set_cmake_vars<typename meta::type_or_t<
+			typename builder_t::template get<"cmake_vars", false>,
+			meta::type_map<>
+		>::template emplace_unique<meta::type_value<var_v>, meta::type_value<val_v>>>;
+
+		using build = typename builder_type::template build<cmake_impl>;
+		using install = set_install<true>::build;
+	};
+	using cmake = cmake_builder<>;
+}
+
+#endif // MGMAKE_SPEC_CMAKE_HXX// ===== end include/mgmake/spec/cmake.hxx =====
+
+
+// ===== begin include/mgmake/spec/fetch.hxx =====
+#pragma once
+
+#ifndef MGMAKE_SPEC_FETCH_HXX
+#define MGMAKE_SPEC_FETCH_HXX
+
+// skipped duplicate include: include/mgmake/meta/type_builder.hxx
+
+namespace mgmake::spec {
+	enum struct fetch_type {
+		git,
+		archive,
+		local
+	};
+
+	enum struct archive_format {
+		auto_detect,
+		zip,
+		tar,
+		tar_gz,
+		tar_xz
+	};
+
+	template<typename storage_t = meta::type_map<>>
+	struct git_fetch_impl {};
+	template<typename storage_t = meta::type_map<>>
+	struct archive_fetch_impl {};
+	template<typename storage_t = meta::type_map<>>
+	struct local_fetch_impl {};
+
+	template<typename builder_t = meta::type_builder<>>
+	struct git_fetch_builder {
+		using builder_type = builder_t;
+
+		MGMAKE_TYPE_BUILDER_VALUE_FIELD(git_fetch_builder, name, meta::static_string);
+		MGMAKE_TYPE_BUILDER_VALUE_FIELD(git_fetch_builder, url, meta::static_string);
+		MGMAKE_TYPE_BUILDER_VALUE_FIELD(git_fetch_builder, tag, meta::static_string);
+
+		using build = typename builder_type::template build<git_fetch_impl>;
+	};
+
+	template<typename builder_t = meta::type_builder<>>
+	struct archive_fetch_builder {
+		using builder_type = builder_t;
+
+		MGMAKE_TYPE_BUILDER_VALUE_FIELD(archive_fetch_builder, name, meta::static_string);
+		MGMAKE_TYPE_BUILDER_VALUE_FIELD(archive_fetch_builder, url, meta::static_string);
+		MGMAKE_TYPE_BUILDER_VALUE_FIELD(archive_fetch_builder, checksum, meta::static_string);
+		MGMAKE_TYPE_BUILDER_VALUE_FIELD(archive_fetch_builder, format, meta::static_string);
+
+		using build = typename builder_type::template build<archive_fetch_impl>;
+	};
+
+	template<typename builder_t = meta::type_builder<>>
+	struct local_fetch_builder {
+		using builder_type = builder_t;
+
+		MGMAKE_TYPE_BUILDER_VALUE_FIELD(local_fetch_builder, name, meta::static_string);
+		MGMAKE_TYPE_BUILDER_VALUE_FIELD(local_fetch_builder, path, meta::static_string);
+
+		using build = typename builder_type::template build<local_fetch_impl>;
+	};
+
+	template<typename builder_t = meta::type_builder<>>
+	struct fetch_builder {
+		using builder_type = builder_t;
+
+		MGMAKE_TYPE_BUILDER_VALUE_FIELD(fetch_builder, name, meta::static_string);
+
+		using git = git_fetch_builder<builder_type>;
+		using archive = archive_fetch_builder<builder_type>;
+		using local = local_fetch_builder<builder_type>;
+	};
+	using fetch = fetch_builder<>;
+}
+
+#endif // MGMAKE_SPEC_FETCH_HXX// ===== end include/mgmake/spec/fetch.hxx =====
+
+
 // ===== begin include/mgmake/spec/project.hxx =====
 #pragma once
 
@@ -2169,7 +2305,17 @@ namespace mgmake::spec {
 
 		MGMAKE_TYPE_BUILDER_VALUE_FIELD(project_builder, name, meta::static_string);
 		// Takes a `meta::type_list` of your target types
-		MGMAKE_TYPE_BUILDER_TYPE_FIELD_AS(project_builder, set_targets, "targets");
+		MGMAKE_TYPE_BUILDER_TYPE_FIELD_AS(project_builder, set_targets_impl, "targets");
+
+		// Check if any targets are builders and build them
+		template<typename targets_t = meta::type_list<>>
+		using set_targets = set_targets_impl<typename targets_t::template fold<[]<typename list_t, typename target_t> consteval {
+			if constexpr (meta::is_builder<target_t>) {
+				return std::type_identity<typename list_t::template append_unique<typename target_t::build>>{};
+			} else {
+				return std::type_identity<typename list_t::template append_unique<target_t>>{};
+			}
+		}, meta::type_list<>>>;
 
 		// Add targets
 		template<typename... target_ts>
@@ -2225,7 +2371,7 @@ namespace mgmake::spec {
 		// Takes a `meta::type_list` of `meta::type_value`s of `meta::static_string`s for include dirs
 		MGMAKE_TYPE_BUILDER_TYPE_FIELD_AS(target_builder, set_include_dirs, "include_dirs");
 		// Takes a `meta::type_list` of link dependencies, either targets or `meta::static_string`s for system libs
-		MGMAKE_TYPE_BUILDER_TYPE_FIELD_AS(target_builder, set_links, "links");
+		MGMAKE_TYPE_BUILDER_TYPE_FIELD_AS(target_builder, set_links_impl, "links");
 
 		template<target_type type_v>
 		using set_target_type = std::remove_cvref_t<std::invoke_result_t<decltype([] consteval {
@@ -2274,6 +2420,15 @@ namespace mgmake::spec {
 		template<meta::static_string include_v>
 		using include_dir = include_dirs<include_v>;
 
+		// Check if any links are builders and build them
+		template<typename links_t = meta::type_list<>>
+		using set_links = set_links_impl<typename links_t::template fold<[]<typename list_t, typename link_t> consteval {
+			if constexpr (meta::is_builder<link_t>) {
+				return std::type_identity<typename list_t::template append_unique<typename link_t::build>>{};
+			} else {
+				return std::type_identity<typename list_t::template append_unique<link_t>>{};
+			}
+		}, meta::type_list<>>>;
 		// Add multiple links
 		template<typename... link_ts>
 		using links = set_links<typename meta::type_or_t<typename builder_t::template get<"links", false>, meta::type_list<>>::template append_types_unique<link_ts...>>;

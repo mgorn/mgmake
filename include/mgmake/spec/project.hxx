@@ -17,7 +17,17 @@ namespace mgmake::spec {
 
 		MGMAKE_TYPE_BUILDER_VALUE_FIELD(project_builder, name, meta::static_string);
 		// Takes a `meta::type_list` of your target types
-		MGMAKE_TYPE_BUILDER_TYPE_FIELD_AS(project_builder, set_targets, "targets");
+		MGMAKE_TYPE_BUILDER_TYPE_FIELD_AS(project_builder, set_targets_impl, "targets");
+
+		// Check if any targets are builders and build them
+		template<typename targets_t = meta::type_list<>>
+		using set_targets = set_targets_impl<typename targets_t::template fold<[]<typename list_t, typename target_t> consteval {
+			if constexpr (meta::is_builder<target_t>) {
+				return std::type_identity<typename list_t::template append_unique<typename target_t::build>>{};
+			} else {
+				return std::type_identity<typename list_t::template append_unique<target_t>>{};
+			}
+		}, meta::type_list<>>>;
 
 		// Add targets
 		template<typename... target_ts>

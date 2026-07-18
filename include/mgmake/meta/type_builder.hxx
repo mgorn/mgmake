@@ -19,6 +19,11 @@ namespace mgmake::meta {
         template<template<typename> typename consumer_t>
         using build = consumer_t<storage_t>;
     };
+
+	template<typename builder_t>
+	concept is_builder = requires {
+		typename builder_t::build;
+	};
 }
 
 // When defining builder fields, ensure `builder_t` is the name of the `meta::type_builder`

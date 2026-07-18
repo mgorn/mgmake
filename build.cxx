@@ -6,17 +6,14 @@ using namespace mgmk::spec;
 /* Define the project spec */
 using testlib = library::name<"testlib">
 	::type<library_type::interface>
-	::include_dirs<"test">
-	::build;
+	::include_dirs<"test">;
 
 using builder = executable::name<"build">
 	::sources<"build.cxx">
-	::link<testlib>
-	::build;
+	::link<testlib>;
 
 using proj = project::name<"mgmake">
-	::target<builder>
-	::build;
+	::target<builder>;
 
 // Configure MGMake
 using c = config::project<proj>;
