@@ -3,7 +3,9 @@
 #ifndef MGMAKE_CLI_DEFAULT_TASKS_HXX
 #define MGMAKE_CLI_DEFAULT_TASKS_HXX
 
+#include "clean.hxx"
 #include "build.hxx"
+#include "fetch.hxx"
 #include "help.hxx"
 
 #include "../meta/type_list.hxx"
@@ -47,7 +49,9 @@ namespace mgmake::task {
     // to your mgmake config for your own CLI
 	using default_tasks = meta::type_list<
 		task::build, // The default task when none is specified
-		task::help
+		task::help,
+		task::clean,
+		task::fetch
 	>;
 }
 

@@ -2152,6 +2152,38 @@ namespace mgmake::meta {
 #define MGMAKE_CLI_DEFAULT_TASKS_HXX
 
 
+// ===== begin include/mgmake/task/clean.hxx =====
+#pragma once
+
+#ifndef MGMAKE_TASK_CLEAN_HXX
+#define MGMAKE_TASK_CLEAN_HXX
+
+// skipped duplicate include: include/mgmake/cli/default_options.hxx
+// skipped duplicate include: include/mgmake/sys/exit_code.hxx
+
+#include <print>
+
+namespace mgmake::task {
+	struct clean {
+		using option_type = cli::option
+			::name<"clean">
+			::description<"Delete all build files.">
+			::set<"task", std::size_t{2}>
+			::task<true>::flag<false>
+			::build;
+		
+		template<typename config_t>
+		static inline constexpr std::expected<sys::exit_code, std::string> handle(auto& cmd, const auto& opts) {
+			// TODO: This would be the entrypoint/root for clean
+			std::println("Clean task");
+			return sys::exit_code::success;
+		}
+	};
+}
+
+#endif // MGMAKE_TASK_CLEAN_HXX// ===== end include/mgmake/task/clean.hxx =====
+
+
 // ===== begin include/mgmake/task/build.hxx =====
 #pragma once
 
@@ -2193,6 +2225,38 @@ namespace mgmake::task {
 }
 
 #endif // MGMAKE_TASK_BUILD_HXX// ===== end include/mgmake/task/build.hxx =====
+
+
+// ===== begin include/mgmake/task/fetch.hxx =====
+#pragma once
+
+#ifndef MGMAKE_TASK_FETCH_HXX
+#define MGMAKE_TASK_FETCH_HXX
+
+// skipped duplicate include: include/mgmake/cli/default_options.hxx
+// skipped duplicate include: include/mgmake/sys/exit_code.hxx
+
+#include <print>
+
+namespace mgmake::task {
+	struct fetch {
+		using option_type = cli::option
+			::name<"fetch">
+			::description<"Fetch (download, find, etc) all project dependencies.">
+			::set<"task", std::size_t{3}>
+			::task<true>::flag<false>
+			::build;
+		
+		template<typename config_t>
+		static inline constexpr std::expected<sys::exit_code, std::string> handle(auto& cmd, const auto& opts) {
+			// TODO: This would be the entrypoint/root for clean
+			std::println("Fetch task");
+			return sys::exit_code::success;
+		}
+	};
+}
+
+#endif // MGMAKE_TASK_FETCH_HXX// ===== end include/mgmake/task/fetch.hxx =====
 
 
 // ===== begin include/mgmake/task/help.hxx =====
@@ -2307,7 +2371,9 @@ namespace mgmake::task {
     // to your mgmake config for your own CLI
 	using default_tasks = meta::type_list<
 		task::build, // The default task when none is specified
-		task::help
+		task::help,
+		task::clean,
+		task::fetch
 	>;
 }
 
