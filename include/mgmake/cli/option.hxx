@@ -17,6 +17,7 @@ namespace mgmake::cli {
     template<typename storage_t = meta::type_map<>>
     struct option_impl {
         MGMAKE_TYPE_CONSUMER_VALUE_FIELD(name, meta::static_string{ "" });
+        MGMAKE_TYPE_CONSUMER_VALUE_FIELD(alias, meta::static_string{ "" });
         MGMAKE_TYPE_CONSUMER_VALUE_FIELD(description, meta::static_string{ "" });
 	    MGMAKE_TYPE_CONSUMER_VALUE_FIELD(short_name, '\0');
 	    MGMAKE_TYPE_CONSUMER_VALUE_FIELD(callback, nullptr);
@@ -65,7 +66,11 @@ namespace mgmake::cli {
 		}
 
 		static inline constexpr bool match_long(std::string_view arg) {
-			return arg.starts_with(name_value);
+			if constexpr (alias_value.empty()) {
+				return arg.starts_with(name_value);
+			} else {
+				return arg.starts_with(name_value) or arg.starts_with(alias_value);
+			}
 		}
 
 		static inline constexpr bool match_short(std::string_view arg) {
@@ -98,8 +103,13 @@ namespace mgmake::cli {
 					return std::unexpected(std::format("Error parsing value for arg '{}': {}", arg, result.error()));
 				}
 
-				// assign
-				opts.template set<storage_key()>(result.value());
+				// If its a vector, emplace back
+				if constexpr (meta::is_vector_v<storage_value_type>) {
+					opts.template get<storage_key()>().emplace_back(result.value());
+				} else {
+					// otherwise just assign
+					opts.template set<storage_key()>(result.value());
+				}
 			}
 			return {};
 		}
@@ -124,6 +134,7 @@ namespace mgmake::cli {
         using builder_type = builder_t;
 
         MGMAKE_TYPE_BUILDER_VALUE_FIELD(option_builder, name, meta::static_string);
+        MGMAKE_TYPE_BUILDER_VALUE_FIELD(option_builder, alias, meta::static_string);
         MGMAKE_TYPE_BUILDER_VALUE_FIELD(option_builder, description, meta::static_string);
         MGMAKE_TYPE_BUILDER_VALUE_FIELD(option_builder, short_name, char);
         MGMAKE_TYPE_BUILDER_VALUE_FIELD(option_builder, callback, auto);

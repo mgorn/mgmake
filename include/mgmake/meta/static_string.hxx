@@ -4,8 +4,11 @@
 #define MGMAKE_META_STATIC_STRING_HXX
 
 #include <array>
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
+#include <format>
+#include <functional>
 #include <string_view>
 
 // static_string carries compile-time strings through templates without relying on runtime storage.
@@ -97,6 +100,16 @@ namespace std {
             const ::mgmake::meta::static_string<N>& value
         ) const noexcept {
             return value.hash();
+        }
+    };
+
+	template<std::size_t N>
+    struct formatter<::mgmake::meta::static_string<N>, char> : formatter<std::string_view, char> {
+        using base_type = formatter<std::string_view, char>;
+
+        template<typename format_context_t>
+        constexpr auto format(const ::mgmake::meta::static_string<N>& value, format_context_t& context) const {
+            return base_type::format(value.view(), context);
         }
     };
 }

@@ -8,6 +8,8 @@
 #include "../meta/type_list.hxx"
 
 #include <print>
+#include <string>
+#include <vector>
 
 namespace mgmake::cli {
 	using task_option = option
@@ -33,6 +35,12 @@ namespace mgmake::cli {
 		::description<"Set the build directory.">
 		::parse<"build_dir", std::filesystem::path>
 		::build;
+
+	using targets_option = option
+		::name<"targets">::alias<"target">
+		::description<"Build a specific target. May be passed multiple times.">
+		::parse<"targets", std::vector<std::string>>
+		::build;
 	
     // Type list of default options
 	//
@@ -43,7 +51,8 @@ namespace mgmake::cli {
 		task_option,
 		verbose_option,
 		dry_run_option,
-		build_dir_option
+		build_dir_option,
+		targets_option
     >;
 }
 

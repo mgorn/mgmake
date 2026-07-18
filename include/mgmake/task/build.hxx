@@ -17,10 +17,17 @@ namespace mgmake::task {
 			::build;
 		
 		template<typename config_t>
-		static inline constexpr std::expected<sys::exit_code, std::string> handle(auto& cmd, auto& opts) {
+		static inline constexpr std::expected<sys::exit_code, std::string> handle(auto& cmd, const auto& opts) {
 			// TODO: This would be the entrypoint/root for build
 			std::println("Build task");
 			std::println("Build dir: {}", opts.template get<cli::build_dir_option>().string());
+			std::println("Verbose: {}", opts.template get<cli::verbose_option>());
+			std::print("Target(s): ");
+			auto& targets = opts.template get<"targets">();
+			for (const auto& target : targets) {
+				std::print("{} ", target);
+			}
+			std::println("");
 			return sys::exit_code::success;
 		}
 	};

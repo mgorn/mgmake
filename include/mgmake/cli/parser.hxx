@@ -7,6 +7,7 @@
 
 #include "../detail/index_bit.hxx"
 #include "../meta/type_list.hxx"
+#include "../meta/type_traits.hxx"
 #include "../sys/shell.hxx"
 
 #include <bitset>
@@ -78,7 +79,7 @@ namespace mgmake::cli {
 					if (not error_hint.empty()) {
 						return std::unexpected(std::format("Invalid argument: {} ({})", arg, error_hint));
 					}
-					return std::unexpected(std::format("Invalid argument: {}", arg));
+					return std::unexpected(std::format("Invalid argument: '{}'", arg));
 				}
 				mgmkassert(is_task or is_switch, "Values for switches should be skipped/parsed by the switch needing it");
 
@@ -100,31 +101,46 @@ namespace mgmake::cli {
 						using value_type = opt_t::storage_value_type;
 
 						// Is it `--switch=value` or `--switch value`?
-						std::string_view value_text{};
-						bool move_next = false; // If we need to move the iterator after consuming an arg
 						if (const auto seperator = arg.find_first_of("="); seperator != std::string_view::npos) {
-							value_text = arg.substr(seperator+1);
+							std::string_view value_text = arg.substr(seperator+1);
 							arg = arg.substr(0, seperator);
-						} else {
-							// Get the next arg
-							auto next_it = std::next(it);
-							if (next_it == args.end()) {
-								return std::unexpected(std::format("argument '{}' expects a value", arg));
+
+							// assign
+							auto result = opt_t::handle_parse(opts, arg, value_text);
+							if (not result) {
+								return std::unexpected(std::format("opt_t::handle_assign failed: {}", result.error()));
 							}
+						} else {
+							if constexpr (meta::is_vector_v<value_type>) {
+								// Get the next args until it can't be parsed as a value
+								for (auto next_it = std::next(it); next_it != args.end(); next_it++) {
+									std::string_view value_text = *next_it;
+									if (value_text.starts_with("-")) {
+										break;
+									}
+									// assign
+									auto result = opt_t::handle_parse(opts, arg, value_text);
+									if (not result) {
+										break;
+									}
+									it = next_it;
+								}
+							} else {
+								// Get the next arg
+								it = std::next(it);
+								if (it == args.end()) {
+									return std::unexpected(std::format("argument '{}' expects a value", arg));
+								}
 
-							value_text = *next_it;
-							move_next = true;
+								std::string_view value_text = *it;
+								// assign
+								auto result = opt_t::handle_parse(opts, arg, value_text);
+								if (not result) {
+									return std::unexpected(std::format("opt_t::handle_assign failed: {}", result.error()));
+								}
+							}
 						}
 
-						// assign
-						auto result = opt_t::handle_parse(opts, arg, value_text);
-						if (not result) {
-							return std::unexpected(std::format("opt_t::handle_assign failed: {}", result.error()));
-						}
-
-						// Move the iterator
-						if (move_next)
-							it = std::next(it);
 						return true;
 					}
 					

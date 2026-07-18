@@ -47,8 +47,11 @@
 #define MGMAKE_META_STATIC_STRING_HXX
 
 #include <array>
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
+#include <format>
+#include <functional>
 #include <string_view>
 
 // static_string carries compile-time strings through templates without relying on runtime storage.
@@ -140,6 +143,16 @@ namespace std {
             const ::mgmake::meta::static_string<N>& value
         ) const noexcept {
             return value.hash();
+        }
+    };
+
+	template<std::size_t N>
+    struct formatter<::mgmake::meta::static_string<N>, char> : formatter<std::string_view, char> {
+        using base_type = formatter<std::string_view, char>;
+
+        template<typename format_context_t>
+        constexpr auto format(const ::mgmake::meta::static_string<N>& value, format_context_t& context) const {
+            return base_type::format(value.view(), context);
         }
     };
 }
@@ -919,6 +932,78 @@ namespace mgmake::detail {
 
 // skipped duplicate include: include/mgmake/meta/type_list.hxx
 
+// ===== begin include/mgmake/meta/type_traits.hxx =====
+#pragma once
+
+#ifndef MGMAKE_META_TYPE_TRAITS_HXX
+#define MGMAKE_META_TYPE_TRAITS_HXX
+
+#include <array>
+#include <type_traits>
+#include <vector>
+
+namespace mgmake::meta {
+	template<typename T>
+	struct array_traits : std::false_type {};
+
+	template<typename T, std::size_t size_v>
+	struct array_traits<std::array<T, size_v>> : std::true_type {
+		using type = std::array<T, size_v>;
+		using value_type = T;
+
+		static inline constexpr std::size_t size = size_v;
+
+		using size_type = typename type::size_type;
+		using difference_type = typename type::difference_type;
+		using reference = typename type::reference;
+		using const_reference = typename type::const_reference;
+		using pointer = typename type::pointer;
+		using const_pointer = typename type::const_pointer;
+		using iterator = typename type::iterator;
+		using const_iterator = typename type::const_iterator;
+	};
+
+	template<typename T>
+	using array_traits_t = array_traits<std::remove_cvref_t<T>>;
+
+	template<typename T>
+	concept array_type = array_traits_t<T>::value;
+
+	template<typename T>
+	inline constexpr bool is_array_v = array_traits<std::remove_cvref_t<T>>::value;
+
+	template<typename T>
+	struct vector_traits : std::false_type {};
+
+	template<typename T, typename allocator_t>
+	struct vector_traits<std::vector<T, allocator_t>> : std::true_type {
+		using type = std::vector<T, allocator_t>;
+		using value_type = T;
+		using allocator_type = allocator_t;
+
+		using size_type = typename type::size_type;
+		using difference_type = typename type::difference_type;
+		using reference = typename type::reference;
+		using const_reference = typename type::const_reference;
+		using pointer = typename type::pointer;
+		using const_pointer = typename type::const_pointer;
+		using iterator = typename type::iterator;
+		using const_iterator = typename type::const_iterator;
+	};
+
+	template<typename T>
+	using vector_traits_t = vector_traits<std::remove_cvref_t<T>>;
+
+	template<typename T>
+	concept vector_type = vector_traits_t<T>::value;
+
+	template<typename T>
+	inline constexpr bool is_vector_v = vector_traits<std::remove_cvref_t<T>>::value;
+}
+
+#endif // MGMAKE_META_TYPE_TRAITS_HXX// ===== end include/mgmake/meta/type_traits.hxx =====
+
+
 // ===== begin include/mgmake/sys/shell.hxx =====
 #pragma once
 
@@ -1155,7 +1240,7 @@ namespace mgmake::cli {
 					if (not error_hint.empty()) {
 						return std::unexpected(std::format("Invalid argument: {} ({})", arg, error_hint));
 					}
-					return std::unexpected(std::format("Invalid argument: {}", arg));
+					return std::unexpected(std::format("Invalid argument: '{}'", arg));
 				}
 				mgmkassert(is_task or is_switch, "Values for switches should be skipped/parsed by the switch needing it");
 
@@ -1177,31 +1262,46 @@ namespace mgmake::cli {
 						using value_type = opt_t::storage_value_type;
 
 						// Is it `--switch=value` or `--switch value`?
-						std::string_view value_text{};
-						bool move_next = false; // If we need to move the iterator after consuming an arg
 						if (const auto seperator = arg.find_first_of("="); seperator != std::string_view::npos) {
-							value_text = arg.substr(seperator+1);
+							std::string_view value_text = arg.substr(seperator+1);
 							arg = arg.substr(0, seperator);
-						} else {
-							// Get the next arg
-							auto next_it = std::next(it);
-							if (next_it == args.end()) {
-								return std::unexpected(std::format("argument '{}' expects a value", arg));
+
+							// assign
+							auto result = opt_t::handle_parse(opts, arg, value_text);
+							if (not result) {
+								return std::unexpected(std::format("opt_t::handle_assign failed: {}", result.error()));
 							}
+						} else {
+							if constexpr (meta::is_vector_v<value_type>) {
+								// Get the next args until it can't be parsed as a value
+								for (auto next_it = std::next(it); next_it != args.end(); next_it++) {
+									std::string_view value_text = *next_it;
+									if (value_text.starts_with("-")) {
+										break;
+									}
+									// assign
+									auto result = opt_t::handle_parse(opts, arg, value_text);
+									if (not result) {
+										break;
+									}
+									it = next_it;
+								}
+							} else {
+								// Get the next arg
+								it = std::next(it);
+								if (it == args.end()) {
+									return std::unexpected(std::format("argument '{}' expects a value", arg));
+								}
 
-							value_text = *next_it;
-							move_next = true;
+								std::string_view value_text = *it;
+								// assign
+								auto result = opt_t::handle_parse(opts, arg, value_text);
+								if (not result) {
+									return std::unexpected(std::format("opt_t::handle_assign failed: {}", result.error()));
+								}
+							}
 						}
 
-						// assign
-						auto result = opt_t::handle_parse(opts, arg, value_text);
-						if (not result) {
-							return std::unexpected(std::format("opt_t::handle_assign failed: {}", result.error()));
-						}
-
-						// Move the iterator
-						if (move_next)
-							it = std::next(it);
 						return true;
 					}
 					
@@ -1405,11 +1505,11 @@ namespace mgmake::cli {
 	template<typename type_t>
 	struct value_parser {
 		// Hint for the value type in help menu
-		static inline constexpr std::string_view help_hint = "value";
+		static inline constexpr meta::static_string help_hint = "value";
 	};
 
 	template<> struct value_parser<std::string> {
-		static inline constexpr std::string_view help_hint = "text";
+		static inline constexpr meta::static_string help_hint = "string";
 
 		[[nodiscard]] static std::expected<std::string, std::string> parse(std::string_view text) {
 			return std::string{ text };
@@ -1417,7 +1517,7 @@ namespace mgmake::cli {
 	};
 
 	template<> struct value_parser<int> {
-		static inline constexpr std::string_view help_hint = "integer";
+		static inline constexpr meta::static_string help_hint = "integer";
 
 		[[nodiscard]] static std::expected<int, std::string> parse(std::string_view text) {
 			if (text.empty()) {
@@ -1434,7 +1534,7 @@ namespace mgmake::cli {
 	};
 
 	template<> struct value_parser<std::filesystem::path> {
-		static inline constexpr std::string_view help_hint = "path";
+		static inline constexpr meta::static_string help_hint = "path";
 
 		[[nodiscard]] static std::expected<std::filesystem::path, std::string> parse(std::string_view text) {
 			std::filesystem::path path{ text };
@@ -1442,6 +1542,15 @@ namespace mgmake::cli {
 				return path;
 			}
 			return std::filesystem::current_path() / path;
+		}
+	};
+
+	template<typename type_t> struct value_parser<std::vector<type_t>> {
+		using item_parser = value_parser<type_t>;
+		static inline constexpr meta::static_string help_hint = item_parser::help_hint + meta::static_string{"s..."};
+
+		[[nodiscard]] static std::expected<type_t, std::string> parse(std::string_view text) {
+			return item_parser::parse(text);
 		}
 	};
 }
@@ -1679,6 +1788,7 @@ namespace mgmake::cli {
     template<typename storage_t = meta::type_map<>>
     struct option_impl {
         MGMAKE_TYPE_CONSUMER_VALUE_FIELD(name, meta::static_string{ "" });
+        MGMAKE_TYPE_CONSUMER_VALUE_FIELD(alias, meta::static_string{ "" });
         MGMAKE_TYPE_CONSUMER_VALUE_FIELD(description, meta::static_string{ "" });
 	    MGMAKE_TYPE_CONSUMER_VALUE_FIELD(short_name, '\0');
 	    MGMAKE_TYPE_CONSUMER_VALUE_FIELD(callback, nullptr);
@@ -1727,7 +1837,11 @@ namespace mgmake::cli {
 		}
 
 		static inline constexpr bool match_long(std::string_view arg) {
-			return arg.starts_with(name_value);
+			if constexpr (alias_value.empty()) {
+				return arg.starts_with(name_value);
+			} else {
+				return arg.starts_with(name_value) or arg.starts_with(alias_value);
+			}
 		}
 
 		static inline constexpr bool match_short(std::string_view arg) {
@@ -1760,8 +1874,13 @@ namespace mgmake::cli {
 					return std::unexpected(std::format("Error parsing value for arg '{}': {}", arg, result.error()));
 				}
 
-				// assign
-				opts.template set<storage_key()>(result.value());
+				// If its a vector, emplace back
+				if constexpr (meta::is_vector_v<storage_value_type>) {
+					opts.template get<storage_key()>().emplace_back(result.value());
+				} else {
+					// otherwise just assign
+					opts.template set<storage_key()>(result.value());
+				}
 			}
 			return {};
 		}
@@ -1786,6 +1905,7 @@ namespace mgmake::cli {
         using builder_type = builder_t;
 
         MGMAKE_TYPE_BUILDER_VALUE_FIELD(option_builder, name, meta::static_string);
+        MGMAKE_TYPE_BUILDER_VALUE_FIELD(option_builder, alias, meta::static_string);
         MGMAKE_TYPE_BUILDER_VALUE_FIELD(option_builder, description, meta::static_string);
         MGMAKE_TYPE_BUILDER_VALUE_FIELD(option_builder, short_name, char);
         MGMAKE_TYPE_BUILDER_VALUE_FIELD(option_builder, callback, auto);
@@ -1822,6 +1942,8 @@ namespace mgmake::cli {
 // skipped duplicate include: include/mgmake/meta/type_list.hxx
 
 #include <print>
+#include <string>
+#include <vector>
 
 namespace mgmake::cli {
 	using task_option = option
@@ -1847,6 +1969,12 @@ namespace mgmake::cli {
 		::description<"Set the build directory.">
 		::parse<"build_dir", std::filesystem::path>
 		::build;
+
+	using targets_option = option
+		::name<"targets">::alias<"target">
+		::description<"Build a specific target. May be passed multiple times.">
+		::parse<"targets", std::vector<std::string>>
+		::build;
 	
     // Type list of default options
 	//
@@ -1857,7 +1985,8 @@ namespace mgmake::cli {
 		task_option,
 		verbose_option,
 		dry_run_option,
-		build_dir_option
+		build_dir_option,
+		targets_option
     >;
 }
 
@@ -1923,10 +2052,17 @@ namespace mgmake::task {
 			::build;
 		
 		template<typename config_t>
-		static inline constexpr std::expected<sys::exit_code, std::string> handle(auto& cmd, auto& opts) {
+		static inline constexpr std::expected<sys::exit_code, std::string> handle(auto& cmd, const auto& opts) {
 			// TODO: This would be the entrypoint/root for build
 			std::println("Build task");
 			std::println("Build dir: {}", opts.template get<cli::build_dir_option>().string());
+			std::println("Verbose: {}", opts.template get<cli::verbose_option>());
+			std::print("Target(s): ");
+			auto& targets = opts.template get<"targets">();
+			for (const auto& target : targets) {
+				std::print("{} ", target);
+			}
+			std::println("");
 			return sys::exit_code::success;
 		}
 	};
