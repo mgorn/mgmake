@@ -85,7 +85,71 @@ namespace mgmake::cli {
 				// Shrimply doesn't exit?
 				auto matches = match<list_type>(arg);
 				if (not matches.any()) {
-					return std::unexpected(std::format("Unknown argument: '{}'", arg));
+					std::string error_hint = "";
+
+					// Trim the arg
+					std::string_view arg_prefix = "";
+					std::string_view arg_name = arg;
+					if (is_long) {
+						arg_prefix = arg.substr(0, 2);
+						arg_name = arg.substr(2);
+					} else if (is_short) {
+						arg_prefix = arg.substr(0, 1);
+						arg_name = arg.substr(1);
+					}					
+
+					if (is_long) {
+						// 1) Use string distance algorithm to find the closest
+						std::size_t dist = -1;
+						if (error_hint.empty()) {
+							std::string closest = "";
+							list_type::for_each([&]<typename opt_t>{
+								constexpr auto name = opt_t::name_value;
+								if (not name.empty()) {
+									auto name_dist = name.distance(arg_name);
+									if (name_dist < dist) {
+										closest = name;
+										dist = name_dist;
+									}
+								}
+
+								constexpr auto alias = opt_t::alias_value;
+								if (not alias.empty()) {
+									auto alias_dist = alias.distance(arg_name);
+									if (alias_dist < dist) {
+										closest = alias;
+										dist = alias_dist;
+									}
+								}
+							});
+							if (dist < arg.size()) {
+								error_hint = std::format("Did you mean '{}{}'?", arg_prefix, closest);
+							}
+						}
+
+						// 2) Check if its contained in a name
+						if (error_hint.empty() or (dist > 1)) {
+							list_type::for_each([&]<typename opt_t>{
+								constexpr auto name = opt_t::name_value;
+								// If arg is in name
+								if (name.contains(arg_name)) {
+									error_hint = std::format("Did you mean '{}{}'?", arg_prefix, name);
+								}
+
+								// or the alias
+								constexpr auto alias = opt_t::alias_value;
+								if (alias.contains(arg_name)) {
+									error_hint = std::format("Did you mean '{}{}'?", arg_prefix, alias);
+								}
+							});
+						}
+					}
+
+					if (error_hint.empty()) {
+						return std::unexpected(std::format("Unknown argument: '{}'", arg));
+					} else {
+						return std::unexpected(std::format("Unknown argument: '{}' ({})", arg, error_hint));
+					}
 				}
 				// If this happens, there's a conflict with option names (either long or short)
 				mgmkassert(matches.count() == 1, "Matched arg to more than one option?");

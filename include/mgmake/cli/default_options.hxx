@@ -25,19 +25,19 @@ namespace mgmake::cli {
 		::build;
 	
 	using dry_run_option = option
-		::name<"dry-run">
+		::name<"dry-run">::short_name<'d'>
 		::description<"Print commands without executing them.">
 		::set<"dry_run", true>
 		::build;
 
 	using build_dir_option = option
-		::name<"build-dir">
+		::name<"build-dir">::short_name<'b'>
 		::description<"Set the build directory.">
 		::parse<"build_dir", std::filesystem::path>
 		::build;
 
 	using targets_option = option
-		::name<"targets">::alias<"target">
+		::name<"targets">::alias<"target">::short_name<'t'>
 		::description<"Build a specific target. May be passed multiple times.">
 		::parse<"targets", std::vector<std::string>>
 		::build;

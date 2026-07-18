@@ -18,18 +18,21 @@
 // or applied to another variadic template with `apply`.
 
 namespace mgmake::meta {
-	template<typename... types_t>
+	template<typename... type_ts>
 	struct type_list {
 		static consteval std::size_t size() {
-			return sizeof...(types_t);
+			return sizeof...(type_ts);
+		}
+		static consteval bool empty() {
+			return size() == 0;
 		}
 
 		template<std::size_t index>
-		using type_at = std::tuple_element_t<index, std::tuple<types_t...>>;
+		using type_at = std::tuple_element_t<index, std::tuple<type_ts...>>;
 
 		template<typename type_t>
 		static consteval std::size_t count() {
-			return (std::size_t{0} + ... + (std::same_as<type_t, types_t> ? 1 : 0));
+			return (std::size_t{0} + ... + (std::same_as<type_t, type_ts> ? 1 : 0));
 		}
 
 		template<typename type_t>
@@ -47,7 +50,7 @@ namespace mgmake::meta {
 			static_assert(unique<type_t>(), "type_list::index<type_t>() requires exactly one matching type.");
 
 			constexpr std::array<bool, size()> matches {
-				std::same_as<type_t, types_t>...
+				std::same_as<type_t, type_ts>...
 			};
 
 			for (std::size_t i = 0; i < matches.size(); ++i) {
@@ -59,15 +62,15 @@ namespace mgmake::meta {
 			return size();
 		}
 
-		template<typename... other_types_t>
-		using append_types = type_list<types_t..., other_types_t...>;
+		template<typename... other_type_ts>
+		using append_types = type_list<type_ts..., other_type_ts...>;
 
 		template<typename type_t>
 		using append = append_types<type_t>;
 
 	private:
 		// Needed because each unique append depends on the list produced by the previous append.
-		template<typename current_list_t, typename... other_types_t>
+		template<typename current_list_t, typename... other_type_ts>
 		struct append_types_unique_type {
 			using type = current_list_t;
 		};
@@ -86,7 +89,7 @@ namespace mgmake::meta {
 			>::type;
 		};
 
-		template<typename current_list_t, typename... other_types_t>
+		template<typename current_list_t, typename... other_type_ts>
 		struct prepend_types_unique_type {
 			using type = current_list_t;
 		};
@@ -106,10 +109,10 @@ namespace mgmake::meta {
 		};
 
 	public:
-		template<typename... other_types_t>
+		template<typename... other_type_ts>
 		using append_types_unique = typename append_types_unique_type<
-			type_list<types_t...>,
-			other_types_t...
+			type_list<type_ts...>,
+			other_type_ts...
 		>::type;
 
 		template<typename type_t, bool check = true>
@@ -122,16 +125,16 @@ namespace mgmake::meta {
 		template<typename type_t, bool check = true>
 		using append_unique = typename append_unique_type<type_t, check>::type;
 
-		template<typename... other_types_t>
-		using prepend_types = type_list<other_types_t..., types_t...>;
+		template<typename... other_type_ts>
+		using prepend_types = type_list<other_type_ts..., type_ts...>;
 
 		template<typename type_t>
 		using prepend = prepend_types<type_t>;
 
-		template<typename... other_types_t>
+		template<typename... other_type_ts>
 		using prepend_types_unique = typename prepend_types_unique_type<
-			type_list<types_t...>,
-			other_types_t...
+			type_list<type_ts...>,
+			other_type_ts...
 		>::type;
 
 		template<typename type_t, bool check = true>
@@ -140,7 +143,7 @@ namespace mgmake::meta {
 
 			using type = std::conditional_t<
 				has<type_t>(),
-				type_list<types_t...>,
+				type_list<type_ts...>,
 				prepend<type_t>
 			>;
 		};
@@ -162,7 +165,7 @@ namespace mgmake::meta {
 
 		// Invoke a variadic template with this list's stored type pack.
 		template<template<typename...> typename pack_t>
-		using apply = pack_t<types_t...>;
+		using apply = pack_t<type_ts...>;
 
 	private:
 		template<auto operation, typename state_t, typename... remaining_t>
@@ -187,7 +190,7 @@ namespace mgmake::meta {
 		//     `operation.template operator()<state_t, type_t>()`
 		// and return `std::type_identity<next_state_t>`.
 		template<auto operation, typename initial_t>
-		using fold = typename fold_type<operation, initial_t, types_t...>::type;
+		using fold = typename fold_type<operation, initial_t, type_ts...>::type;
 
 		// Keep the types for which the consteval NTTP predicate returns true.
 		//
@@ -249,27 +252,37 @@ namespace mgmake::meta {
 			type_list<>
 		>;
 
+		template<typename callable_t>
+		static constexpr void for_each(callable_t&& callable) {
+			(callable.template operator()<type_ts>(), ...);
+		}
+
 		// Invoke the callable with the type at the runtime-selected index.
 		template<typename callable_t>
 		static constexpr decltype(auto) type_switch(callable_t&& callable, std::size_t index) {
 			// A return type cannot be inferred without at least one stored type.
-			static_assert(size() > 0, "Cannot type-switch over an empty type_list.");
-			mgmkassert(index < size(), "type_switch index is outside the bounds of the type_list");
+			//static_assert(size() > 0, "Cannot type-switch over an empty type_list.");
+			// If the list is empty, return void
+			if constexpr (empty()) {
+				return;
+			} else {
+				mgmkassert(index < size(), "type_switch index is outside the bounds of the type_list");
 
-			using first_type = type_at<0>;
-			using return_t = decltype(std::declval<callable_t&&>().template operator()<first_type>());
-			// A single dispatch table requires every specialization to share a return type.
-			static_assert((std::same_as<return_t, decltype(std::declval<callable_t&&>().template operator()<types_t>())> and ...), "Every type_switch invocation must return the same type.");
+				using first_type = type_at<0>;
+				using return_t = decltype(std::declval<callable_t&&>().template operator()<first_type>());
+				// A single dispatch table requires every specialization to share a return type.
+				static_assert((std::same_as<return_t, decltype(std::declval<callable_t&&>().template operator()<type_ts>())> and ...), "Every type_switch invocation must return the same type.");
 
-			using dispatch_t = return_t (*)(callable_t&&);
-			// Generate one reusable dispatch entry for each type.
-			static constexpr std::array<dispatch_t, size()> dispatch {
-				+[](callable_t&& callable) -> return_t {
-					return std::forward<callable_t>(callable).template operator()<types_t>();
-				}...
-			};
+				using dispatch_t = return_t (*)(callable_t&&);
+				// Generate one reusable dispatch entry for each type.
+				static constexpr std::array<dispatch_t, size()> dispatch {
+					+[](callable_t&& callable) -> return_t {
+						return std::forward<callable_t>(callable).template operator()<type_ts>();
+					}...
+				};
 
-			return dispatch[index](std::forward<callable_t>(callable));
+				return dispatch[index](std::forward<callable_t>(callable));
+			}
 		}
 	};
 }

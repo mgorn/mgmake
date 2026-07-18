@@ -35,6 +35,10 @@ namespace mgmake::meta {
             return size() == 0;
         }
 
+		[[nodiscard]] constexpr bool contains(auto other) const noexcept {
+            return view().contains(other);
+        }
+
         [[nodiscard]] constexpr std::string_view view() const noexcept {
             return { m_data.data(), size() };
         }
@@ -61,6 +65,34 @@ namespace mgmake::meta {
 
             return result;
         }
+
+		[[nodiscard]] constexpr std::size_t distance(const std::convertible_to<std::string_view> auto& other) const noexcept {
+			const auto lhs = view();
+			const std::string_view rhs = other;
+
+			std::array<std::size_t, N> previous{};
+			std::array<std::size_t, N> current{};
+
+			for (std::size_t i = 0; i <= lhs.size(); ++i) {
+				previous[i] = i;
+			}
+
+			for (std::size_t j = 1; j <= rhs.size(); ++j) {
+				current[0] = j;
+
+				for (std::size_t i = 1; i <= lhs.size(); ++i) {
+					const auto deletion = previous[i] + 1;
+					const auto insertion = current[i - 1] + 1;
+					const auto substitution = previous[i - 1] + (lhs[i - 1] == rhs[j - 1] ? 0 : 1);
+
+					current[i] = std::min({ deletion, insertion, substitution });
+				}
+
+				previous.swap(current);
+			}
+
+			return previous.back();
+		}
     };
 
     template<std::size_t N1, std::size_t N2>
