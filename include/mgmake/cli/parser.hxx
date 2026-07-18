@@ -52,7 +52,7 @@ namespace mgmake::cli {
 
 					// 1) See if it could have been a short switch
 					if (error_hint.empty()) {
-						auto matches = match(std::format("-{}", arg));
+						auto matches = match<list_type>(std::format("-{}", arg));
 						if (matches.any()) {
 							error_hint = std::format("Did you mean '-{}'?", arg);
 						}
@@ -60,7 +60,7 @@ namespace mgmake::cli {
 
 					// 2) See if it could have been a long switch
 					if (error_hint.empty()) {
-						auto matches = match(std::format("--{}", arg));
+						auto matches = match<list_type>(std::format("--{}", arg));
 						if (matches.any()) {
 							error_hint = std::format("Did you mean '--{}'?", arg);
 						}
@@ -68,8 +68,7 @@ namespace mgmake::cli {
 
 					// 3) See if the arg is meant to be used as an task
 					if (error_hint.empty()) {
-						using task_parser = parser<cli::option_storage<tasks_type>>;
-						auto matches = task_parser::match(arg);
+						auto matches = match<tasks_type>(arg);
 						if (matches.any()) {
 							auto corrected = std::format("{} {} ...", cmd.program_name(), arg);
 							error_hint = std::format("'{}' is a task, did you mean '{}'?", arg, corrected);
@@ -84,7 +83,7 @@ namespace mgmake::cli {
 				mgmkassert(is_task or is_switch, "Values for switches should be skipped/parsed by the switch needing it");
 
 				// Shrimply doesn't exit?
-				auto matches = match(arg);
+				auto matches = match<list_type>(arg);
 				if (not matches.any()) {
 					return std::unexpected(std::format("Unknown argument: '{}'", arg));
 				}
@@ -175,13 +174,15 @@ namespace mgmake::cli {
             return opts;
         }
 
-		using matches_type = std::bitset<list_type::size()>;
-		static inline constexpr matches_type match(std::string_view arg) {
+		template<typename opts_t>
+		using matches_type = std::bitset<opts_t::size()>;
+		template<typename opts_t>
+		static inline constexpr matches_type<opts_t> match(std::string_view arg) {
 			return []<std::size_t... Is>(std::index_sequence<Is...>, std::string_view arg) {
-				matches_type matches{};
-				(matches.set(Is, list_type::template type_at<Is>::match(arg)), ...);
+				matches_type<opts_t> matches{};
+				(matches.set(Is, opts_t::template type_at<Is>::match(arg)), ...);
 				return matches;
-			}(std::make_index_sequence<list_type::size()>{}, arg);
+			}(std::make_index_sequence<opts_t::size()>{}, arg);
 		}
     };
 }
