@@ -12,7 +12,7 @@ namespace mgmake::task {
 		using option_type = cli::option
 			::name<"build">
 			::description<"Build the project.">
-			::set<"task", std::size_t{1}>
+			::set<"task", std::size_t{0}>
 			::task<true>::flag<false>
 			::build;
 		

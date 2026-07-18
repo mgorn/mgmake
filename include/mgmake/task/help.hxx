@@ -16,7 +16,7 @@ namespace mgmake::task {
 		using option_type = cli::option
 			::name<"help">::short_name<'h'>
 			::description<"Show help.">
-			::set<"task", std::size_t{0}>
+			::set<"task", std::size_t{1}>
 			::task<true>
 			::build;
 		
