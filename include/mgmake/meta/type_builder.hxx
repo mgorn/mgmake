@@ -10,6 +10,8 @@
 namespace mgmake::meta {
     template<typename storage_t = type_map<>>
     struct type_builder {
+		using storage_type = storage_t;
+		
         template<static_string key_v, bool check_v = true>
         using get = typename storage_t::template at<type_value<key_v>, check_v>;
 
@@ -21,8 +23,12 @@ namespace mgmake::meta {
     };
 
 	template<typename builder_t>
-	concept is_builder = requires {
+	concept has_builder_alias = requires {
 		typename builder_t::build;
+	};
+	template<auto builder_v>
+	concept has_builder_fn = requires {
+		{ builder_v.build(); }
 	};
 }
 
