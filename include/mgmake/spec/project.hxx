@@ -3,6 +3,8 @@
 #ifndef MGMAKE_SPEC_PROJECT_HXX
 #define MGMAKE_SPEC_PROJECT_HXX
 
+#include "traits.hxx"
+
 #include "../meta/type_builder.hxx"
 
 namespace mgmake::spec {
@@ -13,6 +15,20 @@ namespace mgmake::spec {
 		MGMAKE_TYPE_CONSUMER_VALUE_FIELD(name, meta::static_string{ "" });
 		// Targets directly given to the project
 		MGMAKE_TYPE_CONSUMER_TYPE_FIELD(targets, meta::type_list<>);
+
+		// Uses collect_targets to recursively get all targets for the project
+		using all_targets = typename targets::template fold<[]<typename state_t, typename target_t>{
+			// If the target can also collect targets
+			if constexpr (collects_targets<target_t>) {
+				// Collect them
+				using children_t = target_t::collect_targets;
+				// Append the collected
+				return std::type_identity<typename state_t::template append_list_unique<children_t>::template append_types_unique<target_t>>{};
+			} else {
+				// Doesn't collect, just append
+				return std::type_identity<typename state_t::template append_types_unique<target_t>>{};
+			}
+		}, meta::type_list<>>;
 	};
 
 	template<typename builder_t = meta::type_builder<>>
@@ -27,9 +43,9 @@ namespace mgmake::spec {
 		template<typename targets_t = meta::type_list<>>
 		using set_targets = set_targets_impl<typename targets_t::template fold<[]<typename list_t, typename target_t> consteval {
 			if constexpr (meta::is_builder<target_t>) {
-				return std::type_identity<typename list_t::template append_unique<typename target_t::build>>{};
+				return std::type_identity<typename list_t::template append_unique<typename target_t::build, false>>{};
 			} else {
-				return std::type_identity<typename list_t::template append_unique<target_t>>{};
+				return std::type_identity<typename list_t::template append_unique<target_t, false>>{};
 			}
 		}, meta::type_list<>>>;
 

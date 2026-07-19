@@ -22,10 +22,19 @@ namespace mgmake {
     struct config_builder {
 		using builder_type = builder_t;
 
-		MGMAKE_TYPE_BUILDER_TYPE_FIELD(config_builder, project);
+		MGMAKE_TYPE_BUILDER_TYPE_FIELD_AS(config_builder, project_impl, "project");
 		MGMAKE_TYPE_BUILDER_TYPE_FIELD(config_builder, toolchains);
 		MGMAKE_TYPE_BUILDER_TYPE_FIELD(config_builder, tasks);
 		MGMAKE_TYPE_BUILDER_TYPE_FIELD(config_builder, options);
+
+		template<typename project_t>
+		using project = project_impl<typename std::invoke_result_t<decltype([]{
+			if constexpr (meta::is_builder<project_t>) {
+				return std::type_identity<typename project_t::build>{};
+			} else {
+				return std::type_identity<project_t>{};
+			}
+		})>::type>;
 
 		using build = std::decay_t<std::invoke_result_t<decltype([] consteval {
 			/* Automatically add task options to options */

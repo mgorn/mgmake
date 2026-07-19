@@ -2191,6 +2191,27 @@ namespace mgmake::task {
 #define MGMAKE_TASK_BUILD_HXX
 
 // skipped duplicate include: include/mgmake/cli/default_options.hxx
+
+// ===== begin include/mgmake/spec/traits.hxx =====
+#pragma once
+
+#ifndef MGMAKE_SPEC_TRAITS_HXX
+#define MGMAKE_SPEC_TRAITS_HXX
+
+namespace mgmake::spec {
+	template<typename spec_t>
+	concept has_links = requires {
+		typename spec_t::links;
+	};
+
+	template<typename spec_t>
+	concept collects_targets = requires {
+		typename spec_t::collect_targets;
+	};
+}
+
+#endif // MGMAKE_SPEC_TRAITS_HXX// ===== end include/mgmake/spec/traits.hxx =====
+
 // skipped duplicate include: include/mgmake/sys/exit_code.hxx
 
 #include <print>
@@ -2219,6 +2240,20 @@ namespace mgmake::task {
 				}
 			}
 			std::println("");
+
+			using config_type = config_t;
+			using project_type = config_type::project_type;
+			if constexpr (not std::is_same_v<project_type, void>) {
+				using targets_type = project_type::all_targets;
+
+				targets_type::for_each([]<typename target_t>{
+					if constexpr (spec::collects_targets<target_t>) {
+						std::println("PROJ LINKS TARGET: '{}'", target_t::name_value);
+					} else {
+						std::println("PROJ TARGET: '{}'", target_t::name_value);
+					}
+				});
+			}
 			return sys::exit_code::success;
 		}
 	};
@@ -2393,10 +2428,19 @@ namespace mgmake {
     struct config_builder {
 		using builder_type = builder_t;
 
-		MGMAKE_TYPE_BUILDER_TYPE_FIELD(config_builder, project);
+		MGMAKE_TYPE_BUILDER_TYPE_FIELD_AS(config_builder, project_impl, "project");
 		MGMAKE_TYPE_BUILDER_TYPE_FIELD(config_builder, toolchains);
 		MGMAKE_TYPE_BUILDER_TYPE_FIELD(config_builder, tasks);
 		MGMAKE_TYPE_BUILDER_TYPE_FIELD(config_builder, options);
+
+		template<typename project_t>
+		using project = project_impl<typename std::invoke_result_t<decltype([]{
+			if constexpr (meta::is_builder<project_t>) {
+				return std::type_identity<typename project_t::build>{};
+			} else {
+				return std::type_identity<project_t>{};
+			}
+		})>::type>;
 
 		using build = std::decay_t<std::invoke_result_t<decltype([] consteval {
 			/* Automatically add task options to options */
@@ -2632,6 +2676,8 @@ namespace mgmake::spec {
 #ifndef MGMAKE_SPEC_PROJECT_HXX
 #define MGMAKE_SPEC_PROJECT_HXX
 
+// skipped duplicate include: include/mgmake/spec/traits.hxx
+
 // skipped duplicate include: include/mgmake/meta/type_builder.hxx
 
 namespace mgmake::spec {
@@ -2642,6 +2688,20 @@ namespace mgmake::spec {
 		MGMAKE_TYPE_CONSUMER_VALUE_FIELD(name, meta::static_string{ "" });
 		// Targets directly given to the project
 		MGMAKE_TYPE_CONSUMER_TYPE_FIELD(targets, meta::type_list<>);
+
+		// Uses collect_targets to recursively get all targets for the project
+		using all_targets = typename targets::template fold<[]<typename state_t, typename target_t>{
+			// If the target can also collect targets
+			if constexpr (collects_targets<target_t>) {
+				// Collect them
+				using children_t = target_t::collect_targets;
+				// Append the collected
+				return std::type_identity<typename state_t::template append_list_unique<children_t>::template append_types_unique<target_t>>{};
+			} else {
+				// Doesn't collect, just append
+				return std::type_identity<typename state_t::template append_types_unique<target_t>>{};
+			}
+		}, meta::type_list<>>;
 	};
 
 	template<typename builder_t = meta::type_builder<>>
@@ -2656,9 +2716,9 @@ namespace mgmake::spec {
 		template<typename targets_t = meta::type_list<>>
 		using set_targets = set_targets_impl<typename targets_t::template fold<[]<typename list_t, typename target_t> consteval {
 			if constexpr (meta::is_builder<target_t>) {
-				return std::type_identity<typename list_t::template append_unique<typename target_t::build>>{};
+				return std::type_identity<typename list_t::template append_unique<typename target_t::build, false>>{};
 			} else {
-				return std::type_identity<typename list_t::template append_unique<target_t>>{};
+				return std::type_identity<typename list_t::template append_unique<target_t, false>>{};
 			}
 		}, meta::type_list<>>>;
 
@@ -2682,6 +2742,8 @@ namespace mgmake::spec {
 
 #ifndef MGMAKE_SPEC_TARGET_HXX
 #define MGMAKE_SPEC_TARGET_HXX
+
+// skipped duplicate include: include/mgmake/spec/traits.hxx
 
 // skipped duplicate include: include/mgmake/meta/type_builder.hxx
 
@@ -2710,7 +2772,19 @@ namespace mgmake::spec {
 		MGMAKE_TYPE_CONSUMER_TYPE_FIELD(include_dirs, meta::type_list<>);
 		MGMAKE_TYPE_CONSUMER_TYPE_FIELD(links, meta::type_list<>);
 
-		
+		// Recursively collect all used targets
+		using collect_targets = typename links::template fold<[]<typename state_t, typename link_t>{
+			// If the link can also collect targets
+			if constexpr (collects_targets<link_t>) {
+				// Collect them
+				using children_t = link_t::collect_targets;
+				// Append the collected
+				return std::type_identity<typename state_t::template append_list_unique<children_t>::template append_types_unique<link_t>>{};
+			} else {
+				// Doesn't collect, just append
+				return std::type_identity<typename state_t::template append_types_unique<link_t>>{};
+			}
+		}, meta::type_list<>>;
 	};
 
 	template<typename builder_t = meta::type_builder<>>
@@ -2724,7 +2798,7 @@ namespace mgmake::spec {
 		MGMAKE_TYPE_BUILDER_TYPE_FIELD_AS(target_builder, set_sources, "sources");
 		// Takes a `meta::type_list` of `meta::type_value`s of `meta::static_string`s for include dirs
 		MGMAKE_TYPE_BUILDER_TYPE_FIELD_AS(target_builder, set_include_dirs, "include_dirs");
-		// Takes a `meta::type_list` of link dependencies, either targets or `meta::static_string`s for system libs
+		// Takes a `meta::type_list` of link dependencies
 		MGMAKE_TYPE_BUILDER_TYPE_FIELD_AS(target_builder, set_links_impl, "links");
 
 		template<target_type type_v>
@@ -2790,7 +2864,7 @@ namespace mgmake::spec {
 		template<typename link_t>
 		using link = links<link_t>;
 
-		using build = typename builder_type::template build<project_impl>;
+		using build = typename builder_type::template build<target_impl>;
 	};
 	using target = target_builder<>;
 

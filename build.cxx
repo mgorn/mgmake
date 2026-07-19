@@ -30,16 +30,14 @@ using sdl = sdlproj::library
 
 using testlib = library::name<"testlib">
 	::type<library_type::interface>
-	::include_dirs<"test">
-	::link<glm>
-	::link<sdl>;
+	::include_dirs<"test">;
 
 using builder = executable::name<"build">
 	::sources<"build.cxx">
 	::link<testlib>;
 
 using proj = project::name<"mgmake">
-	::target<builder>;
+	::targets<builder>;
 
 // Configure MGMake
 using c = config::project<proj>;

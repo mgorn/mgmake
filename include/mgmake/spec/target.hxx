@@ -3,6 +3,8 @@
 #ifndef MGMAKE_SPEC_TARGET_HXX
 #define MGMAKE_SPEC_TARGET_HXX
 
+#include "traits.hxx"
+
 #include "../meta/type_builder.hxx"
 
 namespace mgmake::spec {
@@ -30,7 +32,19 @@ namespace mgmake::spec {
 		MGMAKE_TYPE_CONSUMER_TYPE_FIELD(include_dirs, meta::type_list<>);
 		MGMAKE_TYPE_CONSUMER_TYPE_FIELD(links, meta::type_list<>);
 
-		
+		// Recursively collect all used targets
+		using collect_targets = typename links::template fold<[]<typename state_t, typename link_t>{
+			// If the link can also collect targets
+			if constexpr (collects_targets<link_t>) {
+				// Collect them
+				using children_t = link_t::collect_targets;
+				// Append the collected
+				return std::type_identity<typename state_t::template append_list_unique<children_t>::template append_types_unique<link_t>>{};
+			} else {
+				// Doesn't collect, just append
+				return std::type_identity<typename state_t::template append_types_unique<link_t>>{};
+			}
+		}, meta::type_list<>>;
 	};
 
 	template<typename builder_t = meta::type_builder<>>
@@ -44,7 +58,7 @@ namespace mgmake::spec {
 		MGMAKE_TYPE_BUILDER_TYPE_FIELD_AS(target_builder, set_sources, "sources");
 		// Takes a `meta::type_list` of `meta::type_value`s of `meta::static_string`s for include dirs
 		MGMAKE_TYPE_BUILDER_TYPE_FIELD_AS(target_builder, set_include_dirs, "include_dirs");
-		// Takes a `meta::type_list` of link dependencies, either targets or `meta::static_string`s for system libs
+		// Takes a `meta::type_list` of link dependencies
 		MGMAKE_TYPE_BUILDER_TYPE_FIELD_AS(target_builder, set_links_impl, "links");
 
 		template<target_type type_v>
@@ -110,7 +124,7 @@ namespace mgmake::spec {
 		template<typename link_t>
 		using link = links<link_t>;
 
-		using build = typename builder_type::template build<project_impl>;
+		using build = typename builder_type::template build<target_impl>;
 	};
 	using target = target_builder<>;
 

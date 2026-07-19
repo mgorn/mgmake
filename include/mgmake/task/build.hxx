@@ -4,6 +4,7 @@
 #define MGMAKE_TASK_BUILD_HXX
 
 #include "../cli/default_options.hxx"
+#include "../spec/traits.hxx"
 #include "../sys/exit_code.hxx"
 
 #include <print>
@@ -32,6 +33,20 @@ namespace mgmake::task {
 				}
 			}
 			std::println("");
+
+			using config_type = config_t;
+			using project_type = config_type::project_type;
+			if constexpr (not std::is_same_v<project_type, void>) {
+				using targets_type = project_type::all_targets;
+
+				targets_type::for_each([]<typename target_t>{
+					if constexpr (spec::collects_targets<target_t>) {
+						std::println("PROJ LINKS TARGET: '{}'", target_t::name_value);
+					} else {
+						std::println("PROJ TARGET: '{}'", target_t::name_value);
+					}
+				});
+			}
 			return sys::exit_code::success;
 		}
 	};
