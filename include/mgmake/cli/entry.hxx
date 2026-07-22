@@ -14,14 +14,12 @@
 #include <utility>
 
 namespace mgmake::cli {
-    template<typename config_builder_t = config>
+    template<auto config_v = config>
     inline sys::exit_code entry(sys::shell cmd) {
-		// Finalize the given config
-		using config_type = config_builder_t::build;
-		using opt_storage_type = typename config_type::option_storage_type;
+		using opt_storage_type = decltype(config_v.option_storage())::type;
 
         // construct the parser & dispatcher at compile time :)
-		using d = task::dispatcher<config_type>;
+		using d = task::dispatcher<config_v>;
         using p = parser<opt_storage_type>;
 
         // parse cmd at runtime
@@ -40,9 +38,9 @@ namespace mgmake::cli {
         }
     }
 
-    template<typename config_builder_t = config>
+    template<auto config_v = config>
     inline sys::exit_code entry(int argc, char* argv[]) {
-        return entry<config_builder_t>(sys::shell::from_args(argc, argv));
+        return entry<config_v>(sys::shell::from_args(argc, argv));
     }
 }
 

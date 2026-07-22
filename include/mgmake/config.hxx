@@ -17,26 +17,32 @@ namespace mgmake {
 		template<auto builder_v, meta::static_string key_v>
 		consteval auto set_builder() const {
 			if constexpr (meta::has_builder_fn<builder_v>) {
-				return config_impl<builder_type::set<key_v, builder_v.build()>>{};
+				return typename builder_type::template set<key_v, builder_v.build()>::template build<config_impl>{};
 			} else {
-				return config_impl<builder_type::set<key_v, builder_v>>{};
+				return typename builder_type::template set<key_v, builder_v>::template build<config_impl>{};
 			}
 		}
 		template<auto project_v>
 		consteval auto project() const {
 			return set_builder<project_v, "project">();
 		}
+		consteval auto project() const {
+			return std::type_identity<typename builder_type::template get<"project">>{};
+		}
 		template<auto toolchains_v>
 		consteval auto toolchains() const {
 			return set_builder<toolchains_v, "toolchains">();
 		}
-		template<auto tasks_v>
+		template<typename tasks_t>
 		consteval auto tasks() const {
-			return set_builder<tasks_v, "tasks">();
+			return typename builder_type::template set<"tasks", tasks_t>::template build<config_impl>{};
 		}
-		template<auto options_v>
+		consteval auto tasks() const {
+			return std::type_identity<typename builder_type::template get<"tasks">>{};
+		}
+		template<typename options_t>
 		consteval auto options() const {
-			return set_builder<options_v, "options">();
+			return typename builder_type::template set<"options", options_t>::template build<config_impl>{};
 		}
 
 		consteval auto option_storage() const {
@@ -55,16 +61,16 @@ namespace mgmake {
 			using full_options_list = typename options_type::template prepend_list<task_options>;
 
 			// IMPORTANT: wrap the list in option_storage
-			using options_storage_type = cli::option_storage<full_options_list>;
+			using option_storage_type = cli::option_storage<full_options_list>;
 
 			return std::type_identity<option_storage_type>{};
 		};
 
 		consteval auto options() const {
-			return decltype(option_storage())::type{};
+			return typename decltype(option_storage())::type{};
 		}
 	};
-	static constexpr auto config = config_impl<>{}.tasks<task::default_tasks>().options<cli::default_options>();
+	static constexpr auto config = config_impl<>{}.template tasks<task::default_tasks>().template options<cli::default_options>();
 }
 
 #endif // MGMAKE_CONFIG_HXX

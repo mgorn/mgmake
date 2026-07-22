@@ -28,7 +28,7 @@ namespace mgmake::meta {
 	};
 	template<auto builder_v>
 	concept has_builder_fn = requires {
-		{ builder_v.build(); }
+		{ builder_v.build() };
 	};
 }
 

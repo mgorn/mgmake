@@ -20,14 +20,12 @@ namespace mgmake::task {
 			::task<true>
 			::build;
 		
-		template<typename config_t>
+		template<auto config_v>
 		static inline constexpr std::expected<sys::exit_code, std::string> handle(auto& cmd, auto& opts) {
-			using config_type = config_t;
-
 			std::println("Usage:");
 			std::println("\t{} [task] [options]", cmd.program_name());
-			using tasks_type = config_type::tasks_type;
-			using options_type = config_type::option_storage::list_type;
+			using tasks_type = decltype(config_v.tasks())::type;
+			using options_type = decltype(config_v.option_storage())::type::list_type;
 			
 			std::println("\nTasks:");
 			static constexpr auto task_help = []<typename task_t>(auto& cmd){

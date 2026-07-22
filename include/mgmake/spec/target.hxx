@@ -111,7 +111,7 @@ namespace mgmake::spec {
 		// Check if any links are builders and build them
 		template<typename links_t = meta::type_list<>>
 		using set_links = set_links_impl<typename links_t::template fold<[]<typename list_t, typename link_t> consteval {
-			if constexpr (meta::is_builder<link_t>) {
+			if constexpr (meta::has_builder_alias<link_t>) {
 				return std::type_identity<typename list_t::template append_unique<typename link_t::build>>{};
 			} else {
 				return std::type_identity<typename list_t::template append_unique<link_t>>{};

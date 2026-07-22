@@ -14,10 +14,9 @@
 
 namespace mgmake::task {
 	// The mgmake config
-    template<typename config_t>
+    template<auto config_v>
 	struct dispatcher {
-		using config_type = config_t;
-		using list_type = config_type::tasks_type;
+		using list_type = decltype(config_v.tasks())::type;
 
 		static inline constexpr std::expected<sys::exit_code, std::string> invoke(const sys::shell& cmd, const auto& opts) {
 			if constexpr (not opts.template has<cli::task_option>()) {
@@ -25,9 +24,9 @@ namespace mgmake::task {
 			} else {
 				return list_type::type_switch([&]<typename task_t> -> std::expected<sys::exit_code, std::string> {
 					using traits_type = task_traits<task_t>;
-					static_assert(traits_type::template valid_handler<config_type>, "task is missing a handle function");
+					static_assert(traits_type::template valid_handler<config_v>, "task is missing a handle function");
 
-					return task_t::template handle<config_type>(cmd, opts);
+					return task_t::template handle<config_v>(cmd, opts);
 				}, opts.template get<cli::task_option>());
 			}
 		}

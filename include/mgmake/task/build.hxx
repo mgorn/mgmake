@@ -18,7 +18,7 @@ namespace mgmake::task {
 			::task<true>::flag<false>
 			::build;
 		
-		template<typename config_t>
+		template<auto config_v>
 		static inline constexpr std::expected<sys::exit_code, std::string> handle(auto& cmd, const auto& opts) {
 			// TODO: This would be the entrypoint/root for build
 			std::println("Build task");
@@ -34,8 +34,7 @@ namespace mgmake::task {
 			}
 			std::println("");
 
-			using config_type = config_t;
-			using project_type = config_type::project_type;
+			using project_type = decltype(config_v.project())::type;
 			if constexpr (not std::is_same_v<project_type, void>) {
 				using targets_type = project_type::all_targets;
 

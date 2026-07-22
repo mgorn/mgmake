@@ -42,7 +42,7 @@ namespace mgmake::spec {
 		// Check if any targets are builders and build them
 		template<typename targets_t = meta::type_list<>>
 		using set_targets = set_targets_impl<typename targets_t::template fold<[]<typename list_t, typename target_t> consteval {
-			if constexpr (meta::is_builder<target_t>) {
+			if constexpr (meta::has_builder_alias<target_t>) {
 				return std::type_identity<typename list_t::template append_unique<typename target_t::build, false>>{};
 			} else {
 				return std::type_identity<typename list_t::template append_unique<target_t, false>>{};
