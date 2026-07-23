@@ -3,6 +3,8 @@
 #ifndef MGMAKE_TASK_TASK_TRAITS_HXX
 #define MGMAKE_TASK_TASK_TRAITS_HXX
 
+#include "../sys/exit_code.hxx"
+
 #include <concepts>
 #include <expected>
 #include <string>

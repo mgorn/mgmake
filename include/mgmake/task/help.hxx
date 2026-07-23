@@ -8,6 +8,7 @@
 #include "../cli/option.hxx"
 #include "../sys/exit_code.hxx"
 
+#include <print>
 #include <sstream>
 #include <string>
 

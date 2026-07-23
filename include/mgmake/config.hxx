@@ -23,7 +23,7 @@ namespace mgmake {
 		}
 		template<auto toolchains_v>
 		static consteval auto toolchains() {
-			return set_value<toolchains_v, "toolchains">();
+			return builder_type::template set_value<"toolchains", toolchains_v>();
 		}
 		template<typename tasks_t>
 		static consteval auto tasks() -> builder_type::template set_type<"tasks", tasks_t> {

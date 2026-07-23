@@ -3,11 +3,14 @@
 #ifndef MGMAKE_CLI_VALUE_PARSER_HXX
 #define MGMAKE_CLI_VALUE_PARSER_HXX
 
+#include "../meta/static_string.hxx"
+
 #include <expected>
 #include <filesystem>
 #include <format>
 #include <string>
 #include <string_view>
+#include <vector>
 
 // Value parsers convert one option argument string into a typed destination value.
 

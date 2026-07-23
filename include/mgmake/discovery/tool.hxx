@@ -9,22 +9,26 @@
 
 namespace mgmake::discovery {
 	template<typename storage_t = meta::type_map<>>
-	struct tool_impl {
+	struct tool_impl : public meta::type_builder<tool_impl, storage_t> {
+		using builder_type = meta::type_builder<tool_impl, storage_t>;
 
+		template<meta::static_string logical_v>
+		static consteval auto logical() {
+			return builder_type::template set_str<"logical", logical_v>();
+		}
+		static consteval auto logical() {
+			return builder_type::template get_str<"logical">();
+		}
+
+		template<auto role_v>
+		static consteval auto role() {
+			return builder_type::template set_value<"role", role_v>();
+		}
+		static consteval auto role() {
+			return builder_type::template get_value_or<"role", nullptr>();
+		}
 	};
-
-	template<typename builder_t = meta::type_builder<>>
-	struct tool_builder {
-		using builder_type = builder_t;
-
-		MGMAKE_TYPE_BUILDER_VALUE_FIELD(tool_builder, logical, meta::static_string);
-		MGMAKE_TYPE_BUILDER_TYPE_FIELD(tool_builder, role, meta::static_string);
-
-		using build = typename builder_type::template build<tool_impl>;
-	};
-	using tool = tool_builder<>;
-
-	
+	static constexpr auto tool = tool_impl<>{};
 }
 
 #endif // MGMAKE_DISCOVERY_TOOL_HXX

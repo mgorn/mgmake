@@ -10,6 +10,7 @@
 #include "../meta/builder_mixin.hxx"
 #include "../meta/member_access.hxx"
 #include "../meta/type_builder.hxx"
+#include "../meta/type_traits.hxx"
 
 #include <expected>
 

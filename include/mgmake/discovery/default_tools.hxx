@@ -8,10 +8,10 @@
 
 namespace mgmake::discovery {
 	struct default_tools {
-		using clang = tool::logical<"clang">;
-		
-		using clang_c = clang::role<cc_role>::build;
-		using clang_cxx = clang::role<cxx_role>::build;
+		static constexpr auto clang = tool.logical<"clang">();
+
+		static constexpr auto clang_c = clang.role<cc_role>();
+		static constexpr auto clang_cxx = clang.role<cxx_role>();
 	};
 }
 

@@ -3,6 +3,7 @@
 #ifndef MGMAKE_META_STATIC_STRING_HXX
 #define MGMAKE_META_STATIC_STRING_HXX
 
+#include <algorithm>
 #include <array>
 #include <concepts>
 #include <cstddef>

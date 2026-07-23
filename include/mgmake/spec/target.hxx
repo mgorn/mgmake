@@ -7,6 +7,7 @@
 
 #include "../meta/builder_mixin.hxx"
 #include "../meta/type_builder.hxx"
+#include "../meta/value_list.hxx"
 
 namespace mgmake::spec {
 	enum struct target_type {
