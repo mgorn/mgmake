@@ -317,6 +317,67 @@ template<typename message_t>
 
 namespace mgmake::meta {
 	template<typename... type_ts>
+	struct type_list;
+
+	namespace type_list_detail {
+		template<typename current_list_t, typename... other_type_ts>
+		struct append_types_unique_type {
+			using type = current_list_t;
+		};
+
+		template<typename current_list_t, typename first_t, typename... rest_t>
+		struct append_types_unique_type<current_list_t, first_t, rest_t...> {
+			using next_list_t = std::conditional_t<current_list_t::template has<first_t>(), current_list_t, typename current_list_t::template append<first_t>>;
+			using type = typename append_types_unique_type<next_list_t, rest_t...>::type;
+		};
+
+		template<typename current_list_t, typename prefix_t, typename... other_type_ts>
+		struct prepend_types_unique_type;
+
+		template<typename current_list_t, typename prefix_t>
+		struct prepend_types_unique_type<current_list_t, prefix_t> {
+			using type = typename prefix_t::template append_list<current_list_t>;
+		};
+
+		template<typename current_list_t, typename prefix_t, typename first_t, typename... rest_t>
+		struct prepend_types_unique_type<current_list_t, prefix_t, first_t, rest_t...> {
+			using next_prefix_t = std::conditional_t<current_list_t::template has<first_t>() or prefix_t::template has<first_t>(), prefix_t, typename prefix_t::template append<first_t>>;
+			using type = typename prepend_types_unique_type<current_list_t, next_prefix_t, rest_t...>::type;
+		};
+
+		template<auto operation, typename state_t, typename... remaining_t>
+		struct fold_type;
+
+		template<auto operation, typename state_t>
+		struct fold_type<operation, state_t> {
+			using type = state_t;
+		};
+
+		template<auto operation, typename state_t, typename first_t, typename... rest_t>
+		struct fold_type<operation, state_t, first_t, rest_t...> {
+			using next_state_t = typename decltype(operation.template operator()<state_t, first_t>())::type;
+			using type = typename fold_type<operation, next_state_t, rest_t...>::type;
+		};
+
+		template<auto compare, typename sorted_t, typename type_t>
+		struct insert_sorted_type;
+
+		template<auto compare, typename type_t>
+		struct insert_sorted_type<compare, type_list<>, type_t> {
+			using type = type_list<type_t>;
+		};
+
+		template<auto compare, typename type_t, typename first_t, typename... rest_t>
+		struct insert_sorted_type<compare, type_list<first_t, rest_t...>, type_t> {
+			using type = std::conditional_t<
+				static_cast<bool>(compare.template operator()<type_t, first_t>()),
+				type_list<type_t, first_t, rest_t...>,
+				typename insert_sorted_type<compare, type_list<rest_t...>, type_t>::type::template prepend<first_t>
+			>;
+		};
+	}
+
+	template<typename... type_ts>
 	struct type_list {
 		static consteval std::size_t size() {
 			return sizeof...(type_ts);
@@ -366,52 +427,8 @@ namespace mgmake::meta {
 		template<typename type_t>
 		using append = append_types<type_t>;
 
-	private:
-		// Needed because each unique append depends on the list produced by the previous append.
-		template<typename current_list_t, typename... other_type_ts>
-		struct append_types_unique_type {
-			using type = current_list_t;
-		};
-
-		template<typename current_list_t, typename first_t, typename... rest_t>
-		struct append_types_unique_type<current_list_t, first_t, rest_t...> {
-			using next_list_t = std::conditional_t<
-				current_list_t::template has<first_t>(),
-				current_list_t,
-				typename current_list_t::template append<first_t>
-			>;
-
-			using type = typename append_types_unique_type<
-				next_list_t,
-				rest_t...
-			>::type;
-		};
-
-		template<typename current_list_t, typename... other_type_ts>
-		struct prepend_types_unique_type {
-			using type = current_list_t;
-		};
-
-		template<typename current_list_t, typename first_t, typename... rest_t>
-		struct prepend_types_unique_type<current_list_t, first_t, rest_t...> {
-			using next_list_t = std::conditional_t<
-				current_list_t::template has<first_t>(),
-				current_list_t,
-				typename current_list_t::template prepend<first_t>
-			>;
-
-			using type = typename prepend_types_unique_type<
-				next_list_t,
-				rest_t...
-			>::type;
-		};
-
-	public:
 		template<typename... other_type_ts>
-		using append_types_unique = typename append_types_unique_type<
-			type_list<type_ts...>,
-			other_type_ts...
-		>::type;
+		using append_types_unique = typename type_list_detail::append_types_unique_type<type_list<type_ts...>, other_type_ts...>::type;
 
 		template<typename type_t, bool check = true>
 		struct append_unique_type {
@@ -430,20 +447,13 @@ namespace mgmake::meta {
 		using prepend = prepend_types<type_t>;
 
 		template<typename... other_type_ts>
-		using prepend_types_unique = typename prepend_types_unique_type<
-			type_list<type_ts...>,
-			other_type_ts...
-		>::type;
+		using prepend_types_unique = typename type_list_detail::prepend_types_unique_type<type_list<type_ts...>, type_list<>, other_type_ts...>::type;
 
 		template<typename type_t, bool check = true>
 		struct prepend_unique_type {
 			static_assert((not check) or (not has<type_t>()), "type_list::prepend_unique cannot prepend a duplicate type.");
 
-			using type = std::conditional_t<
-				has<type_t>(),
-				type_list<type_ts...>,
-				prepend<type_t>
-			>;
+			using type = std::conditional_t<has<type_t>(), type_list<type_ts...>, prepend<type_t>>;
 		};
 
 		template<typename type_t, bool check = true>
@@ -465,30 +475,13 @@ namespace mgmake::meta {
 		template<template<typename...> typename pack_t>
 		using apply = pack_t<type_ts...>;
 
-	private:
-		template<auto operation, typename state_t, typename... remaining_t>
-		struct fold_type;
-
-		template<auto operation, typename state_t>
-		struct fold_type<operation, state_t> {
-			using type = state_t;
-		};
-
-		template<auto operation, typename state_t, typename first_t, typename... rest_t>
-		struct fold_type<operation, state_t, first_t, rest_t...> {
-			using next_state_t = typename decltype(operation.template operator()<state_t, first_t>())::type;
-
-			using type = typename fold_type<operation, next_state_t, rest_t...>::type;
-		};
-
-	public:
 		// Fold the stored types from left to right into an accumulated type.
 		//
 		// The operation should be callable as:
 		//     `operation.template operator()<state_t, type_t>()`
 		// and return `std::type_identity<next_state_t>`.
 		template<auto operation, typename initial_t>
-		using fold = typename fold_type<operation, initial_t, type_ts...>::type;
+		using fold = typename type_list_detail::fold_type<operation, initial_t, type_ts...>::type;
 
 		// Keep the types for which the consteval NTTP predicate returns true.
 		//
@@ -508,29 +501,6 @@ namespace mgmake::meta {
 			type_list<>
 		>;
 
-	private:
-		template<auto compare, typename sorted_t, typename type_t>
-		struct insert_sorted_type;
-
-		template<auto compare, typename type_t>
-		struct insert_sorted_type<compare, type_list<>, type_t> {
-			using type = type_list<type_t>;
-		};
-
-		template<auto compare, typename type_t, typename first_t, typename... rest_t>
-		struct insert_sorted_type<compare, type_list<first_t, rest_t...>, type_t> {
-			using type = std::conditional_t<
-				static_cast<bool>(compare.template operator()<type_t, first_t>()),
-				type_list<type_t, first_t, rest_t...>,
-				typename insert_sorted_type<
-					compare,
-					type_list<rest_t...>,
-					type_t
-				>::type::template prepend<first_t>
-			>;
-		};
-
-	public:
 		// Sort this `type_list` using a consteval NTTP comparator.
 		//
 		// The comparator should be callable as:
@@ -539,20 +509,19 @@ namespace mgmake::meta {
 		template<auto compare>
 		using sort = fold<
 			[]<typename sorted_t, typename type_t>() consteval {
-				return std::type_identity<
-					typename insert_sorted_type<
-						compare,
-						sorted_t,
-						type_t
-					>::type
-				>{};
+				return std::type_identity<typename type_list_detail::insert_sorted_type<compare, sorted_t, type_t>::type>{};
 			},
 			type_list<>
 		>;
 
 		template<typename callable_t>
-		static constexpr void for_each(callable_t&& callable) {
+		static constexpr void for_each(callable_t& callable) {
 			(callable.template operator()<type_ts>(), ...);
+		}
+
+		template<typename callable_t> requires (not std::is_lvalue_reference_v<callable_t>)
+		static constexpr void for_each(callable_t&& callable) {
+			for_each(callable);
 		}
 
 		// Invoke the callable with the type at the runtime-selected index.
@@ -585,7 +554,8 @@ namespace mgmake::meta {
 	};
 }
 
-#endif // MGMAKE_META_TYPE_LIST_HXX// ===== end include/mgmake/meta/type_list.hxx =====
+#endif // MGMAKE_META_TYPE_LIST_HXX
+// ===== end include/mgmake/meta/type_list.hxx =====
 
 
 // ===== begin include/mgmake/meta/type_pair.hxx =====
@@ -613,6 +583,47 @@ namespace mgmake::meta {
 namespace mgmake::meta {
 	template<typename storage_t = type_list<>>
 	struct type_map;
+
+	namespace type_map_detail {
+		template<typename map_t, typename key_t, bool check, bool exists = map_t::template has<key_t>()>
+		struct at_type;
+
+		template<typename map_t, typename key_t, bool check>
+		struct at_type<map_t, key_t, check, true> {
+			using pair_type = typename map_t::storage_type::template type_at<map_t::template key_index<key_t>()>;
+			using type = typename pair_type::value_type;
+		};
+
+		template<typename map_t, typename key_t, bool check>
+		struct at_type<map_t, key_t, check, false> {
+			static_assert((not check) or map_t::template has<key_t>(), "type_map::at<key_t> requires key_t to exist.");
+
+			using type = void;
+		};
+
+		template<typename pair_t, typename key_t, typename value_t>
+		using replace_pair = std::conditional_t<std::same_as<key_t, typename pair_t::key_type>, type_pair<key_t, value_t>, pair_t>;
+
+		template<typename map_t, typename key_t, typename value_t>
+		struct emplace_type;
+
+		template<typename... pair_ts, typename key_t, typename value_t>
+		struct emplace_type<type_map<type_list<pair_ts...>>, key_t, value_t> {
+			using map_type = type_map<type_list<pair_ts...>>;
+			using type = std::conditional_t<
+				map_type::template has<key_t>(),
+				type_map<type_list<replace_pair<pair_ts, key_t, value_t>...>>,
+				type_map<typename map_type::storage_type::template append<type_pair<key_t, value_t>>>
+			>;
+		};
+
+		template<typename map_t, typename key_t, typename value_t>
+		struct emplace_unique_type {
+			static_assert(not map_t::template has<key_t>(), "type_map::emplace_unique<key_t, value_t> cannot emplace a duplicate key.");
+
+			using type = type_map<typename map_t::storage_type::template append<type_pair<key_t, value_t>>>;
+		};
+	}
 
 	template<typename... pair_ts>
 	struct type_map<type_list<pair_ts...>> {
@@ -645,69 +656,19 @@ namespace mgmake::meta {
 			return key_index<key_t>() < size();
 		}
 
-	private:
-		template<typename key_t, bool check = true, bool exists = has<key_t>()>
-		struct at_type;
-
-		template<typename key_t, bool check>
-		struct at_type<key_t, check, true> {
-			using pair_type = typename storage_type::template type_at<key_index<key_t>()>;
-			using type = typename pair_type::value_type;
-		};
-
-		template<typename key_t, bool check>
-		struct at_type<key_t, check, false> {
-			static_assert(
-				not check or has<key_t>(),
-				"type_map::at<key_t> requires key_t to exist."
-			);
-
-			using type = void;
-		};
-
-    public:
 		template<typename key_t, bool check = true>
-		using at = typename at_type<key_t, check>::type;
+		using at = typename type_map_detail::at_type<type_map<type_list<pair_ts...>>, key_t, check>::type;
 
-    private:
-        template<typename pair_t, typename key_t, typename value_t>
-        using replace_pair = std::conditional_t<
-            std::same_as<key_t, typename pair_t::key_type>,
-            type_pair<key_t, value_t>,
-            pair_t
-        >;
+		template<typename key_t, typename value_t>
+		using emplace = typename type_map_detail::emplace_type<type_map<type_list<pair_ts...>>, key_t, value_t>::type;
 
-        template<typename key_t, typename value_t>
-        struct emplace_type {
-            using type = std::conditional_t<
-                has<key_t>(),
-                type_map<type_list<replace_pair<pair_ts, key_t, value_t>...>>,
-                type_map<typename storage_type::template append<type_pair<key_t, value_t>>>
-            >;
-        };
-
-        template<typename key_t, typename value_t>
-        struct emplace_unique_type {
-            static_assert(
-                not has<key_t>(),
-                "type_map::emplace_unique<key_t, value_t> cannot emplace a duplicate key."
-            );
-
-            using type = type_map<
-                typename storage_type::template append<type_pair<key_t, value_t>>
-            >;
-        };
-
-    public:
-        template<typename key_t, typename value_t>
-        using emplace = typename emplace_type<key_t, value_t>::type;
-
-        template<typename key_t, typename value_t>
-        using emplace_unique = typename emplace_unique_type<key_t, value_t>::type;
+		template<typename key_t, typename value_t>
+		using emplace_unique = typename type_map_detail::emplace_unique_type<type_map<type_list<pair_ts...>>, key_t, value_t>::type;
 	};
 }
 
-#endif // MGMAKE_META_TYPE_MAP_HXX// ===== end include/mgmake/meta/type_map.hxx =====
+#endif // MGMAKE_META_TYPE_MAP_HXX
+// ===== end include/mgmake/meta/type_map.hxx =====
 
 // skipped duplicate include: include/mgmake/meta/type_pair.hxx
 
@@ -1018,8 +979,13 @@ namespace mgmake::meta {
 		>;
 
 		template<typename callable_t>
-		static constexpr void for_each(callable_t&& callable) {
+		static constexpr void for_each(callable_t& callable) {
 			(callable.template operator()<value_vs>(), ...);
+		}
+
+		template<typename callable_t> requires (not std::is_lvalue_reference_v<callable_t>)
+		static constexpr void for_each(callable_t&& callable) {
+			for_each(callable);
 		}
 
 		// Invoke the callable with the value at the runtime-selected index.
@@ -1038,6 +1004,7 @@ namespace mgmake::meta {
 #endif // MGMAKE_META_VALUE_LIST_HXX// ===== end include/mgmake/meta/value_list.hxx =====
 
 
+#include <type_traits>
 #include <utility>
 
 namespace mgmake::cli {
@@ -1046,29 +1013,6 @@ namespace mgmake::cli {
 	struct option_storage {
 		using list_type = opts_t;
 
-	private:
-		// When emplacing a key: this ensures if the key already exists, the types match
-		// If they don't, a static_assert is thrown
-		// If they do, the key was already added and can be skipped
-		template<typename key_t, typename value_t, typename map_t>
-		struct emplace_key_checked {
-			using type = std::invoke_result_t<decltype([] consteval {
-				// If the key exists
-				if constexpr (map_t::template has<key_t>()) {
-					// Get the type
-					using in_map_type = typename map_t::template at<key_t>;
-					// Assert they are the same
-					static_assert(std::is_same_v<value_t, in_map_type>, "option storage key value type mismatch!");
-					return std::type_identity<map_t>{};
-				} else {
-					return std::type_identity<typename map_t::template emplace_unique<key_t, value_t>>{};
-				}
-			})>::type;
-		};
-		//template<typename key_t, typename value_t, typename map_t>
-		//using emplace_key_checked_t = emplace_key_checked<key_t, value_t, map_t>::type;
-
-	public:
 		// The type_map for the option storage key/value pairs
 		using storage_map_type = typename list_type::template fold<[]<typename state_t, auto opt_v>() consteval {
 			// If the option uses storage, it has a storage pair
@@ -1082,13 +1026,17 @@ namespace mgmake::cli {
 
 				// If the value_type is void, then it is determined by another option (typically a storage option)
 				if constexpr (not std::is_same_v<value_type, void>) {
-					// Check the key value & emplace it
-					return std::type_identity<typename emplace_key_checked<key_type, value_type, state_t>::type>{};
+					// When emplacing a key, ensure an existing key has the same value type.
+					if constexpr (state_t::template has<key_type>()) {
+						using in_map_type = typename state_t::template at<key_type>;
+						static_assert(std::is_same_v<value_type, in_map_type>, "option storage key value type mismatch!");
+						return std::type_identity<state_t>{};
+					} else {
+						return std::type_identity<typename state_t::template emplace_unique<key_type, value_type>>{};
+					}
 				} else {
-					// TODO: assert the key exists after constructing the full map
 					return std::type_identity<state_t>{};
 				}
-
 			} else {
 				// The option doesn't have storage, ignore it
 				return std::type_identity<state_t>{};
@@ -1149,12 +1097,13 @@ namespace mgmake::cli {
 			return this->template set<opt_v.storage_key()>(std::forward<decltype(value)>(value));
 		}
 
-		// Value storage
+	private:
 		storage_type m_storage{};
 	};
 }
 
-#endif // MGMAKE_CLI_OPTION_STORAGE_HXX// ===== end include/mgmake/cli/option_storage.hxx =====
+#endif // MGMAKE_CLI_OPTION_STORAGE_HXX
+// ===== end include/mgmake/cli/option_storage.hxx =====
 
 
 
@@ -1818,18 +1767,20 @@ namespace mgmake::cli {
 // skipped duplicate include: include/mgmake/meta/static_string.hxx
 
 namespace mgmake::meta {
+	template<typename builder_t>
 	struct named {
 		template<meta::static_string value_v>
-		consteval auto name(this auto const& self) {
-			return self.template set_str<"name", value_v>();
+		[[nodiscard]] static consteval auto name() {
+			return builder_t::template set_str<"name", value_v>();
 		}
-		consteval auto name(this auto const& self) {
-			return self.template get_str<"name">();
+		static consteval auto name() {
+			return builder_t::template get_str<"name">();
 		}
 	};
 }
 
-#endif // MGMAKE_META_BUILDER_MIXIN_HXX// ===== end include/mgmake/meta/builder_mixin.hxx =====
+#endif // MGMAKE_META_BUILDER_MIXIN_HXX
+// ===== end include/mgmake/meta/builder_mixin.hxx =====
 
 
 // ===== begin include/mgmake/meta/member_access.hxx =====
@@ -1977,24 +1928,19 @@ namespace mgmake::meta {
 // If the type is void, return the default type instead
 
 namespace mgmake::meta {
-    template<typename type_t, typename default_t, typename none_t = void>
-    struct type_or {
-        using type = std::remove_cvref_t<std::invoke_result_t<decltype([] consteval {
-			if constexpr (std::is_same_v<type_t, none_t>) {
-				return std::type_identity<default_t>{};
-			} else {
-				return std::type_identity<type_t>{};
-			}
-		})>>::type;
+	template<typename type_t, typename default_t, typename none_t = void>
+	struct type_or {
+		using type = std::conditional_t<std::is_same_v<type_t, none_t>, default_t, type_t>;
 
 		static_assert(not std::is_same_v<default_t, none_t>, "If your default_t is none_t, you don't need `meta::type_or`...");
-    };
+	};
 
 	template<typename type_t, typename default_t, typename none_t = void>
 	using type_or_t = type_or<type_t, default_t, none_t>::type;
 }
 
-#endif // MGMAKE_META_TYPE_OR_HXX// ===== end include/mgmake/meta/type_or.hxx =====
+#endif // MGMAKE_META_TYPE_OR_HXX
+// ===== end include/mgmake/meta/type_or.hxx =====
 
 // skipped duplicate include: include/mgmake/meta/type_value.hxx
 
@@ -2012,9 +1958,9 @@ namespace mgmake::meta {
         using get_type = typename storage_t::template at<type_value<key_v>, check_v>;
 		template<static_string key_v, typename default_t>
 		using get_type_or = type_or_t<get_type<key_v, false>, default_t>;
-        template<static_string key_v, bool check_v = true>
+        template<static_string key_v>
 		static consteval auto get_value() {
-			return get_type<key_v, check_v>::value;
+			return get_type<key_v>::value;
 		}
 		template<static_string key_v, auto default_v = nullptr>
 		static consteval auto get_value_or() {
@@ -2032,17 +1978,18 @@ namespace mgmake::meta {
         template<static_string key_v, typename value_t>
         using set_type = impl_t<typename storage_t::template emplace<type_value<key_v>, value_t>>;
 		template<static_string key_v, auto value_v>
-		static consteval auto set_value() {
+		[[nodiscard]] static consteval auto set_value() {
 			return set_type<key_v, type_value<value_v>>{};
 		}
 		template<static_string key_v, static_string str_v>
-		static consteval auto set_str() {
+		[[nodiscard]] static consteval auto set_str() {
 			return set_type<key_v, type_value<str_v>>{};
 		}
     };
 }
 
-#endif // MGMAKE_META_TYPE_BUILDER_HXX// ===== end include/mgmake/meta/type_builder.hxx =====
+#endif // MGMAKE_META_TYPE_BUILDER_HXX
+// ===== end include/mgmake/meta/type_builder.hxx =====
 
 // skipped duplicate include: include/mgmake/meta/type_traits.hxx
 
@@ -2051,13 +1998,13 @@ namespace mgmake::meta {
 namespace mgmake::cli {
     // Actual configurable option impl
     template<typename storage_t = meta::type_map<>>
-    struct option_impl : public meta::type_builder<option_impl, storage_t>, meta::named {
+    struct option_impl : public meta::type_builder<option_impl, storage_t>, public meta::named<option_impl<storage_t>> {
 		using builder_type = meta::type_builder<option_impl, storage_t>;
 
 		using builder_type::get_type_or;
 
 		template<meta::static_string value_v>
-		static consteval auto alias() {
+		[[nodiscard]] static consteval auto alias() {
 			return builder_type::template set_str<"alias", value_v>();
 		}
 		static consteval auto alias() {
@@ -2065,23 +2012,23 @@ namespace mgmake::cli {
 		}
 
 		template<meta::static_string value_v>
-		static consteval auto description() {
+		[[nodiscard]] static consteval auto description() {
 			return builder_type::template set_str<"description", value_v>();
 		}
 		static consteval auto description() {
 			return builder_type::template get_str<"description">();
 		}
 
-		template<char value_v = '\0'>
-		static consteval auto short_name() {
+		template<char value_v>
+		[[nodiscard]] static consteval auto short_name() {
 			return builder_type::template set_value<"short_name", value_v>();
 		}
 		static consteval char short_name() {
 			return builder_type::template get_value_or<"short_name", '\0'>();
 		}
 
-		template<auto value_v = nullptr>
-		static consteval auto callback() {
+		template<auto value_v>
+		[[nodiscard]] static consteval auto callback() {
 			return builder_type::template set_value<"callback", value_v>();
 		}
 		static consteval auto callback() {
@@ -2091,7 +2038,7 @@ namespace mgmake::cli {
 		// Takes a `meta::type_pair<meta::static_string, value_type>` for the option value storage
 		// This is what adds the key and value type to the `option_storage`
 		template<typename pair_t>
-		static consteval auto storage_pair() -> typename builder_type::template set_type<"storage_pair", pair_t> {
+		[[nodiscard]] static consteval auto storage_pair() -> typename builder_type::template set_type<"storage_pair", pair_t> {
 			return {};
 		}
 		static consteval auto storage_pair() -> typename builder_type::template get_type<"storage_pair", false> {
@@ -2100,7 +2047,7 @@ namespace mgmake::cli {
 
 		// Set the option to set a specific value & assigns the storage pair
 		template<meta::static_string key_v, auto value_v = std::nullopt>
-        static consteval auto set() {
+        [[nodiscard]] static consteval auto set() {
 			return callback<[](auto& opts) {
 				static_assert(not std::is_same_v<decltype(value_v), std::nullopt_t>, "No value passed to `option::set<>` (Do we actually need to set the value to nullopt?)");
 				opts.template set<key_v>(value_v);
@@ -2108,8 +2055,8 @@ namespace mgmake::cli {
 		}
 
 		// If the option parses a value (`--switch=value` or `--switch value`) and stores it
-		template<bool value_v = true>
-		static consteval auto parses() {
+		template<bool value_v>
+		[[nodiscard]] static consteval auto parses() {
 			return builder_type::template set_value<"parses", value_v>();
 		}
 		static consteval bool parses() {
@@ -2118,12 +2065,12 @@ namespace mgmake::cli {
 
 		// Set the option to parse a value & assigns the storage pair
 		template<meta::static_string key_v, typename parse_t>
-		static consteval auto parse() {
+		[[nodiscard]] static consteval auto parse() {
 			return parses<true>().template storage_pair<typename meta::type_pair<meta::type_value<key_v>, parse_t>>();
 		}
 
-		template<bool value_v = true>
-		static consteval auto task() {
+		template<bool value_v>
+		[[nodiscard]] static consteval auto task() {
 			return builder_type::template set_value<"task", value_v>();
 		}
 		static consteval bool task() {
@@ -2131,8 +2078,8 @@ namespace mgmake::cli {
 		}
 
 		// aka switch
-		template<bool value_v = true>
-		static consteval auto flag() {
+		template<bool value_v>
+		[[nodiscard]] static consteval auto flag() {
 			return builder_type::template set_value<"flag", value_v>();
 		}
 		static consteval bool flag() {
@@ -2142,7 +2089,7 @@ namespace mgmake::cli {
 		// The option is only for reserving a key/value in storage
 		// this disables task and flag
 		template<meta::static_string key_v, typename value_t>
-		static consteval auto storage() {
+		[[nodiscard]] static consteval auto storage() {
 			return task<false>()
 				.template flag<false>()
 				.template storage_pair<typename meta::type_pair<meta::type_value<key_v>, value_t>>();
@@ -2332,7 +2279,7 @@ namespace mgmake::sys {
 
 namespace mgmake::task {
 	template<typename task_t, auto config_v>
-	concept task_handler = requires(const sys::shell& cmd, const typename decltype(config_v.option_storage())::type& opts) {
+	concept task_handler = requires(const sys::shell& cmd, const decltype(config_v.option_storage())& opts) {
 		{
 			task_t::template handle<config_v>(cmd, opts)
 		} -> std::same_as<std::expected<sys::exit_code, std::string>>;
@@ -2410,7 +2357,7 @@ namespace mgmake::task {
 // skipped duplicate include: include/mgmake/cli/option_storage.hxx
 // skipped duplicate include: include/mgmake/cli/default_options.hxx
 // skipped duplicate include: include/mgmake/meta/type_builder.hxx
-// skipped duplicate include: include/mgmake/meta/type_or.hxx
+// skipped duplicate include: include/mgmake/meta/value_list.hxx
 
 // ===== begin include/mgmake/task/default_tasks.hxx =====
 #pragma once
@@ -2463,19 +2410,38 @@ namespace mgmake::task {
 #ifndef MGMAKE_SPEC_TRAITS_HXX
 #define MGMAKE_SPEC_TRAITS_HXX
 
+// skipped duplicate include: include/mgmake/meta/value_list.hxx
+
+#include <type_traits>
+
 namespace mgmake::spec {
 	template<typename spec_t>
 	concept has_links = requires {
 		typename spec_t::links;
 	};
 
+	template<typename type_t>
+	struct is_value_list : std::false_type {};
+
+	template<auto... value_vs>
+	struct is_value_list<meta::value_list<value_vs...>> : std::true_type {};
+
+	template<typename type_t>
+	concept value_list_type = is_value_list<std::remove_cvref_t<type_t>>::value;
+
+	template<auto spec_v, typename visited_t>
+	concept collects_targets_with = value_list_type<visited_t> and requires {
+		requires value_list_type<decltype(spec_v.template collect_targets<visited_t>())>;
+	};
+
 	template<auto spec_v>
 	concept collects_targets = requires {
-		{ spec_v.collect_targets() };
+		requires value_list_type<decltype(spec_v.collect_targets())>;
 	};
 }
 
-#endif // MGMAKE_SPEC_TRAITS_HXX// ===== end include/mgmake/spec/traits.hxx =====
+#endif // MGMAKE_SPEC_TRAITS_HXX
+// ===== end include/mgmake/spec/traits.hxx =====
 
 // skipped duplicate include: include/mgmake/sys/exit_code.hxx
 
@@ -2582,20 +2548,16 @@ namespace mgmake::task {
 			std::println("Usage:");
 			std::println("\t{} [task] [options]", cmd.program_name());
 			using tasks_type = decltype(config_v.tasks());
-			using options_type = decltype(config_v.option_storage())::type::list_type;
+			using options_type = decltype(config_v.option_storage())::list_type;
 			
 			std::println("\nTasks:");
-			static constexpr auto task_help = []<typename task_t>(auto& cmd){
+			tasks_type::for_each([]<typename task_t> {
 				using traits_type = task_traits<task_t>;
 				std::println("\t{:<10} {}", traits_type::name(), traits_type::description());
-			};
-
-			[]<std::size_t... Is>(std::index_sequence<Is...>, auto& cmd) {
-				(task_help.template operator()<typename tasks_type::template type_at<Is>>(cmd), ...);
-			}(std::make_index_sequence<tasks_type::size()>{}, cmd);
+			});
 
 			std::println("\nOptions:");
-			static constexpr auto option_help = []<auto opt_v>{
+			options_type::for_each([]<auto opt_v> {
 				// Only print switches, tasks will be shown first
 				if constexpr (opt_v.flag()) {
 					std::stringstream ss;
@@ -2609,11 +2571,7 @@ namespace mgmake::task {
 					}
 					std::println("\t{:<24} {}", ss.str(), opt_v.description().view());
 				}
-			};
-
-			[]<std::size_t... Is>(std::index_sequence<Is...>) {
-				(option_help.template operator()<options_type::template value_at<Is>>(), ...);
-			}(std::make_index_sequence<options_type::size()>{});
+			});
 
 			return sys::exit_code::success;
 		}
@@ -2673,40 +2631,43 @@ namespace mgmake::task {
 #endif // MGMAKE_CLI_DEFAULT_TASKS_HXX// ===== end include/mgmake/task/default_tasks.hxx =====
 
 
+#include <type_traits>
+
 namespace mgmake {
 	template<typename storage_t = meta::type_map<>>
     struct config_impl : public meta::type_builder<config_impl, storage_t> {
 		using builder_type = meta::type_builder<config_impl, storage_t>;
 
 		template<auto project_v>
-		static consteval auto project() {
+		[[nodiscard]] static consteval auto project() {
 			return builder_type::template set_value<"project", project_v>();
 		}
 		static consteval auto project() {
 			return builder_type::template get_value_or<"project", nullptr>();
 		}
 		template<auto toolchains_v>
-		static consteval auto toolchains() {
+		[[nodiscard]] static consteval auto toolchains() {
 			return builder_type::template set_value<"toolchains", toolchains_v>();
 		}
+		static consteval auto toolchains() {
+			return builder_type::template get_value_or<"toolchains", meta::value_list<>{}>();
+		}
 		template<typename tasks_t>
-		static consteval auto tasks() -> builder_type::template set_type<"tasks", tasks_t> {
+		[[nodiscard]] static consteval auto tasks() -> builder_type::template set_type<"tasks", tasks_t> {
 			return {};
 		}
 		static consteval auto tasks() -> builder_type::template get_type_or<"tasks", task::default_tasks> {
 			return {};
 		}
 		template<auto options_v>
-		static consteval auto options() {
-			return builder_type::template set_value<"options", options_v>();
+		[[nodiscard]] static consteval auto options() -> builder_type::template set_type<"options", std::remove_cvref_t<decltype(options_v)>> {
+			return {};
 		}
-		static consteval auto options() {
-			return builder_type::template get_value_or<"options", cli::default_options>();
+		static consteval auto options() -> builder_type::template get_type_or<"options", std::remove_cvref_t<decltype(cli::default_options)>> {
+			return {};
 		}
 
-		static consteval auto option_storage() {
-			/* Automatically add task options to options */
-
+		static consteval auto full_options() {
 			// Collect the option associated with every task.
 			using task_options = meta::value_list<>::unwrap_list<typename decltype(tasks())::template fold<[]<typename state_t, typename task_t>() consteval {
 				return std::type_identity<typename state_t::template append<meta::type_value<task_t::option>>>{};
@@ -2714,21 +2675,18 @@ namespace mgmake {
 
 			// Append the contents of task_options, not task_options itself.
 			using full_options_list = decltype(options())::template prepend_list<task_options>;
+			return full_options_list{};
+		}
 
-			// IMPORTANT: wrap the list in option_storage
-			using option_storage_type = cli::option_storage<full_options_list>;
-
-			return std::type_identity<option_storage_type>{};
-		};
-
-		static consteval auto full_options() {
-			return typename decltype(option_storage())::type{};
+		static consteval auto option_storage() {
+			return cli::option_storage<decltype(full_options())>{};
 		}
 	};
-	static constexpr auto config = config_impl<>{}.template tasks<task::default_tasks>().template options<cli::default_options>();
+	static constexpr auto config = config_impl<>{};
 }
 
-#endif // MGMAKE_CONFIG_HXX// ===== end include/mgmake/config.hxx =====
+#endif // MGMAKE_CONFIG_HXX
+// ===== end include/mgmake/config.hxx =====
 
 
 #include <print>
@@ -2737,7 +2695,7 @@ namespace mgmake {
 namespace mgmake::cli {
     template<auto config_v = config>
     inline sys::exit_code entry(sys::shell cmd) {
-		using opt_storage_type = decltype(config_v.option_storage())::type;
+		using opt_storage_type = decltype(config_v.option_storage());
 
         // construct the parser & dispatcher at compile time :)
 		using d = task::dispatcher<config_v>;
@@ -2785,11 +2743,11 @@ int main(int argc, char* argv[]) { \
 
 namespace mgmake::spec {
 	template<typename storage_t = meta::type_map<>>
-	struct cmake_target_impl :public meta::type_builder<cmake_target_impl, storage_t>, meta::named {
+	struct cmake_target_impl : public meta::type_builder<cmake_target_impl, storage_t>, public meta::named<cmake_target_impl<storage_t>> {
 		using builder_type = meta::type_builder<cmake_target_impl, storage_t>;
 
 		template<auto cmake_v>
-		static consteval auto project() {
+		[[nodiscard]] static consteval auto project() {
 			return builder_type::template set_value<"project", cmake_v>();
 		}
 		static consteval auto project() {
@@ -2798,44 +2756,43 @@ namespace mgmake::spec {
 	};
 
 	template<typename storage_t = meta::type_map<>>
-	struct cmake_impl : public meta::type_builder<cmake_impl, storage_t>, meta::named {
+	struct cmake_impl : public meta::type_builder<cmake_impl, storage_t>, public meta::named<cmake_impl<storage_t>> {
 		using builder_type = meta::type_builder<cmake_impl, storage_t>;
 
 		template<auto fetch_v>
-		static consteval auto fetch() {
+		[[nodiscard]] static consteval auto fetch() {
 			return builder_type::template set_value<"fetch", fetch_v>();
 		}
 		static consteval auto fetch() {
-			if constexpr (builder_type::template has<"fetch">()) {
-				return builder_type::template get_value<"fetch">();
-			}
+			return builder_type::template get_value_or<"fetch", nullptr>();
 		}
 
 		template<typename cmake_vars_t = meta::type_map<>>
-		static consteval auto set_cmake_vars() -> builder_type::template set_type<"cmake_vars", cmake_vars_t> {
+		[[nodiscard]] static consteval auto set_cmake_vars() -> builder_type::template set_type<"cmake_vars", cmake_vars_t> {
 			return {};
 		}
 		template<meta::static_string var_v, meta::static_string val_v>
-		static consteval auto define() -> decltype(set_cmake_vars<typename meta::type_or_t<
-				typename builder_type::template get_type<"cmake_vars", false>,
-				meta::type_map<>
-			>
-			::template emplace_unique<meta::type_value<var_v>, meta::type_value<val_v>>>()) {
-			return {};
+		[[nodiscard]] static consteval auto define() {
+			using current_vars = meta::type_or_t<typename builder_type::template get_type<"cmake_vars", false>, meta::type_map<>>;
+			using updated_vars = typename current_vars::template emplace_unique<meta::type_value<var_v>, meta::type_value<val_v>>;
+			return set_cmake_vars<updated_vars>();
 		}
 
 		template<bool install_v = true>
-		static consteval auto set_install() {
+		[[nodiscard]] static consteval auto set_install() {
 			return builder_type::template set_value<"install", install_v>();
 		}
-		static consteval auto install() {
+		[[nodiscard]] static consteval auto install() {
 			return set_install<true>();
 		}
+		static consteval bool installs() {
+			return builder_type::template get_value_or<"install", false>();
+		}
 
-		static consteval auto target() {
+		[[nodiscard]] static consteval auto target() {
 			return cmake_target_impl<>{}.project<cmake_impl{}>();
 		}
-		static consteval auto library() {
+		[[nodiscard]] static consteval auto library() {
 			return target();
 		}
 	};
@@ -2843,7 +2800,8 @@ namespace mgmake::spec {
 	static constexpr auto cmake = cmake_impl<>{};
 }
 
-#endif // MGMAKE_SPEC_CMAKE_HXX// ===== end include/mgmake/spec/cmake.hxx =====
+#endif // MGMAKE_SPEC_CMAKE_HXX
+// ===== end include/mgmake/spec/cmake.hxx =====
 
 
 // ===== begin include/mgmake/spec/fetch.hxx =====
@@ -2871,11 +2829,11 @@ namespace mgmake::spec {
 	};
 
 	template<typename storage_t = meta::type_map<>>
-	struct git_fetch_impl : public meta::type_builder<git_fetch_impl, storage_t>, meta::named {
+	struct git_fetch_impl : public meta::type_builder<git_fetch_impl, storage_t>, public meta::named<git_fetch_impl<storage_t>> {
 		using builder_type = meta::type_builder<git_fetch_impl, storage_t>;
 
 		template<meta::static_string url_v>
-		static consteval auto url() {
+		[[nodiscard]] static consteval auto url() {
 			return builder_type::template set_str<"url", url_v>();
 		}
 		static consteval auto url() {
@@ -2883,7 +2841,7 @@ namespace mgmake::spec {
 		}
 
 		template<meta::static_string tag_v>
-		static consteval auto tag() {
+		[[nodiscard]] static consteval auto tag() {
 			return builder_type::template set_str<"tag", tag_v>();
 		}
 		static consteval auto tag() {
@@ -2892,11 +2850,11 @@ namespace mgmake::spec {
 	};
 
 	template<typename storage_t = meta::type_map<>>
-	struct archive_fetch_impl : public meta::type_builder<archive_fetch_impl, storage_t>, meta::named {
+	struct archive_fetch_impl : public meta::type_builder<archive_fetch_impl, storage_t>, public meta::named<archive_fetch_impl<storage_t>> {
 		using builder_type = meta::type_builder<archive_fetch_impl, storage_t>;
 
 		template<meta::static_string url_v>
-		static consteval auto url() {
+		[[nodiscard]] static consteval auto url() {
 			return builder_type::template set_str<"url", url_v>();
 		}
 		static consteval auto url() {
@@ -2904,7 +2862,7 @@ namespace mgmake::spec {
 		}
 
 		template<meta::static_string checksum_v>
-		static consteval auto checksum() {
+		[[nodiscard]] static consteval auto checksum() {
 			return builder_type::template set_str<"checksum", checksum_v>();
 		}
 		static consteval auto checksum() {
@@ -2912,7 +2870,7 @@ namespace mgmake::spec {
 		}
 
 		template<archive_format format_v>
-		static consteval auto format() {
+		[[nodiscard]] static consteval auto format() {
 			return builder_type::template set_value<"format", format_v>();
 		}
 		static consteval archive_format format() {
@@ -2925,11 +2883,11 @@ namespace mgmake::spec {
 	};
 
 	template<typename storage_t = meta::type_map<>>
-	struct local_fetch_impl : public meta::type_builder<local_fetch_impl, storage_t>, meta::named {
+	struct local_fetch_impl : public meta::type_builder<local_fetch_impl, storage_t>, public meta::named<local_fetch_impl<storage_t>> {
 		using builder_type = meta::type_builder<local_fetch_impl, storage_t>;
 
 		template<meta::static_string path_v>
-		static consteval auto path() {
+		[[nodiscard]] static consteval auto path() {
 			return builder_type::template set_str<"path", path_v>();
 		}
 		static consteval auto path() {
@@ -2938,14 +2896,14 @@ namespace mgmake::spec {
 	};
 
 	template<typename storage_t = meta::type_map<>>
-	struct fetch_impl : public meta::type_builder<fetch_impl, storage_t>, meta::named {
-		static consteval auto git() {
+	struct fetch_impl : public meta::type_builder<fetch_impl, storage_t>, public meta::named<fetch_impl<storage_t>> {
+		[[nodiscard]] static consteval auto git() {
 			return git_fetch_impl<>{}.name<fetch_impl{}.name()>();
 		}
-		static consteval auto archive() {
+		[[nodiscard]] static consteval auto archive() {
 			return archive_fetch_impl<>{}.name<fetch_impl{}.name()>();
 		}
-		static consteval auto local() {
+		[[nodiscard]] static consteval auto local() {
 			return local_fetch_impl<>{}.name<fetch_impl{}.name()>();
 		}
 	};
@@ -2969,16 +2927,16 @@ namespace mgmake::spec {
 
 namespace mgmake::spec {
 	template<typename storage_t = meta::type_map<>>
-	struct project_impl : public meta::type_builder<project_impl, storage_t>, meta::named {
+	struct project_impl : public meta::type_builder<project_impl, storage_t>, public meta::named<project_impl<storage_t>> {
 		using builder_type = meta::type_builder<project_impl, storage_t>;
 
 		// Targets directly given to the project
 		template<typename targets_t = meta::value_list<>>
-		static consteval auto set_targets() -> builder_type::template set_type<"targets", targets_t> {
+		[[nodiscard]] static consteval auto set_targets() -> builder_type::template set_type<"targets", targets_t> {
 			return {};
 		}
 		template<auto... target_vs>
-		static consteval auto targets() {
+		[[nodiscard]] static consteval auto targets() {
 			using targets_type = builder_type::template get_type_or<"targets", meta::value_list<>>;
 			return set_targets<typename targets_type::template append_values_unique<target_vs...>>();
 		}
@@ -2986,24 +2944,25 @@ namespace mgmake::spec {
 			return {};
 		}
 		template<auto target_v>
-		static consteval auto target() {
+		[[nodiscard]] static consteval auto target() {
 			return targets<target_v>();
 		}
 
 		// Uses collect_targets to recursively get all targets for the project
-		static consteval auto all_targets() -> decltype(targets())::template fold<[]<typename state_t, auto target_v>{
-				// If the target can also collect targets
-				if constexpr (collects_targets<target_v>) {
-					// Collect them
-					static constexpr auto children_v = target_v.collect_targets();
-					// Append the collected
-					return std::type_identity<typename state_t::template append_list_unique<decltype(children_v)>::template append_values_unique<target_v>>{};
+		static consteval auto all_targets() {
+			using collected_t = typename decltype(targets())::template fold<[]<typename state_t, auto target_v>() consteval {
+				// Prefer the cycle-aware collector when it is available.
+				if constexpr (collects_targets_with<target_v, meta::value_list<>>) {
+					using children_t = decltype(target_v.template collect_targets<meta::value_list<>>());
+					return std::type_identity<typename state_t::template append_list_unique<children_t>::template append_values_unique<target_v>>{};
+				} else if constexpr (collects_targets<target_v>) {
+					using children_t = decltype(target_v.collect_targets());
+					return std::type_identity<typename state_t::template append_list_unique<children_t>::template append_values_unique<target_v>>{};
 				} else {
-					// Doesn't collect, just append
 					return std::type_identity<typename state_t::template append_values_unique<target_v>>{};
 				}
-			}, meta::value_list<>> {
-			return {};
+			}, meta::value_list<>>;
+			return collected_t{};
 		}
 	};
 	static constexpr auto project = project_impl<>{};
@@ -3039,72 +2998,84 @@ namespace mgmake::spec {
 	};
 
 	template<typename storage_t = meta::type_map<>>
-	struct target_impl : public meta::type_builder<target_impl, storage_t>, meta::named {
+	struct target_impl : public meta::type_builder<target_impl, storage_t>, public meta::named<target_impl<storage_t>> {
 		using builder_type = meta::type_builder<target_impl, storage_t>;
 
 		template<target_type type_v>
-		static consteval auto set_target_type() {
+		[[nodiscard]] static consteval auto set_target_type() {
 			return builder_type::template set_value<"target_type", type_v>();
 		}
 		template<library_type type_v>
-		static consteval auto set_library_type() {
+		[[nodiscard]] static consteval auto set_library_type() {
 			return builder_type::template set_value<"library_type", type_v>();
 		}
 		template<auto type_v>
-		static consteval auto type() {
+		[[nodiscard]] static consteval auto type() {
 			using type_t = decltype(type_v);
 			static_assert(std::is_same_v<type_t, target_type> or std::is_same_v<type_t, library_type>, "type_v must be a target_type or library_type");
 
 			if constexpr (std::is_same_v<type_t, target_type>) {
 				return set_target_type<type_v>();
-			}
-			if constexpr (std::is_same_v<type_t, library_type>) {
+			} else {
 				return set_library_type<type_v>();
 			}
 		}
+		static consteval auto type() {
+			if constexpr (builder_type::template has<"library_type">()) {
+				return builder_type::template get_value<"library_type">();
+			} else {
+				return builder_type::template get_value_or<"target_type", target_type::none>();
+			}
+		}
 
-		template<typename sources_t = meta::type_list<>>
-		static consteval auto set_sources() -> builder_type::template set_type<"sources", sources_t> {
+		template<typename sources_t = meta::value_list<>>
+		[[nodiscard]] static consteval auto set_sources() -> builder_type::template set_type<"sources", sources_t> {
 			return {};
 		}
 		template<meta::static_string... source_vs>
-		static consteval auto sources() {
-			using sources_type = builder_type::template get_type_or<"sources", meta::type_list<>>;
-			return set_sources<typename sources_type::template append_types_unique<meta::type_value<source_vs>...>>();
+		[[nodiscard]] static consteval auto sources() {
+			using sources_type = builder_type::template get_type_or<"sources", meta::value_list<>>;
+			return set_sources<typename sources_type::template append_values_unique<source_vs...>>();
+		}
+		static consteval auto sources() -> builder_type::template get_type_or<"sources", meta::value_list<>> {
+			return {};
 		}
 		template<meta::static_string source_v>
-		static consteval auto source() {
+		[[nodiscard]] static consteval auto source() {
 			return sources<source_v>();
 		}
 
-		template<typename includes_t = meta::type_list<>>
-		static consteval auto set_includes() -> builder_type::template set_type<"includes", includes_t> {
+		template<typename includes_t = meta::value_list<>>
+		[[nodiscard]] static consteval auto set_includes() -> builder_type::template set_type<"includes", includes_t> {
 			return {};
 		}
 		template<meta::static_string... include_vs>
-		static consteval auto includes() {
-			using includes_type = builder_type::template get_type_or<"includes", meta::type_list<>>;
-			return set_includes<typename includes_type::template append_types_unique<meta::type_value<include_vs>...>>();
+		[[nodiscard]] static consteval auto includes() {
+			using includes_type = builder_type::template get_type_or<"includes", meta::value_list<>>;
+			return set_includes<typename includes_type::template append_values_unique<include_vs...>>();
+		}
+		static consteval auto includes() -> builder_type::template get_type_or<"includes", meta::value_list<>> {
+			return {};
 		}
 		template<meta::static_string... include_vs>
-		static consteval auto include_dirs() {
+		[[nodiscard]] static consteval auto include_dirs() {
 			return includes<include_vs...>();
 		}
 		template<meta::static_string include_v>
-		static consteval auto include() {
+		[[nodiscard]] static consteval auto include() {
 			return includes<include_v>();
 		}
 		template<meta::static_string include_v>
-		static consteval auto include_dir() {
+		[[nodiscard]] static consteval auto include_dir() {
 			return include<include_v>();
 		}
 
 		template<typename links_t = meta::value_list<>>
-		static consteval auto set_links() -> builder_type::template set_type<"links", links_t> {
+		[[nodiscard]] static consteval auto set_links() -> builder_type::template set_type<"links", links_t> {
 			return {};
 		}
 		template<auto... link_vs>
-		static consteval auto links() {
+		[[nodiscard]] static consteval auto links() {
 			using links_type = builder_type::template get_type_or<"links", meta::value_list<>>;
 			return set_links<typename links_type::template append_values_unique<link_vs...>>();
 		}
@@ -3112,24 +3083,29 @@ namespace mgmake::spec {
 			return {};
 		}
 		template<auto link_v>
-		static consteval auto link() {
+		[[nodiscard]] static consteval auto link() {
 			return links<link_v>();
 		}
 
-		// Recursively collect all used targets
-		static consteval auto collect_targets() -> decltype(links())::template fold<[]<typename state_t, auto link_v>{
-				// If the link can also collect targets
-				if constexpr (collects_targets<link_v>) {
-					// Collect them
-					static constexpr auto children_v = link_v.collect_targets();
-					// Append the collected
-					return std::type_identity<typename state_t::template append_list_unique<decltype(children_v)>::template append_values_unique<link_v>>{};
+		// Recursively collect all used targets.
+		template<typename visited_t = meta::value_list<>> requires value_list_type<visited_t>
+		static consteval auto collect_targets() {
+			static_assert(not visited_t::template has<target_impl<storage_t>{}>(), "target dependency cycle detected while collecting linked targets");
+			using path_t = typename visited_t::template append<target_impl<storage_t>{}>;
+
+			using collected_t = typename decltype(links())::template fold<[]<typename state_t, auto link_v>() consteval {
+				// Prefer the cycle-aware collector when it is available.
+				if constexpr (collects_targets_with<link_v, path_t>) {
+					using children_t = decltype(link_v.template collect_targets<path_t>());
+					return std::type_identity<typename state_t::template append_list_unique<children_t>::template append_values_unique<link_v>>{};
+				} else if constexpr (collects_targets<link_v>) {
+					using children_t = decltype(link_v.collect_targets());
+					return std::type_identity<typename state_t::template append_list_unique<children_t>::template append_values_unique<link_v>>{};
 				} else {
-					// Doesn't collect, just append
 					return std::type_identity<typename state_t::template append_values_unique<link_v>>{};
 				}
-			}, meta::value_list<>> {
-			return {};
+			}, meta::value_list<>>;
+			return collected_t{};
 		}
 	};
 	static constexpr auto target = target_impl<>{};
@@ -3143,7 +3119,8 @@ namespace mgmake::spec {
 	static constexpr auto executable = target.type<target_type::executable>();
 }
 
-#endif // MGMAKE_SPEC_TARGET_HXX// ===== end include/mgmake/spec/target.hxx =====
+#endif // MGMAKE_SPEC_TARGET_HXX
+// ===== end include/mgmake/spec/target.hxx =====
 
 // skipped duplicate include: include/mgmake/config.hxx
 
