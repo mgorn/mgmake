@@ -11,16 +11,16 @@
 
 namespace mgmake::spec {
 	template<typename storage_t = meta::type_map<>>
-	struct project_impl : public meta::type_builder<project_impl, storage_t>, meta::named {
+	struct project_impl : public meta::type_builder<project_impl, storage_t>, public meta::named<project_impl<storage_t>> {
 		using builder_type = meta::type_builder<project_impl, storage_t>;
 
 		// Targets directly given to the project
 		template<typename targets_t = meta::value_list<>>
-		static consteval auto set_targets() -> builder_type::template set_type<"targets", targets_t> {
+		[[nodiscard]] static consteval auto set_targets() -> builder_type::template set_type<"targets", targets_t> {
 			return {};
 		}
 		template<auto... target_vs>
-		static consteval auto targets() {
+		[[nodiscard]] static consteval auto targets() {
 			using targets_type = builder_type::template get_type_or<"targets", meta::value_list<>>;
 			return set_targets<typename targets_type::template append_values_unique<target_vs...>>();
 		}
@@ -28,7 +28,7 @@ namespace mgmake::spec {
 			return {};
 		}
 		template<auto target_v>
-		static consteval auto target() {
+		[[nodiscard]] static consteval auto target() {
 			return targets<target_v>();
 		}
 

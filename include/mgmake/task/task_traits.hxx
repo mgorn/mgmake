@@ -15,7 +15,7 @@ namespace mgmake::sys {
 
 namespace mgmake::task {
 	template<typename task_t, auto config_v>
-	concept task_handler = requires(const sys::shell& cmd, const typename decltype(config_v.option_storage())::type& opts) {
+	concept task_handler = requires(const sys::shell& cmd, const decltype(config_v.option_storage())& opts) {
 		{
 			task_t::template handle<config_v>(cmd, opts)
 		} -> std::same_as<std::expected<sys::exit_code, std::string>>;

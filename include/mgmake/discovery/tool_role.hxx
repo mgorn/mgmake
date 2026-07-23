@@ -11,12 +11,12 @@
 
 namespace mgmake::discovery {
 	template<typename storage_t = meta::type_map<>>
-	struct tool_role_impl : public meta::type_builder<tool_role_impl, storage_t>, meta::named {
+	struct tool_role_impl : public meta::type_builder<tool_role_impl, storage_t>, public meta::named<tool_role_impl<storage_t>> {
 		using builder_type = meta::type_builder<tool_role_impl, storage_t>;
 
 		// Logical name, for the override option ("cc", "cxx")
 		template<meta::static_string logical_v>
-		static consteval auto logical() {
+		[[nodiscard]] static consteval auto logical() {
 			return builder_type::template set_str<"logical", logical_v>();
 		}
 		static consteval auto logical() {
@@ -25,14 +25,14 @@ namespace mgmake::discovery {
 
 		// Environment variable override ("MGMK_CC", "MGMK_CXX", etc)
 		template<meta::static_string env_v>
-		static consteval auto env() {
+		[[nodiscard]] static consteval auto env() {
 			return builder_type::template set_str<"env", env_v>();
 		}
 		static consteval auto env() {
 			return builder_type::template get_str<"env">();
 		}
 
-		static consteval auto option() {
+		[[nodiscard]] static consteval auto option() {
 			constexpr auto description_v = meta::static_string{ "Override the " } + builder_type::template get_str<"name">() + meta::static_string{ " tool" };
 			return cli::option.name<logical()>().template description<description_v>();
 		}

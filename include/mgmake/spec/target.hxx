@@ -24,72 +24,84 @@ namespace mgmake::spec {
 	};
 
 	template<typename storage_t = meta::type_map<>>
-	struct target_impl : public meta::type_builder<target_impl, storage_t>, meta::named {
+	struct target_impl : public meta::type_builder<target_impl, storage_t>, public meta::named<target_impl<storage_t>> {
 		using builder_type = meta::type_builder<target_impl, storage_t>;
 
 		template<target_type type_v>
-		static consteval auto set_target_type() {
+		[[nodiscard]] static consteval auto set_target_type() {
 			return builder_type::template set_value<"target_type", type_v>();
 		}
 		template<library_type type_v>
-		static consteval auto set_library_type() {
+		[[nodiscard]] static consteval auto set_library_type() {
 			return builder_type::template set_value<"library_type", type_v>();
 		}
 		template<auto type_v>
-		static consteval auto type() {
+		[[nodiscard]] static consteval auto type() {
 			using type_t = decltype(type_v);
 			static_assert(std::is_same_v<type_t, target_type> or std::is_same_v<type_t, library_type>, "type_v must be a target_type or library_type");
 
 			if constexpr (std::is_same_v<type_t, target_type>) {
 				return set_target_type<type_v>();
-			}
-			if constexpr (std::is_same_v<type_t, library_type>) {
+			} else {
 				return set_library_type<type_v>();
 			}
 		}
+		static consteval auto type() {
+			if constexpr (builder_type::template has<"library_type">()) {
+				return builder_type::template get_value<"library_type">();
+			} else {
+				return builder_type::template get_value_or<"target_type", target_type::none>();
+			}
+		}
 
-		template<typename sources_t = meta::type_list<>>
-		static consteval auto set_sources() -> builder_type::template set_type<"sources", sources_t> {
+		template<typename sources_t = meta::value_list<>>
+		[[nodiscard]] static consteval auto set_sources() -> builder_type::template set_type<"sources", sources_t> {
 			return {};
 		}
 		template<meta::static_string... source_vs>
-		static consteval auto sources() {
-			using sources_type = builder_type::template get_type_or<"sources", meta::type_list<>>;
-			return set_sources<typename sources_type::template append_types_unique<meta::type_value<source_vs>...>>();
+		[[nodiscard]] static consteval auto sources() {
+			using sources_type = builder_type::template get_type_or<"sources", meta::value_list<>>;
+			return set_sources<typename sources_type::template append_values_unique<source_vs...>>();
+		}
+		static consteval auto sources() -> builder_type::template get_type_or<"sources", meta::value_list<>> {
+			return {};
 		}
 		template<meta::static_string source_v>
-		static consteval auto source() {
+		[[nodiscard]] static consteval auto source() {
 			return sources<source_v>();
 		}
 
-		template<typename includes_t = meta::type_list<>>
-		static consteval auto set_includes() -> builder_type::template set_type<"includes", includes_t> {
+		template<typename includes_t = meta::value_list<>>
+		[[nodiscard]] static consteval auto set_includes() -> builder_type::template set_type<"includes", includes_t> {
 			return {};
 		}
 		template<meta::static_string... include_vs>
-		static consteval auto includes() {
-			using includes_type = builder_type::template get_type_or<"includes", meta::type_list<>>;
-			return set_includes<typename includes_type::template append_types_unique<meta::type_value<include_vs>...>>();
+		[[nodiscard]] static consteval auto includes() {
+			using includes_type = builder_type::template get_type_or<"includes", meta::value_list<>>;
+			return set_includes<typename includes_type::template append_values_unique<include_vs...>>();
+		}
+		static consteval auto includes() -> builder_type::template get_type_or<"includes", meta::value_list<>> {
+			return {};
 		}
 		template<meta::static_string... include_vs>
-		static consteval auto include_dirs() {
+		[[nodiscard]] static consteval auto include_dirs() {
 			return includes<include_vs...>();
 		}
 		template<meta::static_string include_v>
-		static consteval auto include() {
+		[[nodiscard]] static consteval auto include() {
 			return includes<include_v>();
 		}
 		template<meta::static_string include_v>
-		static consteval auto include_dir() {
+		[[nodiscard]] static consteval auto include_dir() {
 			return include<include_v>();
 		}
 
 		template<typename links_t = meta::value_list<>>
-		static consteval auto set_links() -> builder_type::template set_type<"links", links_t> {
+		[[nodiscard]] static consteval auto set_links() -> builder_type::template set_type<"links", links_t> {
 			return {};
 		}
 		template<auto... link_vs>
-		static consteval auto links() {
+		[[nodiscard]] static consteval auto links() {
 			using links_type = builder_type::template get_type_or<"links", meta::value_list<>>;
 			return set_links<typename links_type::template append_values_unique<link_vs...>>();
 		}
@@ -97,7 +109,7 @@ namespace mgmake::spec {
 			return {};
 		}
 		template<auto link_v>
-		static consteval auto link() {
+		[[nodiscard]] static consteval auto link() {
 			return links<link_v>();
 		}
 

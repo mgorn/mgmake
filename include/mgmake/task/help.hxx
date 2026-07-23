@@ -24,7 +24,7 @@ namespace mgmake::task {
 			std::println("Usage:");
 			std::println("\t{} [task] [options]", cmd.program_name());
 			using tasks_type = decltype(config_v.tasks());
-			using options_type = decltype(config_v.option_storage())::type::list_type;
+			using options_type = decltype(config_v.option_storage())::list_type;
 			
 			std::println("\nTasks:");
 			static constexpr auto task_help = []<typename task_t>(auto& cmd){

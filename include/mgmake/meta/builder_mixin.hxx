@@ -6,13 +6,14 @@
 #include "../meta/static_string.hxx"
 
 namespace mgmake::meta {
+	template<typename builder_t>
 	struct named {
 		template<meta::static_string value_v>
-		consteval auto name(this auto const& self) {
-			return self.template set_str<"name", value_v>();
+		[[nodiscard]] static consteval auto name() {
+			return builder_t::template set_str<"name", value_v>();
 		}
-		consteval auto name(this auto const& self) {
-			return self.template get_str<"name">();
+		static consteval auto name() {
+			return builder_t::template get_str<"name">();
 		}
 	};
 }

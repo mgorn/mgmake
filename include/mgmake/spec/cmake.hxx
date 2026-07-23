@@ -8,11 +8,11 @@
 
 namespace mgmake::spec {
 	template<typename storage_t = meta::type_map<>>
-	struct cmake_target_impl :public meta::type_builder<cmake_target_impl, storage_t>, meta::named {
+	struct cmake_target_impl : public meta::type_builder<cmake_target_impl, storage_t>, public meta::named<cmake_target_impl<storage_t>> {
 		using builder_type = meta::type_builder<cmake_target_impl, storage_t>;
 
 		template<auto cmake_v>
-		static consteval auto project() {
+		[[nodiscard]] static consteval auto project() {
 			return builder_type::template set_value<"project", cmake_v>();
 		}
 		static consteval auto project() {
@@ -21,25 +21,23 @@ namespace mgmake::spec {
 	};
 
 	template<typename storage_t = meta::type_map<>>
-	struct cmake_impl : public meta::type_builder<cmake_impl, storage_t>, meta::named {
+	struct cmake_impl : public meta::type_builder<cmake_impl, storage_t>, public meta::named<cmake_impl<storage_t>> {
 		using builder_type = meta::type_builder<cmake_impl, storage_t>;
 
 		template<auto fetch_v>
-		static consteval auto fetch() {
+		[[nodiscard]] static consteval auto fetch() {
 			return builder_type::template set_value<"fetch", fetch_v>();
 		}
 		static consteval auto fetch() {
-			if constexpr (builder_type::template has<"fetch">()) {
-				return builder_type::template get_value<"fetch">();
-			}
+			return builder_type::template get_value_or<"fetch", nullptr>();
 		}
 
 		template<typename cmake_vars_t = meta::type_map<>>
-		static consteval auto set_cmake_vars() -> builder_type::template set_type<"cmake_vars", cmake_vars_t> {
+		[[nodiscard]] static consteval auto set_cmake_vars() -> builder_type::template set_type<"cmake_vars", cmake_vars_t> {
 			return {};
 		}
 		template<meta::static_string var_v, meta::static_string val_v>
-		static consteval auto define() -> decltype(set_cmake_vars<typename meta::type_or_t<
+		[[nodiscard]] static consteval auto define() -> decltype(set_cmake_vars<typename meta::type_or_t<
 				typename builder_type::template get_type<"cmake_vars", false>,
 				meta::type_map<>
 			>
@@ -48,17 +46,20 @@ namespace mgmake::spec {
 		}
 
 		template<bool install_v = true>
-		static consteval auto set_install() {
+		[[nodiscard]] static consteval auto set_install() {
 			return builder_type::template set_value<"install", install_v>();
 		}
-		static consteval auto install() {
+		[[nodiscard]] static consteval auto install() {
 			return set_install<true>();
 		}
+		static consteval bool installs() {
+			return builder_type::template get_value_or<"install", false>();
+		}
 
-		static consteval auto target() {
+		[[nodiscard]] static consteval auto target() {
 			return cmake_target_impl<>{}.project<cmake_impl{}>();
 		}
-		static consteval auto library() {
+		[[nodiscard]] static consteval auto library() {
 			return target();
 		}
 	};

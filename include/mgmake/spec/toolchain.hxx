@@ -8,38 +8,38 @@
 
 namespace mgmake::spec {
 	template<typename storage_t = meta::type_map<>>
-	struct toolchain_impl : public meta::type_builder<toolchain_impl, storage_t>, meta::named {
+	struct toolchain_impl : public meta::type_builder<toolchain_impl, storage_t>, public meta::named<toolchain_impl<storage_t>> {
 		using builder_type = meta::type_builder<toolchain_impl, storage_t>;
 
 		template<meta::static_string value_v>
-		consteval auto cc() const {
+		[[nodiscard]] static consteval auto cc() {
 			return builder_type::template set_str<"cc", value_v>();
 		}
-		consteval auto cc() const {
+		static consteval auto cc() {
 			return builder_type::template get_str<"cc">();
 		}
 
 		template<meta::static_string value_v>
-		consteval auto cxx() const {
+		[[nodiscard]] static consteval auto cxx() {
 			return builder_type::template set_str<"cxx", value_v>();
 		}
-		consteval auto cxx() const {
+		static consteval auto cxx() {
 			return builder_type::template get_str<"cxx">();
 		}
 
 		template<meta::static_string value_v>
-		consteval auto ar() const {
+		[[nodiscard]] static consteval auto ar() {
 			return builder_type::template set_str<"ar", value_v>();
 		}
-		consteval auto ar() const {
+		static consteval auto ar() {
 			return builder_type::template get_str<"ar">();
 		}
 
 		template<meta::static_string value_v>
-		consteval auto linker() const {
+		[[nodiscard]] static consteval auto linker() {
 			return builder_type::template set_str<"linker", value_v>();
 		}
-		consteval auto linker() const {
+		static consteval auto linker() {
 			return builder_type::template get_str<"linker">();
 		}
 	};

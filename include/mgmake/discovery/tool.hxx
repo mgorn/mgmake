@@ -13,7 +13,7 @@ namespace mgmake::discovery {
 		using builder_type = meta::type_builder<tool_impl, storage_t>;
 
 		template<meta::static_string logical_v>
-		static consteval auto logical() {
+		[[nodiscard]] static consteval auto logical() {
 			return builder_type::template set_str<"logical", logical_v>();
 		}
 		static consteval auto logical() {
@@ -21,7 +21,7 @@ namespace mgmake::discovery {
 		}
 
 		template<auto role_v>
-		static consteval auto role() {
+		[[nodiscard]] static consteval auto role() {
 			return builder_type::template set_value<"role", role_v>();
 		}
 		static consteval auto role() {

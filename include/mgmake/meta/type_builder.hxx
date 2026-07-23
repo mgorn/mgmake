@@ -22,9 +22,9 @@ namespace mgmake::meta {
         using get_type = typename storage_t::template at<type_value<key_v>, check_v>;
 		template<static_string key_v, typename default_t>
 		using get_type_or = type_or_t<get_type<key_v, false>, default_t>;
-        template<static_string key_v, bool check_v = true>
+        template<static_string key_v>
 		static consteval auto get_value() {
-			return get_type<key_v, check_v>::value;
+			return get_type<key_v>::value;
 		}
 		template<static_string key_v, auto default_v = nullptr>
 		static consteval auto get_value_or() {
@@ -42,11 +42,11 @@ namespace mgmake::meta {
         template<static_string key_v, typename value_t>
         using set_type = impl_t<typename storage_t::template emplace<type_value<key_v>, value_t>>;
 		template<static_string key_v, auto value_v>
-		static consteval auto set_value() {
+		[[nodiscard]] static consteval auto set_value() {
 			return set_type<key_v, type_value<value_v>>{};
 		}
 		template<static_string key_v, static_string str_v>
-		static consteval auto set_str() {
+		[[nodiscard]] static consteval auto set_str() {
 			return set_type<key_v, type_value<str_v>>{};
 		}
     };
