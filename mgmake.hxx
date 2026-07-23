@@ -1291,6 +1291,8 @@ namespace mgmake::sys {
                 return -1;
             }
 
+            // _spawnvp expects the same null-terminated argv layout as main(). The strings
+            // remain owned by m_args, so these pointers stay valid for the synchronous call.
             std::vector<const char*> argv;
             argv.reserve(m_args.size() + 1);
 
@@ -1299,19 +1301,33 @@ namespace mgmake::sys {
             }
             argv.push_back(nullptr);
 
-            // Execute the tokenized arguments directly so cmd.exe cannot expand %VAR% or !VAR!.
+            // _P_WAIT blocks until the child exits and returns its exit code. Passing argv
+            // directly avoids cmd.exe entirely, so values such as %PATH% and !DELAYED! are
+            // delivered literally instead of being expanded as command-processor syntax.
             return static_cast<int>(_spawnvp(_P_WAIT, argv.front(), argv.data()));
 #else
+            // std::system executes through the POSIX shell and returns an encoded wait status,
+            // not merely the integer passed to exit(). Decode the status using <sys/wait.h>.
             const int status = std::system(full_command().c_str());
+
+            // A return value of -1 means the shell could not be started or waited upon.
             if (status == -1) {
                 return -1;
             }
+
+            // Normal termination: extract the value passed to exit() or returned from main().
             if (WIFEXITED(status)) {
                 return WEXITSTATUS(status);
             }
+
+            // Signal termination: follow the conventional shell representation 128 + signal.
+            // For example, SIGTERM is signal 15 and is therefore reported as exit code 143.
             if (WIFSIGNALED(status)) {
                 return 128 + WTERMSIG(status);
             }
+
+            // system() should normally report one of the states above. Preserve the raw status
+            // for any implementation-specific state rather than inventing another mapping.
             return status;
 #endif
         }
@@ -1321,6 +1337,19 @@ namespace mgmake::sys {
             return arg.empty() or (std::ranges::find_first_of(arg, special_characters) != arg.end());
         }
 
+		// `_spawnvp` launches the executable directly and passes the stored arguments
+		// through the Windows CRT argument parser rather than through `cmd.exe`.
+		//
+		// Because `cmd.exe` is not involved, shell metacharacters such as `&`, `|`,
+		// `<`, `>`, `^`, `%`, `!`, `(`, and `)` have no special meaning here and must
+		// be preserved as ordinary argument characters.
+		//
+		// Only whitespace and `"` affect how a reconstructed Windows command line is
+		// split back into argv entries, so only those characters require CRT quoting.
+		//
+		// This escaping is suitable for direct process invocation. A command string
+		// intended for `cmd.exe`, a batch file, or a shell-backed build backend would
+		// require separate cmd-specific escaping.
         static inline constexpr std::array special_characters{
 #ifdef MGMK_PLATFORM_WINDOWS
         ' ', '\t', '"'
