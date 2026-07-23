@@ -5,93 +5,51 @@
 
 #include "../meta/static_string.hxx"
 #include "../meta/type_map.hxx"
+#include "../meta/type_or.hxx"
 #include "../meta/type_value.hxx"
 
 namespace mgmake::meta {
-    template<typename storage_t = type_map<>>
+    template<template<typename = type_map<>> typename impl_t, typename storage_t = type_map<>>
     struct type_builder {
 		using storage_type = storage_t;
-		
+
+		template<static_string key_v>
+		static consteval bool has() {
+			return storage_type::template has<type_value<key_v>>();
+		}
+
         template<static_string key_v, bool check_v = true>
-        using get = typename storage_t::template at<type_value<key_v>, check_v>;
+        using get_type = typename storage_t::template at<type_value<key_v>, check_v>;
+		template<static_string key_v, typename default_t>
+		using get_type_or = type_or_t<get_type<key_v, false>, default_t>;
+        template<static_string key_v, bool check_v = true>
+		static consteval auto get_value() {
+			return get_type<key_v, check_v>::value;
+		}
+		template<static_string key_v, auto default_v = nullptr>
+		static consteval auto get_value_or() {
+			if constexpr (has<key_v>()) {
+				return get_value<key_v>();
+			} else {
+				return default_v;
+			}
+		}
+		template<static_string key_v>
+		static consteval auto get_str() {
+			return get_value_or<key_v, static_string{ "" }>();
+		}
 
         template<static_string key_v, typename value_t>
-        using set = type_builder<typename storage_t::template emplace<type_value<key_v>, value_t>>;
-
-        template<template<typename> typename consumer_t>
-        using build = consumer_t<storage_t>;
+        using set_type = impl_t<typename storage_t::template emplace<type_value<key_v>, value_t>>;
+		template<static_string key_v, auto value_v>
+		static consteval auto set_value() {
+			return set_type<key_v, type_value<value_v>>{};
+		}
+		template<static_string key_v, static_string str_v>
+		static consteval auto set_str() {
+			return set_type<key_v, type_value<str_v>>{};
+		}
     };
-
-	template<typename builder_t>
-	concept has_builder_alias = requires {
-		typename builder_t::build;
-	};
-	template<auto builder_v>
-	concept has_builder_fn = requires {
-		{ builder_v.build() };
-	};
 }
-
-// When defining builder fields, ensure `builder_t` is the name of the `meta::type_builder`
-#define MGMAKE_TYPE_BUILDER_TYPE_FIELD(wrapper_t, alias_t) \
-	MGMAKE_TYPE_BUILDER_TYPE_FIELD_AS( \
-		wrapper_t, \
-		alias_t, \
-		::mgmake::meta::static_string{#alias_t} \
-	)
-
-#define MGMAKE_TYPE_BUILDER_TYPE_FIELD_AS(wrapper_t, alias_t, key_v) \
-	template<typename alias_t##_t> \
-	using alias_t = wrapper_t< \
-		typename builder_t::template set<key_v, alias_t##_t> \
-	>
-
-#define MGMAKE_TYPE_BUILDER_VALUE_FIELD(wrapper_t, alias_t, value_t) \
-	MGMAKE_TYPE_BUILDER_VALUE_FIELD_AS( \
-		wrapper_t, \
-		alias_t, \
-		value_t, \
-		::mgmake::meta::static_string{#alias_t} \
-	)
-
-#define MGMAKE_TYPE_BUILDER_VALUE_FIELD_AS(wrapper_t, alias_t, value_t, key_v) \
-	MGMAKE_TYPE_BUILDER_TYPE_FIELD_AS( \
-		wrapper_t, \
-		alias_t##_type, \
-		key_v \
-	); \
-	template<value_t alias_t##_v> \
-	using alias_t = alias_t##_type< \
-		::mgmake::meta::type_value<alias_t##_v> \
-	>
-
-#define MGMAKE_TYPE_CONSUMER_TYPE_FIELD(alias_t, default_t) \
-	MGMAKE_TYPE_CONSUMER_TYPE_FIELD_AS(alias_t, ::mgmake::meta::static_string{#alias_t}, default_t)
-
-#define MGMAKE_TYPE_CONSUMER_TYPE_FIELD_AS(alias_t, key_v, default_t) \
-	using alias_t##_type = typename storage_t::template at< \
-		::mgmake::meta::type_value<key_v>, \
-		false \
-	>; \
-	using alias_t = std::conditional_t< \
-		std::same_as<alias_t##_type, void>, \
-		default_t, \
-		alias_t##_type \
-	>
-
-#define MGMAKE_TYPE_CONSUMER_VALUE_FIELD(alias_t, default_v) \
-	MGMAKE_TYPE_CONSUMER_VALUE_FIELD_AS( \
-		alias_t, \
-		::mgmake::meta::static_string{#alias_t}, \
-		default_v \
-	)
-
-#define MGMAKE_TYPE_CONSUMER_VALUE_FIELD_AS(alias_t, key_v, default_v) \
-	MGMAKE_TYPE_CONSUMER_TYPE_FIELD_AS( \
-		alias_t##_type, \
-		key_v, \
-		::mgmake::meta::type_value<default_v> \
-	); \
-	static inline constexpr auto alias_t##_value = alias_t##_type::value
 
 #endif // MGMAKE_META_TYPE_BUILDER_HXX

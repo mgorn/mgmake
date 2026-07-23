@@ -13,18 +13,17 @@
 
 namespace mgmake::task {
 	struct help {
-		using option_type = cli::option
-			::name<"help">::short_name<'h'>
-			::description<"Show help.">
-			::set<"task", std::size_t{1}>
-			::task<true>
-			::build;
+		static constexpr auto option = cli::option
+			.name<"help">().short_name<'h'>()
+			.description<"Show help.">()
+			.set<"task", std::size_t{1}>()
+			.task<true>();
 		
 		template<auto config_v>
 		static inline constexpr std::expected<sys::exit_code, std::string> handle(auto& cmd, auto& opts) {
 			std::println("Usage:");
 			std::println("\t{} [task] [options]", cmd.program_name());
-			using tasks_type = decltype(config_v.tasks())::type;
+			using tasks_type = decltype(config_v.tasks());
 			using options_type = decltype(config_v.option_storage())::type::list_type;
 			
 			std::println("\nTasks:");
@@ -38,24 +37,24 @@ namespace mgmake::task {
 			}(std::make_index_sequence<tasks_type::size()>{}, cmd);
 
 			std::println("\nOptions:");
-			static constexpr auto option_help = []<typename opt_t>{
+			static constexpr auto option_help = []<auto opt_v>{
 				// Only print switches, tasks will be shown first
-				if constexpr (opt_t::flag_value) {
+				if constexpr (opt_v.flag()) {
 					std::stringstream ss;
-					if constexpr (opt_t::short_name_value != '\0') {
-						std::print(ss, "-{}, ", opt_t::short_name_value);
+					if constexpr (opt_v.short_name() != '\0') {
+						std::print(ss, "-{}, ", opt_v.short_name());
 					}
-					std::print(ss, "--{}", opt_t::name_value.view());
-					if constexpr (opt_t::parse_value) {
-						using vp = cli::value_parser<typename opt_t::storage_value_type>;
+					std::print(ss, "--{}", opt_v.name().view());
+					if constexpr (opt_v.parses()) {
+						using vp = cli::value_parser<typename decltype(opt_v)::storage_value_type>;
 						std::print(ss, "=<{}>", vp::help_hint);
 					}
-					std::println("\t{:<24} {}", ss.str(), opt_t::description_value.view());
+					std::println("\t{:<24} {}", ss.str(), opt_v.description().view());
 				}
 			};
 
 			[]<std::size_t... Is>(std::index_sequence<Is...>) {
-				(option_help.template operator()<typename options_type::template type_at<Is>>(), ...);
+				(option_help.template operator()<options_type::template value_at<Is>>(), ...);
 			}(std::make_index_sequence<options_type::size()>{});
 
 			return sys::exit_code::success;

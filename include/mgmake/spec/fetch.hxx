@@ -3,6 +3,7 @@
 #ifndef MGMAKE_SPEC_FETCH_HXX
 #define MGMAKE_SPEC_FETCH_HXX
 
+#include "../meta/builder_mixin.hxx"
 #include "../meta/type_builder.hxx"
 
 namespace mgmake::spec {
@@ -21,60 +22,85 @@ namespace mgmake::spec {
 	};
 
 	template<typename storage_t = meta::type_map<>>
-	struct git_fetch_impl {
-		using storage_type = storage_t;
+	struct git_fetch_impl : public meta::type_builder<git_fetch_impl, storage_t>, meta::named {
+		using builder_type = meta::type_builder<git_fetch_impl, storage_t>;
 
-		
+		template<meta::static_string url_v>
+		static consteval auto url() {
+			return builder_type::template set_str<"url", url_v>();
+		}
+		static consteval auto url() {
+			return builder_type::template get_str<"url">();
+		}
+
+		template<meta::static_string tag_v>
+		static consteval auto tag() {
+			return builder_type::template set_str<"tag", tag_v>();
+		}
+		static consteval auto tag() {
+			return builder_type::template get_str<"tag">();
+		}
 	};
+
 	template<typename storage_t = meta::type_map<>>
-	struct archive_fetch_impl {};
+	struct archive_fetch_impl : public meta::type_builder<archive_fetch_impl, storage_t>, meta::named {
+		using builder_type = meta::type_builder<archive_fetch_impl, storage_t>;
+
+		template<meta::static_string url_v>
+		static consteval auto url() {
+			return builder_type::template set_str<"url", url_v>();
+		}
+		static consteval auto url() {
+			return builder_type::template get_str<"url">();
+		}
+
+		template<meta::static_string checksum_v>
+		static consteval auto checksum() {
+			return builder_type::template set_str<"checksum", checksum_v>();
+		}
+		static consteval auto checksum() {
+			return builder_type::template get_str<"checksum">();
+		}
+
+		template<archive_format format_v>
+		static consteval auto format() {
+			return builder_type::template set_value<"format", format_v>();
+		}
+		static consteval archive_format format() {
+			if constexpr (builder_type::template has<"format">()) {
+				return builder_type::template get_value<"format">();
+			} else {
+				return archive_format::auto_detect;
+			}
+		}
+	};
+
 	template<typename storage_t = meta::type_map<>>
-	struct local_fetch_impl {};
+	struct local_fetch_impl : public meta::type_builder<local_fetch_impl, storage_t>, meta::named {
+		using builder_type = meta::type_builder<local_fetch_impl, storage_t>;
 
-	template<typename builder_t = meta::type_builder<>>
-	struct git_fetch_builder {
-		using builder_type = builder_t;
-
-		MGMAKE_TYPE_BUILDER_VALUE_FIELD(git_fetch_builder, name, meta::static_string);
-		MGMAKE_TYPE_BUILDER_VALUE_FIELD(git_fetch_builder, url, meta::static_string);
-		MGMAKE_TYPE_BUILDER_VALUE_FIELD(git_fetch_builder, tag, meta::static_string);
-
-		using build = typename builder_type::template build<git_fetch_impl>;
+		template<meta::static_string path_v>
+		static consteval auto path() {
+			return builder_type::template set_str<"path", path_v>();
+		}
+		static consteval auto path() {
+			return builder_type::template get_str<"path">();
+		}
 	};
 
-	template<typename builder_t = meta::type_builder<>>
-	struct archive_fetch_builder {
-		using builder_type = builder_t;
-
-		MGMAKE_TYPE_BUILDER_VALUE_FIELD(archive_fetch_builder, name, meta::static_string);
-		MGMAKE_TYPE_BUILDER_VALUE_FIELD(archive_fetch_builder, url, meta::static_string);
-		MGMAKE_TYPE_BUILDER_VALUE_FIELD(archive_fetch_builder, checksum, meta::static_string);
-		MGMAKE_TYPE_BUILDER_VALUE_FIELD(archive_fetch_builder, format, meta::static_string);
-
-		using build = typename builder_type::template build<archive_fetch_impl>;
+	template<typename storage_t = meta::type_map<>>
+	struct fetch_impl : public meta::type_builder<fetch_impl, storage_t>, meta::named {
+		static consteval auto git() {
+			return git_fetch_impl<>{}.name<fetch_impl{}.name()>();
+		}
+		static consteval auto archive() {
+			return archive_fetch_impl<>{}.name<fetch_impl{}.name()>();
+		}
+		static consteval auto local() {
+			return local_fetch_impl<>{}.name<fetch_impl{}.name()>();
+		}
 	};
-
-	template<typename builder_t = meta::type_builder<>>
-	struct local_fetch_builder {
-		using builder_type = builder_t;
-
-		MGMAKE_TYPE_BUILDER_VALUE_FIELD(local_fetch_builder, name, meta::static_string);
-		MGMAKE_TYPE_BUILDER_VALUE_FIELD(local_fetch_builder, path, meta::static_string);
-
-		using build = typename builder_type::template build<local_fetch_impl>;
-	};
-
-	template<typename builder_t = meta::type_builder<>>
-	struct fetch_builder {
-		using builder_type = builder_t;
-
-		MGMAKE_TYPE_BUILDER_VALUE_FIELD(fetch_builder, name, meta::static_string);
-
-		using git = git_fetch_builder<builder_type>;
-		using archive = archive_fetch_builder<builder_type>;
-		using local = local_fetch_builder<builder_type>;
-	};
-	using fetch = fetch_builder<>;
+	static constexpr auto fetch = fetch_impl<>{};
 }
 
 #endif // MGMAKE_SPEC_FETCH_HXX

@@ -10,14 +10,13 @@
 
 namespace mgmake::task {
 	struct fetch {
-		using option_type = cli::option
-			::name<"fetch">
-			::description<"Fetch (download, find, etc) all project dependencies.">
-			::set<"task", std::size_t{3}>
-			::task<true>::flag<false>
-			::build;
+		static constexpr auto option = cli::option
+			.name<"fetch">()
+			.description<"Fetch (download, find, etc) all project dependencies.">()
+			.set<"task", std::size_t{3}>()
+			.task<true>().flag<false>();
 		
-		template<typename config_t>
+		template<auto config_v>
 		static inline constexpr std::expected<sys::exit_code, std::string> handle(auto& cmd, const auto& opts) {
 			// TODO: This would be the entrypoint/root for fetch
 			std::println("Fetch task");

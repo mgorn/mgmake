@@ -23,12 +23,12 @@ namespace mgmake::cli {
 		using list_type = option_storage_type::list_type;
 
 		// Task options (first arg, no - or --)
-		using tasks_type = typename list_type::template filter<[]<typename opt_t> -> bool {
-			return opt_t::task_value;
+		using tasks_type = typename list_type::template filter<[]<auto opt_v> -> bool {
+			return opt_v.task();
 		}>;
 		// Switch option (- or -- prefix)
-		using switches_type = typename list_type::template filter<[]<typename opt_t> -> bool {
-			return opt_t::flag_value;
+		using switches_type = typename list_type::template filter<[]<auto opt_v> -> bool {
+			return opt_v.flag();
 		}>;
 
 		template<typename dispatcher_t>
@@ -103,8 +103,8 @@ namespace mgmake::cli {
 						std::size_t dist = -1;
 						if (error_hint.empty()) {
 							std::string closest = "";
-							switches_type::for_each([&]<typename opt_t>{
-								constexpr auto name = opt_t::name_value;
+							switches_type::for_each([&]<auto opt_v>{
+								constexpr auto name = opt_v.name();
 								if (not name.empty()) {
 									auto name_dist = name.distance(arg_name);
 									if (name_dist < dist) {
@@ -113,7 +113,7 @@ namespace mgmake::cli {
 									}
 								}
 
-								constexpr auto alias = opt_t::alias_value;
+								constexpr auto alias = opt_v.alias();
 								if (not alias.empty()) {
 									auto alias_dist = alias.distance(arg_name);
 									if (alias_dist < dist) {
@@ -129,15 +129,15 @@ namespace mgmake::cli {
 
 						// 2) Check if its contained in a name
 						if (error_hint.empty() or (dist > 1)) {
-							switches_type::for_each([&]<typename opt_t>{
-								constexpr auto name = opt_t::name_value;
+							switches_type::for_each([&]<auto opt_v>{
+								constexpr auto name = opt_v.name();
 								// If arg is in name
 								if (name.contains(arg_name)) {
 									error_hint = std::format("Did you mean '{}{}'?", arg_prefix, name);
 								}
 
 								// or the alias
-								constexpr auto alias = opt_t::alias_value;
+								constexpr auto alias = opt_v.alias();
 								if (alias.contains(arg_name)) {
 									error_hint = std::format("Did you mean '{}{}'?", arg_prefix, alias);
 								}
@@ -155,13 +155,13 @@ namespace mgmake::cli {
 				mgmkassert(matches.count() == 1, "Matched arg to more than one option?");
 
 				auto index = detail::index_bit(matches);
-				auto result = list_type::type_switch([&]<typename opt_t> -> std::expected<bool, std::string> {
+				auto result = list_type::value_switch([&]<auto opt_v> -> std::expected<bool, std::string> {
 					// If the option expects a value
-					if constexpr (opt_t::parse_value) {
+					if constexpr (opt_v.parses()) {
 						// What is the expected value type?
 						// TODO: If value_type is a std::vector or other container,
 						// we need to keep reading each arg, parse them, and store...
-						using value_type = opt_t::storage_value_type;
+						using value_type = decltype(opt_v)::storage_value_type;
 
 						// Is it `--switch=value` or `--switch value`?
 						if (const auto seperator = arg.find_first_of("="); seperator != std::string_view::npos) {
@@ -169,7 +169,7 @@ namespace mgmake::cli {
 							arg = arg.substr(0, seperator);
 
 							// assign
-							auto result = opt_t::handle_parse(opts, arg, value_text);
+							auto result = opt_v.handle_parse(opts, arg, value_text);
 							if (not result) {
 								return std::unexpected(std::format("opt_t::handle_assign failed: {}", result.error()));
 							}
@@ -182,7 +182,7 @@ namespace mgmake::cli {
 										break;
 									}
 									// assign
-									auto result = opt_t::handle_parse(opts, arg, value_text);
+									auto result = opt_v.handle_parse(opts, arg, value_text);
 									if (not result) {
 										break;
 									}
@@ -197,7 +197,7 @@ namespace mgmake::cli {
 
 								std::string_view value_text = *it;
 								// assign
-								auto result = opt_t::handle_parse(opts, arg, value_text);
+								auto result = opt_v.handle_parse(opts, arg, value_text);
 								if (not result) {
 									return std::unexpected(std::format("opt_t::handle_assign failed: {}", result.error()));
 								}
@@ -208,18 +208,18 @@ namespace mgmake::cli {
 					}
 					
 					// If the option invokes a callback
-					if constexpr (opt_t::is_callback) {
-						auto result = opt_t::handle_callback(opts, arg);
+					if constexpr (opt_v.is_callback) {
+						auto result = opt_v.handle_callback(opts, arg);
 						if (not result) {
-							return std::unexpected(std::format("opt_t::handle_callback failed: {}", result.error()));
+							return std::unexpected(std::format("opt_v.handle_callback failed: {}", result.error()));
 						}
 
 						return true;
 					}
 
 					// If the option is a task
-					if constexpr (opt_t::task_value) {
-						auto result = opt_t::template handle_task<dispatcher_t>(opts, arg);
+					if constexpr (opt_v.task()) {
+						auto result = opt_v.template handle_task<dispatcher_t>(opts, arg);
 						if (not result) {
 							return std::unexpected(std::format("opt_t::handle_task failed: {}", result.error()));
 						}
@@ -244,7 +244,7 @@ namespace mgmake::cli {
 		static inline constexpr matches_type<opts_t> match(std::string_view arg) {
 			return []<std::size_t... Is>(std::index_sequence<Is...>, std::string_view arg) {
 				matches_type<opts_t> matches{};
-				(matches.set(Is, opts_t::template type_at<Is>::match(arg)), ...);
+				(matches.set(Is, opts_t::template value_at<Is>.match(arg)), ...);
 				return matches;
 			}(std::make_index_sequence<opts_t::size()>{}, arg);
 		}

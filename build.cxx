@@ -13,8 +13,7 @@ static constexpr auto glmproj = cmake.name<"glm">()
 	.define<"GLM_BUILD_TESTS", "OFF">()
 	.define<"GLM_BUILD_INSTALL", "ON">()
 	.install();
-static constexpr auto glm = glmproj.library()
-	.name<"glm">();
+static constexpr auto glm = glmproj.library().name<"glm">();
 
 static constexpr auto sdlproj = cmake.name<"sdl">()
 	.fetch<fetch.git()
@@ -27,8 +26,7 @@ static constexpr auto sdlproj = cmake.name<"sdl">()
 	.define<"SDL_SHARED_DEFAULT", "OFF">()
 	.define<"BUILD_SHARED_LIBS", "OFF">()
 	.install();
-using sdl = sdlproj.library()
-	.name<"SDL3-static">();
+static constexpr auto sdl = sdlproj.library().name<"SDL3-static">();
 
 static constexpr auto testlib = library.name<"testlib">()
 	.type<library_type::interface>()

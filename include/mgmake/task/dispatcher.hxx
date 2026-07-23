@@ -16,7 +16,7 @@ namespace mgmake::task {
 	// The mgmake config
     template<auto config_v>
 	struct dispatcher {
-		using list_type = decltype(config_v.tasks())::type;
+		using list_type = decltype(config_v.tasks());
 
 		static inline constexpr std::expected<sys::exit_code, std::string> invoke(const sys::shell& cmd, const auto& opts) {
 			if constexpr (not opts.template has<cli::task_option>()) {

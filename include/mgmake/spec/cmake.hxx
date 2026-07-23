@@ -3,58 +3,67 @@
 #ifndef MGMAKE_SPEC_CMAKE_HXX
 #define MGMAKE_SPEC_CMAKE_HXX
 
+#include "../meta/builder_mixin.hxx"
 #include "../meta/type_builder.hxx"
 
 namespace mgmake::spec {
-	template<typename storage_t>
-	struct cmake_target_impl {
-		using storage_type = storage_t;
+	template<typename storage_t = meta::type_map<>>
+	struct cmake_target_impl :public meta::type_builder<cmake_target_impl, storage_t>, meta::named {
+		using builder_type = meta::type_builder<cmake_target_impl, storage_t>;
 
-		MGMAKE_TYPE_CONSUMER_VALUE_FIELD(name, meta::static_string{ "" });
-		MGMAKE_TYPE_CONSUMER_TYPE_FIELD(cmake_project, void);
-	};
-
-	template<typename builder_t = meta::type_builder<>>
-	struct cmake_target_builder {
-		using builder_type = builder_t;
-
-		MGMAKE_TYPE_BUILDER_VALUE_FIELD(cmake_target_builder, name, meta::static_string);
-		MGMAKE_TYPE_BUILDER_TYPE_FIELD(cmake_target_builder, cmake_project);
-
-		using build = typename builder_type::template build<cmake_target_impl>;
+		template<auto cmake_v>
+		static consteval auto project() {
+			return builder_type::template set_value<"project", cmake_v>();
+		}
+		static consteval auto project() {
+			return builder_type::template get_value<"project">();
+		}
 	};
 
 	template<typename storage_t = meta::type_map<>>
-	struct cmake_impl {
-		using storage_type = storage_t;
+	struct cmake_impl : public meta::type_builder<cmake_impl, storage_t>, meta::named {
+		using builder_type = meta::type_builder<cmake_impl, storage_t>;
 
-		MGMAKE_TYPE_CONSUMER_VALUE_FIELD(name, meta::static_string{ "" });
-		MGMAKE_TYPE_CONSUMER_TYPE_FIELD(fetch, void);
+		template<auto fetch_v>
+		static consteval auto fetch() {
+			return builder_type::template set_value<"fetch", fetch_v>();
+		}
+		static consteval auto fetch() {
+			if constexpr (builder_type::template has<"fetch">()) {
+				return builder_type::template get_value<"fetch">();
+			}
+		}
 
-		using target = cmake_target_builder<>::cmake_project<cmake_impl>;
-		using library = target;
-	};
-
-	template<typename builder_t = meta::type_builder<>>
-	struct cmake_builder {
-		using builder_type = builder_t;
-
-		MGMAKE_TYPE_BUILDER_VALUE_FIELD(cmake_builder, name, meta::static_string);
-		MGMAKE_TYPE_BUILDER_TYPE_FIELD(cmake_builder, fetch);
-		// Sets the map of CMake variables to define
-		MGMAKE_TYPE_BUILDER_TYPE_FIELD_AS(cmake_builder, set_cmake_vars, "cmake_vars");
-		MGMAKE_TYPE_BUILDER_VALUE_FIELD(cmake_builder, set_install, bool);
-
+		template<typename cmake_vars_t = meta::type_map<>>
+		static consteval auto set_cmake_vars() -> builder_type::template set_type<"cmake_vars", cmake_vars_t> {
+			return {};
+		}
 		template<meta::static_string var_v, meta::static_string val_v>
-		using define = set_cmake_vars<typename meta::type_or_t<
-			typename builder_t::template get<"cmake_vars", false>,
-			meta::type_map<>
-		>::template emplace_unique<meta::type_value<var_v>, meta::type_value<val_v>>>;
+		static consteval auto define() -> decltype(set_cmake_vars<typename meta::type_or_t<
+				typename builder_type::template get_type<"cmake_vars", false>,
+				meta::type_map<>
+			>
+			::template emplace_unique<meta::type_value<var_v>, meta::type_value<val_v>>>()) {
+			return {};
+		}
 
-		using build = typename builder_type::template build<cmake_impl>;
-		using install = set_install<true>::build;
+		template<bool install_v = true>
+		static consteval auto set_install() {
+			return builder_type::template set_value<"install", install_v>();
+		}
+		static consteval auto install() {
+			return set_install<true>();
+		}
+
+		static consteval auto target() {
+			return cmake_target_impl<>{}.project<cmake_impl{}>();
+		}
+		static consteval auto library() {
+			return target();
+		}
 	};
-	using cmake = cmake_builder<>;
+
+	static constexpr auto cmake = cmake_impl<>{};
 }
 
 #endif // MGMAKE_SPEC_CMAKE_HXX

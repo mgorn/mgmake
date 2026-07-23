@@ -9,9 +9,9 @@ namespace mgmake::spec {
 		typename spec_t::links;
 	};
 
-	template<typename spec_t>
+	template<auto spec_v>
 	concept collects_targets = requires {
-		typename spec_t::collect_targets;
+		{ spec_v.collect_targets() };
 	};
 }
 

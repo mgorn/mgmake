@@ -11,54 +11,45 @@
 
 namespace mgmake {
 	template<typename storage_t = meta::type_map<>>
-    struct config_impl {
-		using builder_type = meta::type_builder<storage_t>;
+    struct config_impl : public meta::type_builder<config_impl, storage_t> {
+		using builder_type = meta::type_builder<config_impl, storage_t>;
 
-		template<auto builder_v, meta::static_string key_v>
-		consteval auto set_builder() const {
-			if constexpr (meta::has_builder_fn<builder_v>) {
-				return typename builder_type::template set<key_v, builder_v.build()>::template build<config_impl>{};
-			} else {
-				return typename builder_type::template set<key_v, builder_v>::template build<config_impl>{};
-			}
-		}
 		template<auto project_v>
-		consteval auto project() const {
-			return set_builder<project_v, "project">();
+		static consteval auto project() {
+			return builder_type::template set_value<"project", project_v>();
 		}
-		consteval auto project() const {
-			return std::type_identity<typename builder_type::template get<"project">>{};
+		static consteval auto project() {
+			return builder_type::template get_value_or<"project", nullptr>();
 		}
 		template<auto toolchains_v>
-		consteval auto toolchains() const {
-			return set_builder<toolchains_v, "toolchains">();
+		static consteval auto toolchains() {
+			return set_value<toolchains_v, "toolchains">();
 		}
 		template<typename tasks_t>
-		consteval auto tasks() const {
-			return typename builder_type::template set<"tasks", tasks_t>::template build<config_impl>{};
+		static consteval auto tasks() -> builder_type::template set_type<"tasks", tasks_t> {
+			return {};
 		}
-		consteval auto tasks() const {
-			return std::type_identity<typename builder_type::template get<"tasks">>{};
+		static consteval auto tasks() -> builder_type::template get_type_or<"tasks", task::default_tasks> {
+			return {};
 		}
-		template<typename options_t>
-		consteval auto options() const {
-			return typename builder_type::template set<"options", options_t>::template build<config_impl>{};
+		template<auto options_v>
+		static consteval auto options() {
+			return builder_type::template set_value<"options", options_v>();
+		}
+		static consteval auto options() {
+			return builder_type::template get_value_or<"options", cli::default_options>();
 		}
 
-		consteval auto option_storage() const {
+		static consteval auto option_storage() {
 			/* Automatically add task options to options */
-			// Get the tasks
-			using tasks_type = meta::type_or_t<typename builder_type::template get<"tasks", false>, task::default_tasks>;
-			// Get the options
-			using options_type = meta::type_or_t<typename builder_type::template get<"options", false>, cli::default_options>;
 
 			// Collect the option associated with every task.
-			using task_options = typename tasks_type::template fold<[]<typename state_t, typename task_t>() consteval {
-				return std::type_identity<typename state_t::template append<typename task_t::option_type>>{};
-			}, meta::type_list<>>;
+			using task_options = meta::value_list<>::unwrap_list<typename decltype(tasks())::template fold<[]<typename state_t, typename task_t>() consteval {
+				return std::type_identity<typename state_t::template append<meta::type_value<task_t::option>>>{};
+			}, meta::type_list<>>>;
 
 			// Append the contents of task_options, not task_options itself.
-			using full_options_list = typename options_type::template prepend_list<task_options>;
+			using full_options_list = decltype(options())::template prepend_list<task_options>;
 
 			// IMPORTANT: wrap the list in option_storage
 			using option_storage_type = cli::option_storage<full_options_list>;
@@ -66,7 +57,7 @@ namespace mgmake {
 			return std::type_identity<option_storage_type>{};
 		};
 
-		consteval auto options() const {
+		static consteval auto full_options() {
 			return typename decltype(option_storage())::type{};
 		}
 	};

@@ -11,12 +11,11 @@
 
 namespace mgmake::task {
 	struct build {
-		using option_type = cli::option
-			::name<"build">
-			::description<"Build the project.">
-			::set<"task", std::size_t{0}>
-			::task<true>::flag<false>
-			::build;
+		static constexpr auto option = cli::option
+			.name<"build">()
+			.description<"Build the project.">()
+			.set<"task", std::size_t{0}>()
+			.task<true>().flag<false>();
 		
 		template<auto config_v>
 		static inline constexpr std::expected<sys::exit_code, std::string> handle(auto& cmd, const auto& opts) {
@@ -34,15 +33,15 @@ namespace mgmake::task {
 			}
 			std::println("");
 
-			using project_type = decltype(config_v.project())::type;
-			if constexpr (not std::is_same_v<project_type, void>) {
-				using targets_type = project_type::all_targets;
+			constexpr auto project = config_v.project();
+			if constexpr (not std::is_same_v<decltype(project), std::nullptr_t>) {
+				constexpr auto targets = project.all_targets();
 
-				targets_type::for_each([]<typename target_t>{
-					if constexpr (spec::collects_targets<target_t>) {
-						std::println("PROJ LINKS TARGET: '{}'", target_t::name_value);
+				targets.for_each([]<auto target_v>{
+					if constexpr (spec::collects_targets<target_v>) {
+						std::println("PROJ LINKS TARGET: '{}'", target_v.name());
 					} else {
-						std::println("PROJ TARGET: '{}'", target_t::name_value);
+						std::println("PROJ TARGET: '{}'", target_v.name());
 					}
 				});
 			}
