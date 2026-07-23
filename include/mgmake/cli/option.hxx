@@ -20,8 +20,6 @@ namespace mgmake::cli {
     struct option_impl : public meta::type_builder<option_impl, storage_t>, public meta::named<option_impl<storage_t>> {
 		using builder_type = meta::type_builder<option_impl, storage_t>;
 
-		using builder_type::get_type_or;
-
 		template<meta::static_string value_v>
 		[[nodiscard]] static consteval auto alias() {
 			return builder_type::template set_str<"alias", value_v>();

@@ -42,4 +42,4 @@ namespace mgmake::task {
 	};
 }
 
-#endif // MGMAKE_TASK_TASK_HXX
+#endif // MGMAKE_TASK_TASK_TRAITS_HXX

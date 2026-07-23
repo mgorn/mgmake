@@ -14,31 +14,28 @@
 #include <sstream>
 
 /*
- * Why are tasks seperate from normal options? (Why can't they just be callback options?)
+ * Why are tasks separate from normal callback options?
  *
- * Option callbacks are invoked during parsing and are functions to initialize the `cli::options` structure.
+ * Option callbacks run while the command line is being parsed. A task instead selects
+ * which handler the dispatcher invokes after parsing succeeds.
  *
- * The flow:
- * main -> parse -> cli::options -> tasks
- *			|-> match
- *			|-> invoke callbacks
- *
- * but options have a `task` setting? What's with that?
- * You still need to provide the tasks as options to the CLI parser.
- * They simply assign the task value in the `cli::options` structure.
- * Later on, that value is consumed to invoke the respective task handler.
+ * Each task exposes a `static constexpr auto option` marked with `.task<true>()`.
+ * `config_impl::full_options()` automatically prepends those task options to the
+ * configured CLI options, and the parser stores the selected task for the dispatcher.
  *
  * To make a task:
- *		1) Create a struct for your task
- *		2) Create an option alias with your desired settings
- *		3) Use the `::task<true>` option in your option alias
- *		3) Create a `handle` function:
+ *		1) Create a struct for the task.
+ *		2) Define its `static constexpr auto option` with the desired settings.
+ *		3) Mark that option with `.task<true>()`.
+ *		4) Define a handler:
  *```
- * template<typename config_t>
- * static inline constexpr std::expected<sys::exit_code, std::string> handle(const sys::shell& cmd, const sli::options& opts)
+ * template<auto config_v>
+ * static inline constexpr std::expected<sys::exit_code, std::string> handle(const sys::shell& cmd, const auto& opts)
  *```
- * 
- * NOTE: You only provide the CLI option when making the task. Do not pass them as options in your config seperately.
+ *		5) Add the task type to the task list supplied to the mgmake config.
+ *
+ * Do not also add the task's option to the config's normal option list; it is collected
+ * automatically from the configured task types.
  */
 
 namespace mgmake::task {

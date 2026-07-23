@@ -7,12 +7,6 @@
 #include "../meta/type_builder.hxx"
 
 namespace mgmake::spec {
-	enum struct fetch_type {
-		git,
-		archive,
-		local
-	};
-
 	enum struct archive_format {
 		auto_detect,
 		zip,

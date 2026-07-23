@@ -8,11 +8,6 @@
 #include <type_traits>
 
 namespace mgmake::spec {
-	template<typename spec_t>
-	concept has_links = requires {
-		typename spec_t::links;
-	};
-
 	template<typename type_t>
 	struct is_value_list : std::false_type {};
 

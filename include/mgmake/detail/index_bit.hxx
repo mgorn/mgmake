@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef MGMAKE_DETAIL_INDEX_BIT_HXX
+#define MGMAKE_DETAIL_INDEX_BIT_HXX
+
 #include "assert.hxx"
 
 #include <bit>
@@ -37,3 +40,5 @@ namespace mgmake::detail {
 		std::unreachable();
 	}
 }
+
+#endif // MGMAKE_DETAIL_INDEX_BIT_HXX
