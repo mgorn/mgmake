@@ -30,7 +30,9 @@ static constexpr auto sdl = sdlproj.library().name<"SDL3-static">();
 
 static constexpr auto testlib = library.name<"testlib">()
 	.type<library_type::interface>()
-	.include_dirs<"test">();
+	.include_dirs<"test">()
+	.link<sdl>()
+	.link<glm>();
 
 static constexpr auto builder = executable.name<"build">()
 	.sources<"build.cxx">()
