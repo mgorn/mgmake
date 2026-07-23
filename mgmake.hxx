@@ -46,6 +46,7 @@
 #ifndef MGMAKE_META_STATIC_STRING_HXX
 #define MGMAKE_META_STATIC_STRING_HXX
 
+#include <algorithm>
 #include <array>
 #include <concepts>
 #include <cstddef>
@@ -306,6 +307,7 @@ template<typename message_t>
 #include <cstddef>
 #include <tuple>
 #include <type_traits>
+#include <utility>
 
 // Compile-time list of types.
 //
@@ -1036,6 +1038,8 @@ namespace mgmake::meta {
 #endif // MGMAKE_META_VALUE_LIST_HXX// ===== end include/mgmake/meta/value_list.hxx =====
 
 
+#include <utility>
+
 namespace mgmake::cli {
 	// Type list of all options for the build program
 	template<typename opts_t = meta::value_list<>>
@@ -1091,6 +1095,18 @@ namespace mgmake::cli {
 			}
 		}, meta::type_map<>>;
 
+		// Ensure deferred `void` storage pairs resolve to a concrete key supplied by another option.
+		using storage_validation = typename list_type::template fold<[]<typename state_t, auto opt_v>() consteval {
+			if constexpr (opt_v.has_storage) {
+				using pair_type = decltype(opt_v.storage_pair());
+				if constexpr (std::is_same_v<typename pair_type::value_type, void>) {
+					static_assert(storage_map_type::template has<typename pair_type::key_type>(), "void option storage value requires another option to define the key's value type");
+				}
+			}
+			return std::type_identity<state_t>{};
+		}, meta::type_list<>>;
+		static_assert(std::is_same_v<storage_validation, meta::type_list<>>);
+
 		// The storage type for the option values
 		using storage_type = meta::static_dict<storage_map_type>;
 
@@ -1109,7 +1125,7 @@ namespace mgmake::cli {
 		}
 		template<meta::static_string key_v>
 		constexpr void set(auto&& value) {
-			return m_storage.template set<key_v>(value);
+			return m_storage.template set<key_v>(std::forward<decltype(value)>(value));
 		}
 
 		// Overloads for option types
@@ -1130,7 +1146,7 @@ namespace mgmake::cli {
 		template<auto opt_v> requires requires { opt_v.storage_key(); }
 		constexpr void set(auto&& value) {
 			static_assert(has<opt_v>(), "Missing storage key for option (was the option added to your options in your config?)");
-			return this->template set<opt_v.storage_key()>(value);
+			return this->template set<opt_v.storage_key()>(std::forward<decltype(value)>(value));
 		}
 
 		// Value storage
@@ -1589,18 +1605,24 @@ namespace mgmake::cli {
 							}
 						} else {
 							if constexpr (meta::is_vector_v<value_type>) {
-								// Get the next args until it can't be parsed as a value
-								for (auto next_it = std::next(it); next_it != args.end(); next_it++) {
+								std::size_t parsed_values = 0;
+								for (auto next_it = std::next(it); next_it != args.end(); ++next_it) {
 									std::string_view value_text = *next_it;
-									if (value_text.starts_with("-")) {
+									if (match<switches_type>(value_text).any()) {
 										break;
 									}
-									// assign
+
 									auto result = opt_v.handle_parse(opts, arg, value_text);
 									if (not result) {
-										break;
+										return std::unexpected(std::format("opt_t::handle_assign failed: {}", result.error()));
 									}
+
+									++parsed_values;
 									it = next_it;
+								}
+
+								if (parsed_values == 0) {
+									return std::unexpected(std::format("argument '{}' expects at least one value", arg));
 								}
 							} else {
 								// Get the next arg
@@ -1621,21 +1643,21 @@ namespace mgmake::cli {
 						return true;
 					}
 					
-					// If the option invokes a callback
-					if constexpr (opt_v.is_callback) {
-						auto result = opt_v.handle_callback(opts, arg);
+					// Tasks must be handled before callbacks because task options may also define callbacks.
+					if constexpr (opt_v.task()) {
+						auto result = opt_v.template handle_task<dispatcher_t>(opts, arg);
 						if (not result) {
-							return std::unexpected(std::format("opt_v.handle_callback failed: {}", result.error()));
+							return std::unexpected(std::format("opt_t::handle_task failed: {}", result.error()));
 						}
 
 						return true;
 					}
 
-					// If the option is a task
-					if constexpr (opt_v.task()) {
-						auto result = opt_v.template handle_task<dispatcher_t>(opts, arg);
+					// If the option invokes a callback
+					if constexpr (opt_v.is_callback) {
+						auto result = opt_v.handle_callback(opts, arg);
 						if (not result) {
-							return std::unexpected(std::format("opt_t::handle_task failed: {}", result.error()));
+							return std::unexpected(std::format("opt_v.handle_callback failed: {}", result.error()));
 						}
 
 						return true;
@@ -1714,11 +1736,15 @@ namespace mgmake::sys {
 #ifndef MGMAKE_CLI_VALUE_PARSER_HXX
 #define MGMAKE_CLI_VALUE_PARSER_HXX
 
+// skipped duplicate include: include/mgmake/meta/static_string.hxx
+
+#include <charconv>
 #include <expected>
 #include <filesystem>
 #include <format>
 #include <string>
 #include <string_view>
+#include <vector>
 
 // Value parsers convert one option argument string into a typed destination value.
 
@@ -1745,12 +1771,12 @@ namespace mgmake::cli {
 				return std::unexpected(std::format("invalid integer value '{}' (empty)", text));
 			}
 
-			try {
-				// Why can't std::stoi take a string_view???
-				return std::stoi(std::string{ text });
-				// Why does the alternative `std::from_chars` return a `std::from_chars_result` instead of a `std::expected` or something??
-			} catch (...) {}
-			return std::unexpected(std::format("invalid integer value '{}'", text));
+			int value = 0;
+			auto [end, error] = std::from_chars(text.data(), text.data() + text.size(), value);
+			if (error != std::errc{} or end != text.data() + text.size()) {
+				return std::unexpected(std::format("invalid integer value '{}'", text));
+			}
+			return value;
 		}
 	};
 
@@ -2018,6 +2044,7 @@ namespace mgmake::meta {
 
 #endif // MGMAKE_META_TYPE_BUILDER_HXX// ===== end include/mgmake/meta/type_builder.hxx =====
 
+// skipped duplicate include: include/mgmake/meta/type_traits.hxx
 
 #include <expected>
 
@@ -2050,7 +2077,7 @@ namespace mgmake::cli {
 			return builder_type::template set_value<"short_name", value_v>();
 		}
 		static consteval char short_name() {
-			return builder_type::template get_value<"short_name">();
+			return builder_type::template get_value_or<"short_name", '\0'>();
 		}
 
 		template<auto value_v = nullptr>
@@ -2162,12 +2189,19 @@ namespace mgmake::cli {
 			return false;
 		}
 
+		static inline constexpr bool match_long_name(std::string_view arg, std::string_view name) {
+			return arg == name or (arg.size() > name.size() and arg.starts_with(name) and arg[name.size()] == '=');
+		}
+
 		static inline constexpr bool match_long(std::string_view arg) {
-			if constexpr (alias().empty()) {
-				return arg.starts_with(option_impl{}.name());
-			} else {
-				return arg.starts_with(option_impl{}.name()) or arg.starts_with(alias());
+			if (match_long_name(arg, option_impl{}.name())) {
+				return true;
 			}
+
+			if constexpr (not alias().empty()) {
+				return match_long_name(arg, alias());
+			}
+			return false;
 		}
 
 		static inline constexpr bool match_short(std::string_view arg) {
@@ -2286,21 +2320,19 @@ namespace mgmake::cli {
 #ifndef MGMAKE_TASK_TASK_TRAITS_HXX
 #define MGMAKE_TASK_TASK_TRAITS_HXX
 
+// skipped duplicate include: include/mgmake/sys/exit_code.hxx
+
 #include <concepts>
 #include <expected>
 #include <string>
 
-// Forward decl if needed
-namespace mgmake::cli {
-	struct options;
-}
 namespace mgmake::sys {
 	struct shell;
 }
 
 namespace mgmake::task {
 	template<typename task_t, auto config_v>
-	concept task_handler = requires(const sys::shell& cmd, const cli::options& opts) {
+	concept task_handler = requires(const sys::shell& cmd, const typename decltype(config_v.option_storage())::type& opts) {
 		{
 			task_t::template handle<config_v>(cmd, opts)
 		} -> std::same_as<std::expected<sys::exit_code, std::string>>;
@@ -2403,7 +2435,6 @@ namespace mgmake::task {
 		static constexpr auto option = cli::option
 			.name<"clean">()
 			.description<"Delete all build files.">()
-			.set<"task", std::size_t{2}>()
 			.task<true>().flag<false>();
 		
 		template<auto config_v>
@@ -2449,13 +2480,13 @@ namespace mgmake::spec {
 // skipped duplicate include: include/mgmake/sys/exit_code.hxx
 
 #include <print>
+#include <type_traits>
 
 namespace mgmake::task {
 	struct build {
 		static constexpr auto option = cli::option
 			.name<"build">()
 			.description<"Build the project.">()
-			.set<"task", std::size_t{0}>()
 			.task<true>().flag<false>();
 		
 		template<auto config_v>
@@ -2475,7 +2506,7 @@ namespace mgmake::task {
 			std::println("");
 
 			constexpr auto project = config_v.project();
-			if constexpr (not std::is_same_v<decltype(project), std::nullptr_t>) {
+			if constexpr (not std::is_same_v<std::remove_cvref_t<decltype(project)>, std::nullptr_t>) {
 				constexpr auto targets = project.all_targets();
 
 				targets.for_each([]<auto target_v>{
@@ -2510,7 +2541,6 @@ namespace mgmake::task {
 		static constexpr auto option = cli::option
 			.name<"fetch">()
 			.description<"Fetch (download, find, etc) all project dependencies.">()
-			.set<"task", std::size_t{3}>()
 			.task<true>().flag<false>();
 		
 		template<auto config_v>
@@ -2536,6 +2566,7 @@ namespace mgmake::task {
 // skipped duplicate include: include/mgmake/cli/option.hxx
 // skipped duplicate include: include/mgmake/sys/exit_code.hxx
 
+#include <print>
 #include <sstream>
 #include <string>
 
@@ -2544,7 +2575,6 @@ namespace mgmake::task {
 		static constexpr auto option = cli::option
 			.name<"help">().short_name<'h'>()
 			.description<"Show help.">()
-			.set<"task", std::size_t{1}>()
 			.task<true>();
 		
 		template<auto config_v>
@@ -2657,7 +2687,7 @@ namespace mgmake {
 		}
 		template<auto toolchains_v>
 		static consteval auto toolchains() {
-			return set_value<toolchains_v, "toolchains">();
+			return builder_type::template set_value<"toolchains", toolchains_v>();
 		}
 		template<typename tasks_t>
 		static consteval auto tasks() -> builder_type::template set_type<"tasks", tasks_t> {
@@ -2715,7 +2745,7 @@ namespace mgmake::cli {
 
         // parse cmd at runtime
         if (auto parse_result = p::template parse<d>(cmd)) {
-			auto opts = parse_result.value();
+			auto opts = std::move(parse_result).value();
 
 			if (auto dispatch_result = d::invoke(cmd, opts)) {
                 return dispatch_result.value();
@@ -2992,6 +3022,7 @@ namespace mgmake::spec {
 
 // skipped duplicate include: include/mgmake/meta/builder_mixin.hxx
 // skipped duplicate include: include/mgmake/meta/type_builder.hxx
+// skipped duplicate include: include/mgmake/meta/value_list.hxx
 
 namespace mgmake::spec {
 	enum struct target_type {

@@ -175,18 +175,24 @@ namespace mgmake::cli {
 							}
 						} else {
 							if constexpr (meta::is_vector_v<value_type>) {
-								// Get the next args until it can't be parsed as a value
-								for (auto next_it = std::next(it); next_it != args.end(); next_it++) {
+								std::size_t parsed_values = 0;
+								for (auto next_it = std::next(it); next_it != args.end(); ++next_it) {
 									std::string_view value_text = *next_it;
-									if (value_text.starts_with("-")) {
+									if (match<switches_type>(value_text).any()) {
 										break;
 									}
-									// assign
+
 									auto result = opt_v.handle_parse(opts, arg, value_text);
 									if (not result) {
-										break;
+										return std::unexpected(std::format("opt_t::handle_assign failed: {}", result.error()));
 									}
+
+									++parsed_values;
 									it = next_it;
+								}
+
+								if (parsed_values == 0) {
+									return std::unexpected(std::format("argument '{}' expects at least one value", arg));
 								}
 							} else {
 								// Get the next arg
@@ -207,21 +213,21 @@ namespace mgmake::cli {
 						return true;
 					}
 					
-					// If the option invokes a callback
-					if constexpr (opt_v.is_callback) {
-						auto result = opt_v.handle_callback(opts, arg);
+					// Tasks must be handled before callbacks because task options may also define callbacks.
+					if constexpr (opt_v.task()) {
+						auto result = opt_v.template handle_task<dispatcher_t>(opts, arg);
 						if (not result) {
-							return std::unexpected(std::format("opt_v.handle_callback failed: {}", result.error()));
+							return std::unexpected(std::format("opt_t::handle_task failed: {}", result.error()));
 						}
 
 						return true;
 					}
 
-					// If the option is a task
-					if constexpr (opt_v.task()) {
-						auto result = opt_v.template handle_task<dispatcher_t>(opts, arg);
+					// If the option invokes a callback
+					if constexpr (opt_v.is_callback) {
+						auto result = opt_v.handle_callback(opts, arg);
 						if (not result) {
-							return std::unexpected(std::format("opt_t::handle_task failed: {}", result.error()));
+							return std::unexpected(std::format("opt_v.handle_callback failed: {}", result.error()));
 						}
 
 						return true;

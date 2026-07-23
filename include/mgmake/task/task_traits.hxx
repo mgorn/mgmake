@@ -9,17 +9,13 @@
 #include <expected>
 #include <string>
 
-// Forward decl if needed
-namespace mgmake::cli {
-	struct options;
-}
 namespace mgmake::sys {
 	struct shell;
 }
 
 namespace mgmake::task {
 	template<typename task_t, auto config_v>
-	concept task_handler = requires(const sys::shell& cmd, const cli::options& opts) {
+	concept task_handler = requires(const sys::shell& cmd, const typename decltype(config_v.option_storage())::type& opts) {
 		{
 			task_t::template handle<config_v>(cmd, opts)
 		} -> std::same_as<std::expected<sys::exit_code, std::string>>;

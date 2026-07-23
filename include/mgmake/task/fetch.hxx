@@ -13,7 +13,6 @@ namespace mgmake::task {
 		static constexpr auto option = cli::option
 			.name<"fetch">()
 			.description<"Fetch (download, find, etc) all project dependencies.">()
-			.set<"task", std::size_t{3}>()
 			.task<true>().flag<false>();
 		
 		template<auto config_v>

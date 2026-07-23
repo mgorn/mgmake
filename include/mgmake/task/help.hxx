@@ -17,7 +17,6 @@ namespace mgmake::task {
 		static constexpr auto option = cli::option
 			.name<"help">().short_name<'h'>()
 			.description<"Show help.">()
-			.set<"task", std::size_t{1}>()
 			.task<true>();
 		
 		template<auto config_v>

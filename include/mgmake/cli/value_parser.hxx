@@ -5,6 +5,7 @@
 
 #include "../meta/static_string.hxx"
 
+#include <charconv>
 #include <expected>
 #include <filesystem>
 #include <format>
@@ -37,12 +38,12 @@ namespace mgmake::cli {
 				return std::unexpected(std::format("invalid integer value '{}' (empty)", text));
 			}
 
-			try {
-				// Why can't std::stoi take a string_view???
-				return std::stoi(std::string{ text });
-				// Why does the alternative `std::from_chars` return a `std::from_chars_result` instead of a `std::expected` or something??
-			} catch (...) {}
-			return std::unexpected(std::format("invalid integer value '{}'", text));
+			int value = 0;
+			auto [end, error] = std::from_chars(text.data(), text.data() + text.size(), value);
+			if (error != std::errc{} or end != text.data() + text.size()) {
+				return std::unexpected(std::format("invalid integer value '{}'", text));
+			}
+			return value;
 		}
 	};
 

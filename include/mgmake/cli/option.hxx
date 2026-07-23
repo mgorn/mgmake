@@ -43,7 +43,7 @@ namespace mgmake::cli {
 			return builder_type::template set_value<"short_name", value_v>();
 		}
 		static consteval char short_name() {
-			return builder_type::template get_value<"short_name">();
+			return builder_type::template get_value_or<"short_name", '\0'>();
 		}
 
 		template<auto value_v = nullptr>
@@ -155,12 +155,19 @@ namespace mgmake::cli {
 			return false;
 		}
 
+		static inline constexpr bool match_long_name(std::string_view arg, std::string_view name) {
+			return arg == name or (arg.size() > name.size() and arg.starts_with(name) and arg[name.size()] == '=');
+		}
+
 		static inline constexpr bool match_long(std::string_view arg) {
-			if constexpr (alias().empty()) {
-				return arg.starts_with(option_impl{}.name());
-			} else {
-				return arg.starts_with(option_impl{}.name()) or arg.starts_with(alias());
+			if (match_long_name(arg, option_impl{}.name())) {
+				return true;
 			}
+
+			if constexpr (not alias().empty()) {
+				return match_long_name(arg, alias());
+			}
+			return false;
 		}
 
 		static inline constexpr bool match_short(std::string_view arg) {

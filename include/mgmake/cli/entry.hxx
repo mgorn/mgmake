@@ -24,7 +24,7 @@ namespace mgmake::cli {
 
         // parse cmd at runtime
         if (auto parse_result = p::template parse<d>(cmd)) {
-			auto opts = parse_result.value();
+			auto opts = std::move(parse_result).value();
 
 			if (auto dispatch_result = d::invoke(cmd, opts)) {
                 return dispatch_result.value();

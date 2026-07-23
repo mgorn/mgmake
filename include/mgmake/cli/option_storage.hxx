@@ -6,6 +6,8 @@
 #include "../meta/static_dict.hxx"
 #include "../meta/value_list.hxx"
 
+#include <utility>
+
 namespace mgmake::cli {
 	// Type list of all options for the build program
 	template<typename opts_t = meta::value_list<>>
@@ -61,6 +63,18 @@ namespace mgmake::cli {
 			}
 		}, meta::type_map<>>;
 
+		// Ensure deferred `void` storage pairs resolve to a concrete key supplied by another option.
+		using storage_validation = typename list_type::template fold<[]<typename state_t, auto opt_v>() consteval {
+			if constexpr (opt_v.has_storage) {
+				using pair_type = decltype(opt_v.storage_pair());
+				if constexpr (std::is_same_v<typename pair_type::value_type, void>) {
+					static_assert(storage_map_type::template has<typename pair_type::key_type>(), "void option storage value requires another option to define the key's value type");
+				}
+			}
+			return std::type_identity<state_t>{};
+		}, meta::type_list<>>;
+		static_assert(std::is_same_v<storage_validation, meta::type_list<>>);
+
 		// The storage type for the option values
 		using storage_type = meta::static_dict<storage_map_type>;
 
@@ -79,7 +93,7 @@ namespace mgmake::cli {
 		}
 		template<meta::static_string key_v>
 		constexpr void set(auto&& value) {
-			return m_storage.template set<key_v>(value);
+			return m_storage.template set<key_v>(std::forward<decltype(value)>(value));
 		}
 
 		// Overloads for option types
@@ -100,7 +114,7 @@ namespace mgmake::cli {
 		template<auto opt_v> requires requires { opt_v.storage_key(); }
 		constexpr void set(auto&& value) {
 			static_assert(has<opt_v>(), "Missing storage key for option (was the option added to your options in your config?)");
-			return this->template set<opt_v.storage_key()>(value);
+			return this->template set<opt_v.storage_key()>(std::forward<decltype(value)>(value));
 		}
 
 		// Value storage

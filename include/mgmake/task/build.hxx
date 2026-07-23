@@ -8,13 +8,13 @@
 #include "../sys/exit_code.hxx"
 
 #include <print>
+#include <type_traits>
 
 namespace mgmake::task {
 	struct build {
 		static constexpr auto option = cli::option
 			.name<"build">()
 			.description<"Build the project.">()
-			.set<"task", std::size_t{0}>()
 			.task<true>().flag<false>();
 		
 		template<auto config_v>
@@ -34,7 +34,7 @@ namespace mgmake::task {
 			std::println("");
 
 			constexpr auto project = config_v.project();
-			if constexpr (not std::is_same_v<decltype(project), std::nullptr_t>) {
+			if constexpr (not std::is_same_v<std::remove_cvref_t<decltype(project)>, std::nullptr_t>) {
 				constexpr auto targets = project.all_targets();
 
 				targets.for_each([]<auto target_v>{

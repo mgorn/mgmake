@@ -13,7 +13,6 @@ namespace mgmake::task {
 		static constexpr auto option = cli::option
 			.name<"clean">()
 			.description<"Delete all build files.">()
-			.set<"task", std::size_t{2}>()
 			.task<true>().flag<false>();
 		
 		template<auto config_v>
