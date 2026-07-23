@@ -33,19 +33,20 @@ namespace mgmake::spec {
 		}
 
 		// Uses collect_targets to recursively get all targets for the project
-		static consteval auto all_targets() -> decltype(targets())::template fold<[]<typename state_t, auto target_v>{
-				// If the target can also collect targets
-				if constexpr (collects_targets<target_v>) {
-					// Collect them
-					static constexpr auto children_v = target_v.collect_targets();
-					// Append the collected
-					return std::type_identity<typename state_t::template append_list_unique<decltype(children_v)>::template append_values_unique<target_v>>{};
+		static consteval auto all_targets() {
+			using collected_t = typename decltype(targets())::template fold<[]<typename state_t, auto target_v>() consteval {
+				// Prefer the cycle-aware collector when it is available.
+				if constexpr (collects_targets_with<target_v, meta::value_list<>>) {
+					using children_t = decltype(target_v.template collect_targets<meta::value_list<>>());
+					return std::type_identity<typename state_t::template append_list_unique<children_t>::template append_values_unique<target_v>>{};
+				} else if constexpr (collects_targets<target_v>) {
+					using children_t = decltype(target_v.collect_targets());
+					return std::type_identity<typename state_t::template append_list_unique<children_t>::template append_values_unique<target_v>>{};
 				} else {
-					// Doesn't collect, just append
 					return std::type_identity<typename state_t::template append_values_unique<target_v>>{};
 				}
-			}, meta::value_list<>> {
-			return {};
+			}, meta::value_list<>>;
+			return collected_t{};
 		}
 	};
 	static constexpr auto project = project_impl<>{};

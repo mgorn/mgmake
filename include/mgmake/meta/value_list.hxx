@@ -177,8 +177,13 @@ namespace mgmake::meta {
 		>;
 
 		template<typename callable_t>
-		static constexpr void for_each(callable_t&& callable) {
+		static constexpr void for_each(callable_t& callable) {
 			(callable.template operator()<value_vs>(), ...);
+		}
+
+		template<typename callable_t> requires (not std::is_lvalue_reference_v<callable_t>)
+		static constexpr void for_each(callable_t&& callable) {
+			for_each(callable);
 		}
 
 		// Invoke the callable with the value at the runtime-selected index.

@@ -6,6 +6,7 @@
 #include "../meta/static_dict.hxx"
 #include "../meta/value_list.hxx"
 
+#include <type_traits>
 #include <utility>
 
 namespace mgmake::cli {
@@ -14,29 +15,6 @@ namespace mgmake::cli {
 	struct option_storage {
 		using list_type = opts_t;
 
-	private:
-		// When emplacing a key: this ensures if the key already exists, the types match
-		// If they don't, a static_assert is thrown
-		// If they do, the key was already added and can be skipped
-		template<typename key_t, typename value_t, typename map_t>
-		struct emplace_key_checked {
-			using type = std::invoke_result_t<decltype([] consteval {
-				// If the key exists
-				if constexpr (map_t::template has<key_t>()) {
-					// Get the type
-					using in_map_type = typename map_t::template at<key_t>;
-					// Assert they are the same
-					static_assert(std::is_same_v<value_t, in_map_type>, "option storage key value type mismatch!");
-					return std::type_identity<map_t>{};
-				} else {
-					return std::type_identity<typename map_t::template emplace_unique<key_t, value_t>>{};
-				}
-			})>::type;
-		};
-		//template<typename key_t, typename value_t, typename map_t>
-		//using emplace_key_checked_t = emplace_key_checked<key_t, value_t, map_t>::type;
-
-	public:
 		// The type_map for the option storage key/value pairs
 		using storage_map_type = typename list_type::template fold<[]<typename state_t, auto opt_v>() consteval {
 			// If the option uses storage, it has a storage pair
@@ -50,13 +28,17 @@ namespace mgmake::cli {
 
 				// If the value_type is void, then it is determined by another option (typically a storage option)
 				if constexpr (not std::is_same_v<value_type, void>) {
-					// Check the key value & emplace it
-					return std::type_identity<typename emplace_key_checked<key_type, value_type, state_t>::type>{};
+					// When emplacing a key, ensure an existing key has the same value type.
+					if constexpr (state_t::template has<key_type>()) {
+						using in_map_type = typename state_t::template at<key_type>;
+						static_assert(std::is_same_v<value_type, in_map_type>, "option storage key value type mismatch!");
+						return std::type_identity<state_t>{};
+					} else {
+						return std::type_identity<typename state_t::template emplace_unique<key_type, value_type>>{};
+					}
 				} else {
-					// TODO: assert the key exists after constructing the full map
 					return std::type_identity<state_t>{};
 				}
-
 			} else {
 				// The option doesn't have storage, ignore it
 				return std::type_identity<state_t>{};
@@ -117,7 +99,7 @@ namespace mgmake::cli {
 			return this->template set<opt_v.storage_key()>(std::forward<decltype(value)>(value));
 		}
 
-		// Value storage
+	private:
 		storage_type m_storage{};
 	};
 }

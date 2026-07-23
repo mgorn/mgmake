@@ -37,12 +37,10 @@ namespace mgmake::spec {
 			return {};
 		}
 		template<meta::static_string var_v, meta::static_string val_v>
-		[[nodiscard]] static consteval auto define() -> decltype(set_cmake_vars<typename meta::type_or_t<
-				typename builder_type::template get_type<"cmake_vars", false>,
-				meta::type_map<>
-			>
-			::template emplace_unique<meta::type_value<var_v>, meta::type_value<val_v>>>()) {
-			return {};
+		[[nodiscard]] static consteval auto define() {
+			using current_vars = meta::type_or_t<typename builder_type::template get_type<"cmake_vars", false>, meta::type_map<>>;
+			using updated_vars = typename current_vars::template emplace_unique<meta::type_value<var_v>, meta::type_value<val_v>>;
+			return set_cmake_vars<updated_vars>();
 		}
 
 		template<bool install_v = true>

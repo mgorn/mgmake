@@ -15,6 +15,47 @@ namespace mgmake::meta {
 	template<typename storage_t = type_list<>>
 	struct type_map;
 
+	namespace type_map_detail {
+		template<typename map_t, typename key_t, bool check, bool exists = map_t::template has<key_t>()>
+		struct at_type;
+
+		template<typename map_t, typename key_t, bool check>
+		struct at_type<map_t, key_t, check, true> {
+			using pair_type = typename map_t::storage_type::template type_at<map_t::template key_index<key_t>()>;
+			using type = typename pair_type::value_type;
+		};
+
+		template<typename map_t, typename key_t, bool check>
+		struct at_type<map_t, key_t, check, false> {
+			static_assert((not check) or map_t::template has<key_t>(), "type_map::at<key_t> requires key_t to exist.");
+
+			using type = void;
+		};
+
+		template<typename pair_t, typename key_t, typename value_t>
+		using replace_pair = std::conditional_t<std::same_as<key_t, typename pair_t::key_type>, type_pair<key_t, value_t>, pair_t>;
+
+		template<typename map_t, typename key_t, typename value_t>
+		struct emplace_type;
+
+		template<typename... pair_ts, typename key_t, typename value_t>
+		struct emplace_type<type_map<type_list<pair_ts...>>, key_t, value_t> {
+			using map_type = type_map<type_list<pair_ts...>>;
+			using type = std::conditional_t<
+				map_type::template has<key_t>(),
+				type_map<type_list<replace_pair<pair_ts, key_t, value_t>...>>,
+				type_map<typename map_type::storage_type::template append<type_pair<key_t, value_t>>>
+			>;
+		};
+
+		template<typename map_t, typename key_t, typename value_t>
+		struct emplace_unique_type {
+			static_assert(not map_t::template has<key_t>(), "type_map::emplace_unique<key_t, value_t> cannot emplace a duplicate key.");
+
+			using type = type_map<typename map_t::storage_type::template append<type_pair<key_t, value_t>>>;
+		};
+	}
+
 	template<typename... pair_ts>
 	struct type_map<type_list<pair_ts...>> {
 		using storage_type = type_list<pair_ts...>;
@@ -46,65 +87,14 @@ namespace mgmake::meta {
 			return key_index<key_t>() < size();
 		}
 
-	private:
-		template<typename key_t, bool check = true, bool exists = has<key_t>()>
-		struct at_type;
-
-		template<typename key_t, bool check>
-		struct at_type<key_t, check, true> {
-			using pair_type = typename storage_type::template type_at<key_index<key_t>()>;
-			using type = typename pair_type::value_type;
-		};
-
-		template<typename key_t, bool check>
-		struct at_type<key_t, check, false> {
-			static_assert(
-				not check or has<key_t>(),
-				"type_map::at<key_t> requires key_t to exist."
-			);
-
-			using type = void;
-		};
-
-    public:
 		template<typename key_t, bool check = true>
-		using at = typename at_type<key_t, check>::type;
+		using at = typename type_map_detail::at_type<type_map<type_list<pair_ts...>>, key_t, check>::type;
 
-    private:
-        template<typename pair_t, typename key_t, typename value_t>
-        using replace_pair = std::conditional_t<
-            std::same_as<key_t, typename pair_t::key_type>,
-            type_pair<key_t, value_t>,
-            pair_t
-        >;
+		template<typename key_t, typename value_t>
+		using emplace = typename type_map_detail::emplace_type<type_map<type_list<pair_ts...>>, key_t, value_t>::type;
 
-        template<typename key_t, typename value_t>
-        struct emplace_type {
-            using type = std::conditional_t<
-                has<key_t>(),
-                type_map<type_list<replace_pair<pair_ts, key_t, value_t>...>>,
-                type_map<typename storage_type::template append<type_pair<key_t, value_t>>>
-            >;
-        };
-
-        template<typename key_t, typename value_t>
-        struct emplace_unique_type {
-            static_assert(
-                not has<key_t>(),
-                "type_map::emplace_unique<key_t, value_t> cannot emplace a duplicate key."
-            );
-
-            using type = type_map<
-                typename storage_type::template append<type_pair<key_t, value_t>>
-            >;
-        };
-
-    public:
-        template<typename key_t, typename value_t>
-        using emplace = typename emplace_type<key_t, value_t>::type;
-
-        template<typename key_t, typename value_t>
-        using emplace_unique = typename emplace_unique_type<key_t, value_t>::type;
+		template<typename key_t, typename value_t>
+		using emplace_unique = typename type_map_detail::emplace_unique_type<type_map<type_list<pair_ts...>>, key_t, value_t>::type;
 	};
 }
 

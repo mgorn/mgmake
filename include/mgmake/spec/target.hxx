@@ -113,20 +113,25 @@ namespace mgmake::spec {
 			return links<link_v>();
 		}
 
-		// Recursively collect all used targets
-		static consteval auto collect_targets() -> decltype(links())::template fold<[]<typename state_t, auto link_v>{
-				// If the link can also collect targets
-				if constexpr (collects_targets<link_v>) {
-					// Collect them
-					static constexpr auto children_v = link_v.collect_targets();
-					// Append the collected
-					return std::type_identity<typename state_t::template append_list_unique<decltype(children_v)>::template append_values_unique<link_v>>{};
+		// Recursively collect all used targets.
+		template<typename visited_t = meta::value_list<>> requires value_list_type<visited_t>
+		static consteval auto collect_targets() {
+			static_assert(not visited_t::template has<target_impl<storage_t>{}>(), "target dependency cycle detected while collecting linked targets");
+			using path_t = typename visited_t::template append<target_impl<storage_t>{}>;
+
+			using collected_t = typename decltype(links())::template fold<[]<typename state_t, auto link_v>() consteval {
+				// Prefer the cycle-aware collector when it is available.
+				if constexpr (collects_targets_with<link_v, path_t>) {
+					using children_t = decltype(link_v.template collect_targets<path_t>());
+					return std::type_identity<typename state_t::template append_list_unique<children_t>::template append_values_unique<link_v>>{};
+				} else if constexpr (collects_targets<link_v>) {
+					using children_t = decltype(link_v.collect_targets());
+					return std::type_identity<typename state_t::template append_list_unique<children_t>::template append_values_unique<link_v>>{};
 				} else {
-					// Doesn't collect, just append
 					return std::type_identity<typename state_t::template append_values_unique<link_v>>{};
 				}
-			}, meta::value_list<>> {
-			return {};
+			}, meta::value_list<>>;
+			return collected_t{};
 		}
 	};
 	static constexpr auto target = target_impl<>{};
