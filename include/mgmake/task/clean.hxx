@@ -17,8 +17,10 @@ namespace mgmake::task {
 		
 		template<auto config_v>
 		static inline constexpr std::expected<sys::exit_code, std::string> handle(auto& cmd, const auto& opts) {
+			auto build_dir = opts.template get<cli::build_dir_option>();
 			// TODO: This would be the entrypoint/root for clean
 			std::println("Clean task");
+			std::println("Build dir: '{}'", build_dir.string());
 			return sys::exit_code::success;
 		}
 	};

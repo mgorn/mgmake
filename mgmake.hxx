@@ -1097,6 +1097,17 @@ namespace mgmake::cli {
 			return this->template set<opt_v.storage_key()>(std::forward<decltype(value)>(value));
 		}
 
+		constexpr option_storage() {
+			list_type::for_each([&]<auto opt_v> constexpr {
+				if constexpr (opt_v.has_storage) {
+					if constexpr (not std::is_same_v<decltype(opt_v.default_value()), std::nullopt_t>) {
+						constexpr auto key = opt_v.storage_key();
+						set<key>(opt_v.default_value());
+					}
+				}
+			});
+		}
+		
 	private:
 		storage_type m_storage{};
 	};
@@ -2086,7 +2097,7 @@ namespace mgmake::cli {
 			return builder_type::template get_value_or<"callback", nullptr>();
 		}
 
-		// Takes a `meta::type_pair<meta::static_string, value_type>` for the option value storage
+		// Takes a `meta::type_pair<meta::type_value<meta::static_string>, value_type>` for the option value storage
 		// This is what adds the key and value type to the `option_storage`
 		template<typename pair_t>
 		[[nodiscard]] static consteval auto storage_pair() -> typename builder_type::template set_type<"storage_pair", pair_t> {
@@ -2163,6 +2174,23 @@ namespace mgmake::cli {
 				return std::type_identity<void>{};
 			}
 		})>::type;
+
+		template<auto default_v>
+		static consteval auto default_value() {
+			using default_t = std::remove_cvref_t<decltype(default_v)>;
+			// If we have storage but not an assigned type
+			if constexpr (std::is_same_v<storage_value_type, void> and has_storage) {
+				// Use the type of the default value passed & set the default value
+				return storage_pair<typename meta::type_pair<meta::type_value<storage_key()>, default_t>>().template default_value<default_v>();
+			} else {
+				// The default value must be assignable to the storage value type
+				static_assert(std::is_assignable_v<storage_value_type&, default_t>, "Default value must be assignable to storage value type");
+				return builder_type::template set_value<"default_value", default_v>();
+			}
+		}
+		static consteval auto default_value() {
+			return builder_type::template get_value_or<"default_value", std::nullopt>();
+		}
 
 		static inline constexpr bool match(std::string_view arg) {
 			if (arg.empty()) {
@@ -2438,8 +2466,10 @@ namespace mgmake::task {
 		
 		template<auto config_v>
 		static inline constexpr std::expected<sys::exit_code, std::string> handle(auto& cmd, const auto& opts) {
+			auto build_dir = opts.template get<cli::build_dir_option>();
 			// TODO: This would be the entrypoint/root for clean
 			std::println("Clean task");
+			std::println("Build dir: '{}'", build_dir.string());
 			return sys::exit_code::success;
 		}
 	};

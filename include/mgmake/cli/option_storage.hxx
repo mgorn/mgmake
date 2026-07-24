@@ -99,6 +99,17 @@ namespace mgmake::cli {
 			return this->template set<opt_v.storage_key()>(std::forward<decltype(value)>(value));
 		}
 
+		constexpr option_storage() {
+			list_type::for_each([&]<auto opt_v> constexpr {
+				if constexpr (opt_v.has_storage) {
+					if constexpr (not std::is_same_v<decltype(opt_v.default_value()), std::nullopt_t>) {
+						constexpr auto key = opt_v.storage_key();
+						set<key>(opt_v.default_value());
+					}
+				}
+			});
+		}
+		
 	private:
 		storage_type m_storage{};
 	};
