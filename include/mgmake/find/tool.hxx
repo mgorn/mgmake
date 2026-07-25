@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef MGMAKE_DISCOVERY_tool_HXX
-#define MGMAKE_DISCOVERY_tool_HXX
+#ifndef MGMAKE_FIND_TOOL_HXX
+#define MGMAKE_FIND_TOOL_HXX
 
 #include "../cli/option.hxx"
 #include "../meta/static_string.hxx"
@@ -9,7 +9,7 @@
 #include "../meta/value_list.hxx"
 #include "../meta/type_map.hxx"
 
-namespace mgmake::discovery {
+namespace mgmake::find {
 	template<typename storage_t = meta::type_map<>>
 	struct tool_impl : public meta::type_builder<tool_impl, storage_t>, public meta::named<tool_impl<storage_t>> {
 		using builder_type = meta::type_builder<tool_impl, storage_t>;
@@ -36,9 +36,10 @@ namespace mgmake::discovery {
 			constexpr auto description_v = meta::static_string{ "Override the " } + builder_type::template get_str<"name">() + meta::static_string{ " tool" };
 			return cli::option.name<logical()>().template description<description_v>();
 		}
+		
 		using option_type = decltype(option());
 	};
 	static constexpr auto tool = tool_impl<>{};
 }
 
-#endif // MGMAKE_DISCOVERY_tool_HXX
+#endif // MGMAKE_FIND_TOOL_HXX

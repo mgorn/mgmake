@@ -1,12 +1,12 @@
 #pragma once
 
-#ifndef MGMAKE_DISCOVERY_DEFAULT_TOOLS_HXX
-#define MGMAKE_DISCOVERY_DEFAULT_TOOLS_HXX
+#ifndef MGMAKE_FIND_DEFAULT_TOOLS_HXX
+#define MGMAKE_FIND_DEFAULT_TOOLS_HXX
 
 #include "tool_role.hxx"
 #include "tool.hxx"
 
-namespace mgmake::discovery {
+namespace mgmake::find {
 	static constexpr auto cc_tool = tool.logical<"cc">().name<"C Compiler">().env<"MGMK_CC">();
 	static constexpr auto cxx_tool = tool.logical<"cxx">().name<"C++ Compiler">().env<"MGMK_CXX">();
 	static constexpr auto objc_tool = tool.logical<"objcc">().name<"Objective-C Compiler">().env<"MGMK_OBJCC">();
@@ -88,4 +88,4 @@ namespace mgmake::discovery {
 	>;
 }
 
-#endif // MGMAKE_DISCOVERY_DEFAULT_TOOLS_HXX
+#endif // MGMAKE_FIND_DEFAULT_TOOLS_HXX
