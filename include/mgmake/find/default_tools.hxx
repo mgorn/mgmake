@@ -3,7 +3,6 @@
 #ifndef MGMAKE_FIND_DEFAULT_TOOLS_HXX
 #define MGMAKE_FIND_DEFAULT_TOOLS_HXX
 
-#include "tool_role.hxx"
 #include "tool.hxx"
 
 namespace mgmake::find {

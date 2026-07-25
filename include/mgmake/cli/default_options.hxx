@@ -42,13 +42,13 @@ namespace mgmake::cli {
     // this way you can add your own options to 
     // default_options before passing the list 
     // to your mgmake config for your own CLI
-    static constexpr auto default_options = meta::value_list<
+    using default_options = meta::value_list<
 		task_option,
 		verbose_option,
 		dry_run_option,
 		build_dir_option,
 		targets_option
-	>{};
+	>;
 }
 
 #endif // MGMAKE_CLI_DEFAULT_OPTIONS_HXX

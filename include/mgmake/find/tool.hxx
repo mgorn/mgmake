@@ -34,7 +34,10 @@ namespace mgmake::find {
 
 		[[nodiscard]] static consteval auto option() {
 			constexpr auto description_v = meta::static_string{ "Override the " } + builder_type::template get_str<"name">() + meta::static_string{ " tool" };
-			return cli::option.name<logical()>().template description<description_v>();
+			return cli::option
+				.name<logical()>()
+				.template description<description_v>()
+				.template parse<logical(), std::filesystem::path>();
 		}
 		
 		using option_type = decltype(option());

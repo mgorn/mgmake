@@ -2328,13 +2328,13 @@ namespace mgmake::cli {
     // this way you can add your own options to 
     // default_options before passing the list 
     // to your mgmake config for your own CLI
-    static constexpr auto default_options = meta::value_list<
+    using default_options = meta::value_list<
 		task_option,
 		verbose_option,
 		dry_run_option,
 		build_dir_option,
 		targets_option
-	>{};
+	>;
 }
 
 #endif // MGMAKE_CLI_DEFAULT_OPTIONS_HXX// ===== end include/mgmake/cli/default_options.hxx =====
@@ -2436,6 +2436,275 @@ namespace mgmake::task {
 
 // skipped duplicate include: include/mgmake/cli/option_storage.hxx
 // skipped duplicate include: include/mgmake/cli/default_options.hxx
+
+// ===== begin include/mgmake/find/default_toolchains.hxx =====
+#pragma once
+
+#ifndef MGMAKE_FIND_DEFAULT_TOOLCHAINS_HXX
+#define MGMAKE_FIND_DEFAULT_TOOLCHAINS_HXX
+
+
+// ===== begin include/mgmake/find/toolchain.hxx =====
+#pragma once
+
+#ifndef MGMAKE_FIND_TOOLCHAIN_HXX
+#define MGMAKE_FIND_TOOLCHAIN_HXX
+
+
+// ===== begin include/mgmake/find/default_tools.hxx =====
+#pragma once
+
+#ifndef MGMAKE_FIND_DEFAULT_TOOLS_HXX
+#define MGMAKE_FIND_DEFAULT_TOOLS_HXX
+
+
+// ===== begin include/mgmake/find/tool.hxx =====
+#pragma once
+
+#ifndef MGMAKE_FIND_TOOL_HXX
+#define MGMAKE_FIND_TOOL_HXX
+
+// skipped duplicate include: include/mgmake/cli/option.hxx
+// skipped duplicate include: include/mgmake/meta/static_string.hxx
+// skipped duplicate include: include/mgmake/meta/type_builder.hxx
+// skipped duplicate include: include/mgmake/meta/value_list.hxx
+// skipped duplicate include: include/mgmake/meta/type_map.hxx
+
+namespace mgmake::find {
+	template<typename storage_t = meta::type_map<>>
+	struct tool_impl : public meta::type_builder<tool_impl, storage_t>, public meta::named<tool_impl<storage_t>> {
+		using builder_type = meta::type_builder<tool_impl, storage_t>;
+
+		// Logical name, for the override option ("cc", "cxx")
+		template<meta::static_string logical_v>
+		[[nodiscard]] static consteval auto logical() {
+			return builder_type::template set_str<"logical", logical_v>();
+		}
+		static consteval auto logical() {
+			return builder_type::template get_str<"logical">();
+		}
+
+		// Environment variable override ("MGMK_CC", "MGMK_CXX", etc)
+		template<meta::static_string env_v>
+		[[nodiscard]] static consteval auto env() {
+			return builder_type::template set_str<"env", env_v>();
+		}
+		static consteval auto env() {
+			return builder_type::template get_str<"env">();
+		}
+
+		[[nodiscard]] static consteval auto option() {
+			constexpr auto description_v = meta::static_string{ "Override the " } + builder_type::template get_str<"name">() + meta::static_string{ " tool" };
+			return cli::option
+				.name<logical()>()
+				.template description<description_v>()
+				.template parse<logical(), std::filesystem::path>();
+		}
+		
+		using option_type = decltype(option());
+	};
+	static constexpr auto tool = tool_impl<>{};
+}
+
+#endif // MGMAKE_FIND_TOOL_HXX// ===== end include/mgmake/find/tool.hxx =====
+
+
+namespace mgmake::find {
+	static constexpr auto cc_tool = tool.logical<"cc">().name<"C Compiler">().env<"MGMK_CC">();
+	static constexpr auto cxx_tool = tool.logical<"cxx">().name<"C++ Compiler">().env<"MGMK_CXX">();
+	static constexpr auto objc_tool = tool.logical<"objcc">().name<"Objective-C Compiler">().env<"MGMK_OBJCC">();
+	static constexpr auto objcxx_tool = tool.logical<"objcxx">().name<"Objective-CXX Compiler">().env<"MGMK_OBJCXX">();
+	static constexpr auto assembler_tool = tool.logical<"asm">().name<"Assembler">().env<"MGMK_ASM">();
+	static constexpr auto cuda_compiler_tool = tool.logical<"cuda">().name<"CUDA Compiler">();
+	static constexpr auto hip_compiler_tool = tool.logical<"hip">().name<"HIP Compiler">();
+	static constexpr auto resource_compiler_tool = tool.logical<"rc">().name<"Resource Compiler">().env<"MGMK_RC">();
+	static constexpr auto midl_compiler_tool = tool.logical<"midl">().name<"MIDL Compiler">();
+	static constexpr auto archiver_tool = tool.logical<"ar">().name<"Archiver">().env<"MGMK_AR">();
+	static constexpr auto ranlib_tool = tool.logical<"ranlib">().name<"Ranlib">().env<"MGMK_RANLIB">();
+	static constexpr auto librarian_tool = tool.logical<"lib">().name<"Librarian">().env<"MGMK_LIB">();
+	static constexpr auto linker_tool = tool.logical<"linker">().name<"Linker">().env<"MGMK_LINKER">();
+	static constexpr auto shared_linker_tool = tool.logical<"shared-linker">().name<"Shared Linker">().env<"MGMK_SHARED_LINKER">();
+	static constexpr auto dll_tool = tool.logical<"dlltool">().name<"DLL Tool">().env<"MGMK_DLLTOOL">();
+	static constexpr auto manifest_tool = tool.logical<"mt">().name<"Manifest Tool">().env<"MGMK_MT">();
+	static constexpr auto strip_tool = tool.logical<"strip">().name<"Strip">().env<"MGMK_STRIP">();
+	static constexpr auto objcopy_tool = tool.logical<"objcopy">().name<"Objcopy">().env<"MGMK_OBJCOPY">();
+	static constexpr auto objdump_tool = tool.logical<"objdump">().name<"Objdump">().env<"MGMK_OBJDUMP">();
+	static constexpr auto nm_tool = tool.logical<"nm">().name<"NM">().env<"MGMK_NM">();
+	static constexpr auto readelf_tool = tool.logical<"readelf">().name<"Readelf">().env<"MGMK_READELF">();
+	static constexpr auto debug_symbol_tool = tool.logical<"debug-symbol-tool">().name<"Debug Symbol Tool">();
+	static constexpr auto lipo_tool = tool.logical<"lipo">().name<"Lipo">();
+	static constexpr auto install_name_tool = tool.logical<"install-name-tool">().name<"Install Name Tool">();
+	static constexpr auto codesign_tool = tool.logical<"codesign">().name<"Codesign">();
+	static constexpr auto ninja_tool = tool.logical<"ninja">().name<"Ninja">().env<"MGMK_NINJA">();
+	static constexpr auto make_tool = tool.logical<"make">().name<"Make">();
+	static constexpr auto msbuild_tool = tool.logical<"msbuild">().name<"MSBuild">();
+	static constexpr auto xcodebuild_tool = tool.logical<"xcodebuild">().name<"Xcodebuild">();
+	static constexpr auto cmake_tool = tool.logical<"cmake">().name<"CMake">().env<"MGMK_CMAKE">();
+	static constexpr auto pkg_config_tool = tool.logical<"pkg-config">().name<"pkg-config">().env<"MGMK_PKG_CONFIG">();
+	static constexpr auto git_tool = tool.logical<"git">().name<"Git">().env<"MGMK_GIT">();
+	static constexpr auto curl_tool = tool.logical<"curl">().name<"Curl">().env<"MGMK_CURL">();
+	static constexpr auto wget_tool = tool.logical<"wget">().name<"Wget">().env<"MGMK_WGET">();
+	static constexpr auto unzip_tool = tool.logical<"unzip">().name<"Unzip">().env<"MGMK_UNZIP">();
+	static constexpr auto tar_tool = tool.logical<"tar">().name<"Tar">().env<"MGMK_TAR">();
+	static constexpr auto exe_wrapper_tool = tool.logical<"exe-wrapper">().name<"Executable Wrapper">().env<"MGMK_EXE_WRAPPER">();
+	static constexpr auto emulator_tool = tool.logical<"emulator">().name<"Emulator">().env<"MGMK_EMULATOR">();
+
+	using default_tools = meta::value_list<
+		cc_tool,
+		cxx_tool,
+		objc_tool,
+		objcxx_tool,
+		assembler_tool,
+		cuda_compiler_tool,
+		hip_compiler_tool,
+		resource_compiler_tool,
+		midl_compiler_tool,
+		archiver_tool,
+		ranlib_tool,
+		librarian_tool,
+		linker_tool,
+		shared_linker_tool,
+		dll_tool,
+		manifest_tool,
+		strip_tool,
+		objcopy_tool,
+		objdump_tool,
+		nm_tool,
+		readelf_tool,
+		debug_symbol_tool,
+		lipo_tool,
+		install_name_tool,
+		codesign_tool,
+		ninja_tool,
+		make_tool,
+		msbuild_tool,
+		xcodebuild_tool,
+		cmake_tool,
+		pkg_config_tool,
+		git_tool,
+		curl_tool,
+		wget_tool,
+		unzip_tool,
+		tar_tool,
+		exe_wrapper_tool,
+		emulator_tool
+	>;
+}
+
+#endif // MGMAKE_FIND_DEFAULT_TOOLS_HXX
+// ===== end include/mgmake/find/default_tools.hxx =====
+
+// skipped duplicate include: include/mgmake/meta/builder_mixin.hxx
+// skipped duplicate include: include/mgmake/meta/type_builder.hxx
+
+namespace mgmake::find {
+	template<typename storage_t = meta::type_map<>>
+	struct toolchain_impl : public meta::type_builder<toolchain_impl, storage_t>, public meta::named<toolchain_impl<storage_t>> {
+		using builder_type = meta::type_builder<toolchain_impl, storage_t>;
+
+		// Override the default name for the tool for this toolchain
+		// e.g. llvm toolchain would have "clang++" as logical for "cxx_tool"
+		template<auto tool_v, meta::static_string logical_v>
+		[[nodiscard]] static consteval auto tool() {
+			// Use the tool's logical name (e.g. "cxx_tool" -> "cxx")
+			return builder_type::template set_str<tool_v.logical(), logical_v>();
+		}
+		template<auto tool_v>
+		[[nodiscard]] static consteval auto tool() {
+			return builder_type::template get_str<tool_v.logical()>();
+		}
+
+#define MGMK_FIND_TOOLCHAIN_TOOL_FNS(TOOL) \
+		template<meta::static_string value_v> \
+		[[nodiscard]] static consteval auto TOOL() { \
+			return tool<find::TOOL##_tool, value_v>(); \
+		} \
+		[[nodiscard]] static consteval auto TOOL() { \
+			return tool<find::TOOL##_tool>(); \
+		}
+
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(cc);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(cxx);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(objc);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(objcxx);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(assembler);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(cuda_compiler);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(hip_compiler);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(resource_compiler);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(midl_compiler);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(archiver);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(ranlib);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(librarian);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(linker);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(shared_linker);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(dll);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(manifest);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(strip);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(objcopy);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(objdump);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(nm);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(readelf);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(debug_symbol);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(lipo);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(install_name);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(codesign);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(ninja);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(make);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(msbuild);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(xcodebuild);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(cmake);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(pkg_config);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(git);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(curl);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(wget);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(unzip);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(tar);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(exe_wrapper);
+		MGMK_FIND_TOOLCHAIN_TOOL_FNS(emulator);
+		
+#undef MGMK_FIND_TOOLCHAIN_TOOL_FNS
+	};
+	static constexpr auto toolchain = toolchain_impl<>{};
+}
+
+#endif // MGMAKE_FIND_TOOLCHAIN_HXX
+// ===== end include/mgmake/find/toolchain.hxx =====
+
+
+namespace mgmake::find {
+	static constexpr auto tc_llvm = toolchain
+		.name<"LLVM">()
+		.cc<"clang">()
+		.cxx<"clang++">()
+		.archiver<"llvm-ar">()
+		.ranlib<"llvm-ranlib">()
+		.linker<"clang++">()
+		.shared_linker<"clang++">()
+		.resource_compiler<"llvm-rc">()
+        .strip<"llvm-strip">()
+        .objcopy<"llvm-objcopy">()
+        .objdump<"llvm-objdump">()
+        .nm<"llvm-nm">()
+        .readelf<"llvm-readelf">();
+	
+	static constexpr auto tc_clang = tc_llvm.name<"Clang">();
+	static constexpr auto tc_clang_cl = tc_llvm.name<"Clang-CL">()
+		.cc<"clang-cl">()
+		.cxx<"clang-cl">()
+		.linker<"clang-cl">()
+		.shared_linker<"clang-cl">();
+
+	using default_toolchains = meta::value_list<
+		tc_llvm,
+		tc_clang,
+		tc_clang_cl
+	>;
+}
+
+#endif // MGMAKE_FIND_DEFAULT_TOOLCHAINS_HXX
+// ===== end include/mgmake/find/default_toolchains.hxx =====
+
+// skipped duplicate include: include/mgmake/find/default_tools.hxx
 // skipped duplicate include: include/mgmake/meta/type_builder.hxx
 // skipped duplicate include: include/mgmake/meta/value_list.hxx
 
@@ -2624,15 +2893,15 @@ namespace mgmake::task {
 		static inline constexpr std::expected<sys::exit_code, std::string> handle(auto& cmd, auto& opts) {
 			std::println("Usage:");
 			std::println("\t{} [task] [options]", cmd.program_name());
+
 			using tasks_type = decltype(config_v.tasks());
-			using options_type = decltype(config_v.option_storage())::list_type;
-			
 			std::println("\nTasks:");
 			tasks_type::for_each([]<typename task_t> {
 				using traits_type = task_traits<task_t>;
 				std::println("\t{:<10} {}", traits_type::name(), traits_type::description());
 			});
 
+			using options_type = decltype(config_v.option_storage())::list_type;
 			std::println("\nOptions:");
 			options_type::for_each([]<auto opt_v> {
 				// Only print switches, tasks will be shown first
@@ -2646,8 +2915,14 @@ namespace mgmake::task {
 						using vp = cli::value_parser<typename decltype(opt_v)::storage_value_type>;
 						std::print(ss, "=<{}>", vp::help_hint);
 					}
-					std::println("\t{:<24} {}", ss.str(), opt_v.description().view());
+					std::println("\t{:<30} {}", ss.str(), opt_v.description().view());
 				}
+			});
+
+			using toolchains_type = decltype(config_v.toolchains());
+			std::println("\nToolchains:");
+			toolchains_type::for_each([]<auto toolchain_v> {
+				std::println("\t{:<24}", toolchain_v.name());
 			});
 
 			return sys::exit_code::success;
@@ -2719,12 +2994,19 @@ namespace mgmake {
 		static consteval auto project() {
 			return builder_type::template get_value_or<"project", nullptr>();
 		}
-		template<auto toolchains_v>
-		[[nodiscard]] static consteval auto toolchains() {
-			return builder_type::template set_value<"toolchains", toolchains_v>();
+		template<typename tools_t>
+		[[nodiscard]] static consteval auto tools() -> builder_type::template set_type<"tools", tools_t> {
+			return {};
 		}
-		static consteval auto toolchains() {
-			return builder_type::template get_value_or<"toolchains", meta::value_list<>{}>();
+		static consteval auto tools() -> builder_type::template get_type_or<"tools", find::default_tools> {
+			return {};
+		}
+		template<typename toolchains_t>
+		[[nodiscard]] static consteval auto toolchains() -> builder_type::template set_type<"toolchains", toolchains_t> {
+			return {};
+		}
+		static consteval auto toolchains() -> builder_type::template get_type_or<"toolchains", find::default_toolchains> {
+			return {};
 		}
 		template<typename tasks_t>
 		[[nodiscard]] static consteval auto tasks() -> builder_type::template set_type<"tasks", tasks_t> {
@@ -2733,11 +3015,11 @@ namespace mgmake {
 		static consteval auto tasks() -> builder_type::template get_type_or<"tasks", task::default_tasks> {
 			return {};
 		}
-		template<auto options_v>
-		[[nodiscard]] static consteval auto options() -> builder_type::template set_type<"options", std::remove_cvref_t<decltype(options_v)>> {
+		template<typename options_t>
+		[[nodiscard]] static consteval auto options() -> builder_type::template set_type<"options", options_t> {
 			return {};
 		}
-		static consteval auto options() -> builder_type::template get_type_or<"options", std::remove_cvref_t<decltype(cli::default_options)>> {
+		static consteval auto options() -> builder_type::template get_type_or<"options", cli::default_options> {
 			return {};
 		}
 
@@ -2747,8 +3029,13 @@ namespace mgmake {
 				return std::type_identity<typename state_t::template append<meta::type_value<task_t::option>>>{};
 			}, meta::type_list<>>>;
 
+			// Collect the option for each tool override
+			using tool_options = decltype(tools())::template fold<[]<typename state_t, auto tool_v> consteval {
+				return std::type_identity<typename state_t::template append<tool_v.option()>>{};
+			}, meta::value_list<>>;
+			
 			// Append the contents of task_options, not task_options itself.
-			using full_options_list = decltype(options())::template prepend_list<task_options>;
+			using full_options_list = decltype(options())::template prepend_list<task_options>::template append_list<tool_options>;
 			return full_options_list{};
 		}
 

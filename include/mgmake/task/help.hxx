@@ -23,15 +23,15 @@ namespace mgmake::task {
 		static inline constexpr std::expected<sys::exit_code, std::string> handle(auto& cmd, auto& opts) {
 			std::println("Usage:");
 			std::println("\t{} [task] [options]", cmd.program_name());
+
 			using tasks_type = decltype(config_v.tasks());
-			using options_type = decltype(config_v.option_storage())::list_type;
-			
 			std::println("\nTasks:");
 			tasks_type::for_each([]<typename task_t> {
 				using traits_type = task_traits<task_t>;
 				std::println("\t{:<10} {}", traits_type::name(), traits_type::description());
 			});
 
+			using options_type = decltype(config_v.option_storage())::list_type;
 			std::println("\nOptions:");
 			options_type::for_each([]<auto opt_v> {
 				// Only print switches, tasks will be shown first
@@ -45,8 +45,14 @@ namespace mgmake::task {
 						using vp = cli::value_parser<typename decltype(opt_v)::storage_value_type>;
 						std::print(ss, "=<{}>", vp::help_hint);
 					}
-					std::println("\t{:<24} {}", ss.str(), opt_v.description().view());
+					std::println("\t{:<30} {}", ss.str(), opt_v.description().view());
 				}
+			});
+
+			using toolchains_type = decltype(config_v.toolchains());
+			std::println("\nToolchains:");
+			toolchains_type::for_each([]<auto toolchain_v> {
+				std::println("\t{:<24}", toolchain_v.name());
 			});
 
 			return sys::exit_code::success;
