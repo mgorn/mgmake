@@ -12,7 +12,7 @@
 #define MGMAKE_MGMAKE_HXX
 
 #define MGMK_VERSION "0.0.1"
-#define MGMK_VERSION_COMMIT "d87969f"
+#define MGMK_VERSION_COMMIT "2d6addf"
 #define MGMK_VERSION_DIRTY true
 
 
@@ -822,6 +822,18 @@ namespace mgmake::meta {
 #include <utility>
 
 namespace mgmake::meta {
+	namespace value_list_detail {
+		template<typename callable_t>
+		struct switch_adapter {
+			callable_t&& callable;
+
+			template<typename wrapped_t>
+			constexpr decltype(auto) operator()() {
+				return std::forward<callable_t>(callable).template operator()<wrapped_t::value>();
+			}
+		};
+	}
+
 	// Compile-time list of values.
 	//
 	// Values are stored internally as:
@@ -1001,8 +1013,8 @@ namespace mgmake::meta {
 		template<typename callable_t>
 		static constexpr decltype(auto) value_switch(callable_t&& callable, std::size_t index) {
 			return underlying_type::type_switch(
-				[&callable]<typename wrapped_t>() -> decltype(auto) {
-					return std::forward<callable_t>(callable).template operator()<wrapped_t::value>();
+				value_list_detail::switch_adapter<callable_t> {
+					std::forward<callable_t>(callable)
 				},
 				index
 			);
