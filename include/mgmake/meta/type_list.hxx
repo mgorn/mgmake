@@ -230,28 +230,23 @@ namespace mgmake::meta {
 		// Invoke the callable with the type at the runtime-selected index.
 		template<typename callable_t>
 		static constexpr decltype(auto) type_switch(callable_t&& callable, std::size_t index) {
-			// A return type cannot be inferred without at least one stored type.
-			//static_assert(size() > 0, "Cannot type-switch over an empty type_list.");
-			// If the list is empty, return void
 			if constexpr (empty()) {
 				return;
 			} else {
+				static_assert(size() > 0, "Cannot type-switch over an empty type_list.");
 				mgmkassert(index < size(), "type_switch index is outside the bounds of the type_list");
 
+				using callable_type = std::remove_cvref_t<callable_t>;
 				using first_type = type_at<0>;
-				using return_t = decltype(std::declval<callable_t&&>().template operator()<first_type>());
-				// A single dispatch table requires every specialization to share a return type.
-				static_assert((std::same_as<return_t, decltype(std::declval<callable_t&&>().template operator()<type_ts>())> and ...), "Every type_switch invocation must return the same type.");
+				using dispatch_t = decltype(&callable_type::template operator()<first_type>);
 
-				using dispatch_t = return_t (*)(callable_t&&);
-				// Generate one reusable dispatch entry for each type.
+				static_assert((std::same_as<dispatch_t, decltype(&callable_type::template operator()<type_ts>)> and ...), "Every type_switch invocation must have a compatible call operator.");
+
 				static constexpr std::array<dispatch_t, size()> dispatch {
-					+[](callable_t&& callable) -> return_t {
-						return std::forward<callable_t>(callable).template operator()<type_ts>();
-					}...
+					&callable_type::template operator()<type_ts>...
 				};
 
-				return dispatch[index](std::forward<callable_t>(callable));
+				return (std::forward<callable_t>(callable).*dispatch[index])();
 			}
 		}
 	};

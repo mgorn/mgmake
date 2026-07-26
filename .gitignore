@@ -51,3 +51,8 @@
 /.vscode
 /.cxxmg-cache
 /.build-old
+*.tmp
+*.ll
+*.s
+*.bc
+*.json

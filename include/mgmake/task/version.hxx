@@ -38,6 +38,8 @@ namespace mgmake::task {
                 // Build mode
                 std::println("Build mode: {}", build_mode());
             }
+            std::println("Made with <3 -mgorn");
+            std::println("Genesis 1:1 \"In the beginning God created the heaven and the earth.\"");
 			return sys::exit_code::success;
 		}
 

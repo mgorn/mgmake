@@ -12,7 +12,7 @@
 #define MGMAKE_MGMAKE_HXX
 
 #define MGMK_VERSION "0.0.1"
-#define MGMK_VERSION_COMMIT "3902b19"
+#define MGMK_VERSION_COMMIT "4666574"
 #define MGMK_VERSION_DIRTY true
 
 
@@ -531,29 +531,20 @@ namespace mgmake::meta {
 		// Invoke the callable with the type at the runtime-selected index.
 		template<typename callable_t>
 		static constexpr decltype(auto) type_switch(callable_t&& callable, std::size_t index) {
-			// A return type cannot be inferred without at least one stored type.
-			//static_assert(size() > 0, "Cannot type-switch over an empty type_list.");
-			// If the list is empty, return void
-			if constexpr (empty()) {
-				return;
-			} else {
-				mgmkassert(index < size(), "type_switch index is outside the bounds of the type_list");
+			static_assert(size() > 0, "Cannot type-switch over an empty type_list.");
+			mgmkassert(index < size(), "type_switch index is outside the bounds of the type_list");
 
-				using first_type = type_at<0>;
-				using return_t = decltype(std::declval<callable_t&&>().template operator()<first_type>());
-				// A single dispatch table requires every specialization to share a return type.
-				static_assert((std::same_as<return_t, decltype(std::declval<callable_t&&>().template operator()<type_ts>())> and ...), "Every type_switch invocation must return the same type.");
+			using callable_type = std::remove_cvref_t<callable_t>;
+			using first_type = type_at<0>;
+			using dispatch_t = decltype(&callable_type::template operator()<first_type>);
 
-				using dispatch_t = return_t (*)(callable_t&&);
-				// Generate one reusable dispatch entry for each type.
-				static constexpr std::array<dispatch_t, size()> dispatch {
-					+[](callable_t&& callable) -> return_t {
-						return std::forward<callable_t>(callable).template operator()<type_ts>();
-					}...
-				};
+			static_assert((std::same_as<dispatch_t, decltype(&callable_type::template operator()<type_ts>)> and ...), "Every type_switch invocation must have a compatible call operator.");
 
-				return dispatch[index](std::forward<callable_t>(callable));
-			}
+			static constexpr std::array<dispatch_t, size()> dispatch {
+				&callable_type::template operator()<type_ts>...
+			};
+
+			return (std::forward<callable_t>(callable).*dispatch[index])();
 		}
 	};
 }
@@ -2861,6 +2852,8 @@ namespace mgmake::task {
                 // Build mode
                 std::println("Build mode: {}", build_mode());
             }
+            std::println("Made with <3 -mgorn");
+            std::println("Genesis 1:1 \"In the beginning God created the heaven and the earth.\"");
 			return sys::exit_code::success;
 		}
 
