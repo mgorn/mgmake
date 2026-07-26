@@ -44,7 +44,8 @@ static constexpr auto proj = project
 	.targets<builder>();
 
 // Configure MGMake
-static constexpr auto c = config.project<proj>();
+static constexpr auto c = config
+	.project<proj>();
 
 // Define entrypoint
 MGMK_ENTRY(c);

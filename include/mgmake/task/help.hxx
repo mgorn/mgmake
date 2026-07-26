@@ -24,14 +24,14 @@ namespace mgmake::task {
 			std::println("Usage:");
 			std::println("\t{} [task] [options]", cmd.program_name());
 
-			using tasks_type = decltype(config_v.tasks());
+			using tasks_type = decltype(config_v.tasks_list());
 			std::println("\nTasks:");
 			tasks_type::for_each([]<typename task_t> {
 				using traits_type = task_traits<task_t>;
 				std::println("\t{:<10} {}", traits_type::name(), traits_type::description());
 			});
 
-			using options_type = decltype(config_v.option_storage())::list_type;
+			using options_type = decltype(config_v.options())::list_type;
 			std::println("\nOptions:");
 			options_type::for_each([]<auto opt_v> {
 				// Only print switches, tasks will be shown first
@@ -49,7 +49,7 @@ namespace mgmake::task {
 				}
 			});
 
-			using toolchains_type = decltype(config_v.toolchains());
+			using toolchains_type = decltype(config_v.toolchains_list());
 			std::println("\nToolchains:");
 			toolchains_type::for_each([]<auto toolchain_v> {
 				std::println("\t{:<24}", toolchain_v.name());

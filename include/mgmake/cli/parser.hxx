@@ -3,7 +3,7 @@
 #ifndef MGMAKE_CLI_PARSER_HXX
 #define MGMAKE_CLI_PARSER_HXX
 
-#include "option_storage.hxx"
+#include "options.hxx"
 
 #include "../detail/index_bit.hxx"
 #include "../meta/type_list.hxx"
@@ -17,10 +17,10 @@
 #include <utility>
 
 namespace mgmake::cli {
-    template<typename option_storage_t = option_storage<>>
+    template<auto config_v>
     struct parser {
-		using option_storage_type = option_storage_t;
-		using list_type = option_storage_type::list_type;
+		using options_type = decltype(config_v.options());
+		using list_type = options_type::list_type;
 
 		// Task options (first arg, no - or --)
 		using tasks_type = typename list_type::template filter<[]<auto opt_v> -> bool {
@@ -32,9 +32,9 @@ namespace mgmake::cli {
 		}>;
 
 		template<typename dispatcher_t>
-        static inline constexpr std::expected<option_storage_type, std::string> parse(const sys::shell& cmd) {
+        static inline constexpr std::expected<options_type, std::string> parse(const sys::shell& cmd) {
 			// The resulting options
-			option_storage_type opts{};
+			options_type opts{};
 
 			auto args = cmd.user_args();
 
@@ -244,15 +244,15 @@ namespace mgmake::cli {
             return opts;
         }
 
-		template<typename opts_t>
-		using matches_type = std::bitset<opts_t::size()>;
-		template<typename opts_t>
-		static inline constexpr matches_type<opts_t> match(std::string_view arg) {
+		template<typename list_t>
+		using matches_type = std::bitset<list_t::size()>;
+		template<typename list_t>
+		static inline constexpr matches_type<list_t> match(std::string_view arg) {
 			return []<std::size_t... Is>(std::index_sequence<Is...>, std::string_view arg) {
-				matches_type<opts_t> matches{};
-				(matches.set(Is, opts_t::template value_at<Is>.match(arg)), ...);
+				matches_type<list_t> matches{};
+				(matches.set(Is, list_t::template value_at<Is>.match(arg)), ...);
 				return matches;
-			}(std::make_index_sequence<opts_t::size()>{}, arg);
+			}(std::make_index_sequence<list_t::size()>{}, arg);
 		}
     };
 }

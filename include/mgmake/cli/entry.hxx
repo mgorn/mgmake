@@ -16,11 +16,11 @@
 namespace mgmake::cli {
     template<auto config_v = config>
     inline sys::exit_code entry(sys::shell cmd) {
-		using opt_storage_type = decltype(config_v.option_storage());
+		using options_type = decltype(config_v.options());
 
         // construct the parser & dispatcher at compile time :)
 		using d = task::dispatcher<config_v>;
-        using p = parser<opt_storage_type>;
+        using p = parser<config_v>;
 
         // parse cmd at runtime
         if (auto parse_result = p::template parse<d>(cmd)) {

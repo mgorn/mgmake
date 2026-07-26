@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef MGMAKE_CLI_OPTION_STORAGE_HXX
-#define MGMAKE_CLI_OPTION_STORAGE_HXX
+#ifndef MGMAKE_CLI_OPTIONS_HXX
+#define MGMAKE_CLI_OPTIONS_HXX
 
 #include "../meta/static_dict.hxx"
 #include "../meta/value_list.hxx"
@@ -12,7 +12,7 @@
 namespace mgmake::cli {
 	// Type list of all options for the build program
 	template<typename opts_t = meta::value_list<>>
-	struct option_storage {
+	struct options_impl {
 		using list_type = opts_t;
 
 		// The type_map for the option storage key/value pairs
@@ -99,7 +99,7 @@ namespace mgmake::cli {
 			return this->template set<opt_v.storage_key()>(std::forward<decltype(value)>(value));
 		}
 
-		constexpr option_storage() {
+		constexpr options_impl() {
 			list_type::for_each([&]<auto opt_v> constexpr {
 				if constexpr (opt_v.has_storage) {
 					if constexpr (not std::is_same_v<decltype(opt_v.default_value()), std::nullopt_t>) {
@@ -115,4 +115,4 @@ namespace mgmake::cli {
 	};
 }
 
-#endif // MGMAKE_CLI_OPTION_STORAGE_HXX
+#endif // MGMAKE_CLI_OPTIONS_HXX
