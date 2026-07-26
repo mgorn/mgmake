@@ -22,6 +22,11 @@ namespace mgmake::cli {
 		.description<"Print commands before executing them.">()
 		.set<"verbose", true>();
 	
+	static constexpr auto short_option = option
+		.name<"short">().short_name<'s'>()
+		.description<"Keep command output short.">()
+		.set<"short", true>();
+	
 	static constexpr auto dry_run_option = option
 		.name<"dry-run">().short_name<'d'>()
 		.description<"Print commands without executing them.">()
@@ -45,6 +50,7 @@ namespace mgmake::cli {
     using default_options = meta::value_list<
 		task_option,
 		verbose_option,
+		short_option,
 		dry_run_option,
 		build_dir_option,
 		targets_option

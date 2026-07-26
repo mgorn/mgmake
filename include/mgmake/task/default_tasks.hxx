@@ -7,6 +7,7 @@
 #include "build.hxx"
 #include "fetch.hxx"
 #include "help.hxx"
+#include "version.hxx"
 
 #include "../meta/type_list.hxx"
 #include "../sys/exit_code.hxx"
@@ -48,7 +49,8 @@ namespace mgmake::task {
 		task::build, // The default task when none is specified
 		task::help,
 		task::clean,
-		task::fetch
+		task::fetch,
+		task::version
 	>;
 }
 
