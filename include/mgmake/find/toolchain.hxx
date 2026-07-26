@@ -16,12 +16,17 @@ namespace mgmake::find {
 		// e.g. llvm toolchain would have "clang++" as logical for "cxx_tool"
 		template<auto tool_v, meta::static_string logical_v>
 		[[nodiscard]] static consteval auto tool() {
-			// Use the tool's logical name (e.g. "cxx_tool" -> "cxx")
-			return builder_type::template set_str<tool_v.logical(), logical_v>();
+			// Use the tool's cli name (e.g. "cxx_tool" -> "cxx")
+			return builder_type::template set_str<tool_v.cli(), logical_v>();
 		}
 		template<auto tool_v>
 		[[nodiscard]] static consteval auto tool() {
-			return builder_type::template get_str<tool_v.logical()>();
+			return builder_type::template get_str<tool_v.cli()>();
+		}
+
+		template<auto tool_v>
+		[[nodiscard]] static consteval auto has_tool() {
+			return builder_type::template has<tool_v.cli()>();
 		}
 
 #define MGMK_FIND_TOOLCHAIN_TOOL_FNS(TOOL) \

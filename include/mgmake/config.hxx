@@ -7,6 +7,7 @@
 #include "cli/default_options.hxx"
 #include "find/default_toolchains.hxx"
 #include "find/default_tools.hxx"
+#include "find/tools.hxx"
 #include "meta/type_builder.hxx"
 #include "meta/value_list.hxx"
 #include "task/default_tasks.hxx"
@@ -29,28 +30,31 @@ namespace mgmake {
 		[[nodiscard]] static consteval auto tools() -> builder_type::template set_type<"tools", tools_t> {
 			return {};
 		}
-		static consteval auto tools() -> builder_type::template get_type_or<"tools", find::default_tools> {
+		static consteval auto tools_list() -> builder_type::template get_type_or<"tools", find::default_tools> {
 			return {};
+		}
+		static consteval auto tools() {
+			return tools_impl<decltype(tools_list()), decltype(toolchains())>{};
 		}
 		template<typename toolchains_t>
 		[[nodiscard]] static consteval auto toolchains() -> builder_type::template set_type<"toolchains", toolchains_t> {
 			return {};
 		}
-		static consteval auto toolchains() -> builder_type::template get_type_or<"toolchains", find::default_toolchains> {
+		static consteval auto toolchains_list() -> builder_type::template get_type_or<"toolchains", find::default_toolchains> {
 			return {};
 		}
 		template<typename tasks_t>
 		[[nodiscard]] static consteval auto tasks() -> builder_type::template set_type<"tasks", tasks_t> {
 			return {};
 		}
-		static consteval auto tasks() -> builder_type::template get_type_or<"tasks", task::default_tasks> {
+		static consteval auto tasks_list() -> builder_type::template get_type_or<"tasks", task::default_tasks> {
 			return {};
 		}
 		template<typename options_t>
 		[[nodiscard]] static consteval auto options() -> builder_type::template set_type<"options", options_t> {
 			return {};
 		}
-		static consteval auto options() -> builder_type::template get_type_or<"options", cli::default_options> {
+		static consteval auto options_list() -> builder_type::template get_type_or<"options", cli::default_options> {
 			return {};
 		}
 
@@ -64,7 +68,7 @@ namespace mgmake {
 			using tool_options = decltype(tools())::template fold<[]<typename state_t, auto tool_v> consteval {
 				return std::type_identity<typename state_t::template append<tool_v.option()>>{};
 			}, meta::value_list<>>;
-			
+
 			// Append the contents of task_options, not task_options itself.
 			using full_options_list = decltype(options())::template prepend_list<task_options>::template append_list<tool_options>;
 			return full_options_list{};
@@ -73,6 +77,8 @@ namespace mgmake {
 		static consteval auto option_storage() {
 			return cli::option_storage<decltype(full_options())>{};
 		}
+
+		
 	};
 	static constexpr auto config = config_impl<>{};
 }
