@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef MGMAKE_FIND_TOOL_HXX
-#define MGMAKE_FIND_TOOL_HXX
+#ifndef MGMAKE_TOOL_TOOL_HXX
+#define MGMAKE_TOOL_TOOL_HXX
 
 #include "../cli/option.hxx"
 #include "../meta/static_string.hxx"
@@ -9,7 +9,7 @@
 #include "../meta/value_list.hxx"
 #include "../meta/type_map.hxx"
 
-namespace mgmake::find {
+namespace mgmake::tool {
 	template<typename storage_t = meta::type_map<>>
 	struct tool_impl : public meta::type_builder<tool_impl, storage_t>, public meta::named<tool_impl<storage_t>> {
 		using builder_type = meta::type_builder<tool_impl, storage_t>;
@@ -54,4 +54,4 @@ namespace mgmake::find {
 	static constexpr auto tool = tool_impl<>{};
 }
 
-#endif // MGMAKE_FIND_TOOL_HXX
+#endif // MGMAKE_TOOL_TOOL_HXX

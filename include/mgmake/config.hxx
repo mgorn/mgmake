@@ -5,12 +5,12 @@
 
 #include "cli/default_options.hxx"
 #include "cli/options.hxx"
-#include "find/default_toolchains.hxx"
-#include "find/default_tools.hxx"
-#include "find/tools.hxx"
 #include "meta/type_builder.hxx"
 #include "meta/value_list.hxx"
 #include "task/default_tasks.hxx"
+#include "tool/default_toolchains.hxx"
+#include "tool/default_tools.hxx"
+#include "tool/tools.hxx"
 
 #include <type_traits>
 
@@ -31,7 +31,7 @@ namespace mgmake {
 		[[nodiscard]] static consteval auto tools_list() -> builder_type::template set_type<"tools_list", tools_t> {
 			return {};
 		}
-		static consteval auto tools_list() -> builder_type::template get_type_or<"tools_list", find::default_tools> {
+		static consteval auto tools_list() -> builder_type::template get_type_or<"tools_list", tool::default_tools> {
 			return {};
 		}
 		template<auto tool_v>
@@ -42,7 +42,7 @@ namespace mgmake {
 		[[nodiscard]] static consteval auto toolchains_list() -> builder_type::template set_type<"toolchains_list", toolchains_t> {
 			return {};
 		}
-		static consteval auto toolchains_list() -> builder_type::template get_type_or<"toolchains_list", find::default_toolchains> {
+		static consteval auto toolchains_list() -> builder_type::template get_type_or<"toolchains_list", tool::default_toolchains> {
 			return {};
 		}
 		template<auto toolchain_v>
@@ -94,7 +94,7 @@ namespace mgmake {
 			return cli::options_impl<decltype(full_options_list())>{};
 		}
 		static consteval auto tools() {
-			return find::tools_impl<decltype(tools_list()), decltype(toolchains_list())>{};
+			return tool::tools_impl<decltype(tools_list()), decltype(toolchains_list())>{};
 		}
 	};
 	static constexpr auto config = config_impl<>{};

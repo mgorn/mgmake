@@ -1,11 +1,11 @@
 #pragma once
 
-#ifndef MGMAKE_FIND_DEFAULT_TOOLS_HXX
-#define MGMAKE_FIND_DEFAULT_TOOLS_HXX
+#ifndef MGMAKE_TOOL_DEFAULT_TOOLS_HXX
+#define MGMAKE_TOOL_DEFAULT_TOOLS_HXX
 
 #include "tool.hxx"
 
-namespace mgmake::find {
+namespace mgmake::tool {
 	static constexpr auto cc_tool = tool
 		.cli<"cc">()
 		.name<"C Compiler">()
@@ -274,4 +274,4 @@ namespace mgmake::find {
 	>;
 }
 
-#endif // MGMAKE_FIND_DEFAULT_TOOLS_HXX
+#endif // MGMAKE_TOOL_DEFAULT_TOOLS_HXX

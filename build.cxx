@@ -2,7 +2,7 @@
 
 using namespace mgmk;
 using namespace mgmk::spec;
-using namespace mgmk::find;
+using namespace mgmk::tool;
 
 /* Define the project spec */
 static constexpr auto glmproj = cmake.name<"glm">()

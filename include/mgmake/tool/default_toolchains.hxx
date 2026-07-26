@@ -1,11 +1,11 @@
 #pragma once
 
-#ifndef MGMAKE_FIND_DEFAULT_TOOLCHAINS_HXX
-#define MGMAKE_FIND_DEFAULT_TOOLCHAINS_HXX
+#ifndef MGMAKE_TOOL_DEFAULT_TOOLCHAINS_HXX
+#define MGMAKE_TOOL_DEFAULT_TOOLCHAINS_HXX
 
 #include "toolchain.hxx"
 
-namespace mgmake::find {
+namespace mgmake::tool {
 	static constexpr auto tc_llvm = toolchain
 		.name<"LLVM">()
 		.cc<"clang">()
@@ -35,4 +35,4 @@ namespace mgmake::find {
 	>;
 }
 
-#endif // MGMAKE_FIND_DEFAULT_TOOLCHAINS_HXX
+#endif // MGMAKE_TOOL_DEFAULT_TOOLCHAINS_HXX
