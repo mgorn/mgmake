@@ -3,6 +3,8 @@
 #ifndef MGMAKE_SYS_SHELL_HXX
 #define MGMAKE_SYS_SHELL_HXX
 
+#include "platform.hxx"
+
 #include <algorithm>   // std::ranges::find_first_of
 #include <array>       // std::array
 #include <cstddef>     // std::size_t
