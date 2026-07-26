@@ -12,7 +12,7 @@
 #define MGMAKE_MGMAKE_HXX
 
 #define MGMK_VERSION "0.0.1"
-#define MGMK_VERSION_COMMIT "2d6addf"
+#define MGMK_VERSION_COMMIT "bef8f1a"
 #define MGMK_VERSION_DIRTY true
 
 
@@ -2878,7 +2878,7 @@ namespace mgmake::task {
                 // Build mode
                 std::println("Build mode: {}", build_mode());
             }
-            std::println("Made with <3 -mgorn");
+            std::println("\nMade with <3 -mgorn");
             std::println("Genesis 1:1 \"In the beginning God created the heaven and the earth.\"");
 			return sys::exit_code::success;
 		}
