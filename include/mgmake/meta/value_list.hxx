@@ -6,6 +6,7 @@
 #include "type_list.hxx"
 #include "type_value.hxx"
 
+#include <concepts>
 #include <cstddef>
 #include <type_traits>
 #include <utility>

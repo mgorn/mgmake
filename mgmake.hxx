@@ -12,7 +12,7 @@
 #define MGMAKE_MGMAKE_HXX
 
 #define MGMK_VERSION "0.0.1"
-#define MGMK_VERSION_COMMIT "4666574"
+#define MGMK_VERSION_COMMIT "d87969f"
 #define MGMK_VERSION_DIRTY true
 
 
@@ -379,6 +379,15 @@ namespace mgmake::meta {
 				typename insert_sorted_type<compare, type_list<rest_t...>, type_t>::type::template prepend<first_t>
 			>;
 		};
+
+		template<typename return_t, typename type_t, typename callable_t>
+		constexpr return_t type_switch_invoke(callable_t&& callable) {
+			if constexpr (std::is_void_v<return_t>) {
+				std::forward<callable_t>(callable).template operator()<type_t>();
+			} else {
+				return std::forward<callable_t>(callable).template operator()<type_t>();
+			}
+		}
 	}
 
 	template<typename... type_ts>
@@ -531,20 +540,24 @@ namespace mgmake::meta {
 		// Invoke the callable with the type at the runtime-selected index.
 		template<typename callable_t>
 		static constexpr decltype(auto) type_switch(callable_t&& callable, std::size_t index) {
-			static_assert(size() > 0, "Cannot type-switch over an empty type_list.");
-			mgmkassert(index < size(), "type_switch index is outside the bounds of the type_list");
+			if constexpr (empty()) {
+				return;
+			} else {
+				static_assert(size() > 0, "Cannot type-switch over an empty type_list.");
+				mgmkassert(index < size(), "type_switch index is outside the bounds of the type_list");
 
-			using callable_type = std::remove_cvref_t<callable_t>;
-			using first_type = type_at<0>;
-			using dispatch_t = decltype(&callable_type::template operator()<first_type>);
+				using first_type = type_at<0>;
+				using return_t = decltype(std::declval<callable_t>().template operator()<first_type>());
+				using dispatch_t = return_t (*)(callable_t&&);
 
-			static_assert((std::same_as<dispatch_t, decltype(&callable_type::template operator()<type_ts>)> and ...), "Every type_switch invocation must have a compatible call operator.");
+				static_assert((std::same_as<return_t, decltype(std::declval<callable_t>().template operator()<type_ts>())> and ...), "Every type_switch invocation must return the same type.");
 
-			static constexpr std::array<dispatch_t, size()> dispatch {
-				&callable_type::template operator()<type_ts>...
-			};
+				static constexpr std::array<dispatch_t, size()> dispatch {
+					&type_list_detail::type_switch_invoke<return_t, type_ts, callable_t>...
+				};
 
-			return (std::forward<callable_t>(callable).*dispatch[index])();
+				return dispatch[index](std::forward<callable_t>(callable));
+			}
 		}
 	};
 }
@@ -803,6 +816,7 @@ namespace mgmake::meta {
 // skipped duplicate include: include/mgmake/meta/type_list.hxx
 // skipped duplicate include: include/mgmake/meta/type_value.hxx
 
+#include <concepts>
 #include <cstddef>
 #include <type_traits>
 #include <utility>
