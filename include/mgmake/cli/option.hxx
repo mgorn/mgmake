@@ -52,14 +52,12 @@ namespace mgmake::cli {
 			return builder_type::template get_value_or<"callback", nullptr>();
 		}
 
-		// Takes a `meta::type_pair<meta::type_value<meta::static_string>, value_type>` for the option value storage
-		// This is what adds the key and value type to the `option_storage`
-		template<typename pair_t>
-		[[nodiscard]] static consteval auto storage_pair() -> typename builder_type::template set_type<"storage_pair", pair_t> {
-			return {};
+		template<meta::static_string key_v>
+		[[nodiscard]] static consteval auto storage_key() {
+			return builder_type::template set_str<"storage_key", key_v>();
 		}
-		static consteval auto storage_pair() -> typename builder_type::template get_type<"storage_pair", false> {
-			return {};
+		static consteval auto storage_key() {
+			return builder_type::template get_str<"storage_key">();
 		}
 
 		// Set the option to set a specific value & assigns the storage pair
@@ -68,7 +66,7 @@ namespace mgmake::cli {
 			return callback<[](auto& opts) {
 				static_assert(not std::is_same_v<decltype(value_v), std::nullopt_t>, "No value passed to `option::set<>` (Do we actually need to set the value to nullopt?)");
 				opts.template set<key_v>(value_v);
-			}>().template storage_pair<typename meta::type_pair<meta::type_value<key_v>, std::remove_cvref_t<decltype(value_v)>>>();
+			}>().template storage_key<key_v>();
 		}
 
 		// If the option parses a value (`--switch=value` or `--switch value`) and stores it
@@ -81,9 +79,9 @@ namespace mgmake::cli {
 		}
 
 		// Set the option to parse a value & assigns the storage pair
-		template<meta::static_string key_v, typename parse_t>
+		template<meta::static_string key_v>
 		[[nodiscard]] static consteval auto parse() {
-			return parses<true>().template storage_pair<typename meta::type_pair<meta::type_value<key_v>, parse_t>>();
+			return parses<true>().template storage_key<key_v>();
 		}
 
 		template<bool value_v>
@@ -101,50 +99,6 @@ namespace mgmake::cli {
 		}
 		static consteval bool flag() {
 			return builder_type::template get_value_or<"flag", true>();
-		}
-
-		// The option is only for reserving a key/value in storage
-		// this disables task and flag
-		template<meta::static_string key_v, typename value_t>
-		[[nodiscard]] static consteval auto storage() {
-			return task<false>()
-				.template flag<false>()
-				.template storage_pair<typename meta::type_pair<meta::type_value<key_v>, value_t>>();
-		}
-
-		static inline constexpr bool has_storage = not std::is_same_v<decltype(storage_pair()), void>;
-		// The key for the storage value, else the option name
-		static inline constexpr decltype(auto) storage_key() {
-			if constexpr (has_storage) {
-				return decltype(storage_pair())::key_type::value;
-			} else {
-				return option_impl{}.name();
-			}
-		}
-		// The value for the storage, else void
-		using storage_value_type = std::invoke_result_t<decltype([] consteval {
-			if constexpr (has_storage) {
-				return std::type_identity<typename decltype(storage_pair())::value_type>{};
-			} else {
-				return std::type_identity<void>{};
-			}
-		})>::type;
-
-		template<auto default_v>
-		static consteval auto default_value() {
-			using default_t = std::remove_cvref_t<decltype(default_v)>;
-			// If we have storage but not an assigned type
-			if constexpr (std::is_same_v<storage_value_type, void> and has_storage) {
-				// Use the type of the default value passed & set the default value
-				return storage_pair<typename meta::type_pair<meta::type_value<storage_key()>, default_t>>().template default_value<default_v>();
-			} else {
-				// The default value must be assignable to the storage value type
-				static_assert(std::is_assignable_v<storage_value_type&, default_t>, "Default value must be assignable to storage value type");
-				return builder_type::template set_value<"default_value", default_v>();
-			}
-		}
-		static consteval auto default_value() {
-			return builder_type::template get_value_or<"default_value", std::nullopt>();
 		}
 
 		static inline constexpr bool match(std::string_view arg) {
@@ -209,6 +163,8 @@ namespace mgmake::cli {
 
 			if constexpr (parses()) {
 				// parse the storage_value_type
+				using storage_value_type = std::decay_t<decltype(opts)>::storage_type::template get_type<storage_key()>;
+
 				using vp = value_parser<storage_value_type>;
 				auto result = vp::parse(value);
 				if (not result.has_value()) {

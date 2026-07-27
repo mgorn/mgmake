@@ -20,7 +20,7 @@ namespace mgmake::cli {
     template<auto config_v>
     struct parser {
 		using options_type = decltype(config_v.options());
-		using list_type = options_type::list_type;
+		using list_type = decltype(config_v.options_list());
 
 		// Task options (first arg, no - or --)
 		using tasks_type = typename list_type::template filter<[]<auto opt_v> -> bool {
@@ -159,7 +159,7 @@ namespace mgmake::cli {
 					// If the option expects a value
 					if constexpr (opt_v.parses()) {
 						// What is the expected value type?
-						using value_type = decltype(opt_v)::storage_value_type;
+						using value_type = options_type::storage_type::template get_type<opt_v.storage_key()>;
 
 						// Is it `--switch=value` or `--switch value`?
 						if (const auto seperator = arg.find_first_of("="); seperator != std::string_view::npos) {
