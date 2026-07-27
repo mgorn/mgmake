@@ -12,8 +12,8 @@
 #define MGMAKE_MGMAKE_HXX
 
 #define MGMK_VERSION "0.0.1"
-#define MGMK_VERSION_COMMIT "4c068a8"
-#define MGMK_VERSION_DIRTY false
+#define MGMK_VERSION_COMMIT "274c2d7"
+#define MGMK_VERSION_DIRTY true
 
 
 // ===== begin include/mgmake/cli/entry.hxx =====
@@ -1769,8 +1769,6 @@ namespace mgmake::cli {
 					// If the option expects a value
 					if constexpr (opt_v.parses()) {
 						// What is the expected value type?
-						// TODO: If value_type is a std::vector or other container,
-						// we need to keep reading each arg, parse them, and store...
 						using value_type = decltype(opt_v)::storage_value_type;
 
 						// Is it `--switch=value` or `--switch value`?
@@ -1784,6 +1782,8 @@ namespace mgmake::cli {
 								return std::unexpected(std::format("opt_t::handle_assign failed: {}", result.error()));
 							}
 						} else {
+							// If value_type is a std::vector or other container,
+							// we need to keep reading each arg, parse them, and store...
 							if constexpr (meta::is_vector_v<value_type>) {
 								std::size_t parsed_values = 0;
 								for (auto next_it = std::next(it); next_it != args.end(); ++next_it) {
