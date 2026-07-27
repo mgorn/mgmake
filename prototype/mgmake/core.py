@@ -13,8 +13,8 @@ from typing import Iterable, Sequence, TYPE_CHECKING, TypeVar
 if TYPE_CHECKING:
     from .tools import ToolchainSpec
 
-VERSION_TEXT = "MGMake prototype script 0.2"
-TOOL_CACHE_SCHEMA = 1
+VERSION_TEXT = "MGMake prototype script 0.3"
+TOOL_CACHE_SCHEMA = 2
 USAGE_CACHE_SCHEMA = 1
 
 
@@ -113,6 +113,32 @@ class BuildOptions:
 class ProcessRunner:
     def __init__(self, options: BuildOptions) -> None:
         self.options = options
+        self._environment = dict(os.environ)
+
+    @property
+    def environment(self) -> dict[str, str]:
+        return dict(self._environment)
+
+    def environment_value(self, name: str) -> str | None:
+        if os.name != "nt":
+            return self._environment.get(name)
+        folded = name.casefold()
+        for key, value in self._environment.items():
+            if key.casefold() == folded:
+                return value
+        return None
+
+    def update_environment(self, values: dict[str, str]) -> None:
+        if os.name != "nt":
+            self._environment.update(values)
+            return
+        existing = {key.casefold(): key for key in self._environment}
+        for key, value in values.items():
+            previous = existing.get(key.casefold())
+            if previous is not None and previous != key:
+                del self._environment[previous]
+            self._environment[key] = value
+            existing[key.casefold()] = key
 
     def run(self, args: Sequence[str | Path], *, cwd: Path | None = None) -> None:
         command = [str(argument) for argument in args]
@@ -128,6 +154,7 @@ class ProcessRunner:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
+                env=self._environment,
             )
             if result.returncode != 0:
                 if result.stdout:
@@ -137,7 +164,7 @@ class ProcessRunner:
                 raise subprocess.CalledProcessError(result.returncode, command)
             return
 
-        subprocess.run(command, cwd=cwd, check=True)
+        subprocess.run(command, cwd=cwd, check=True, env=self._environment)
 
     def capture(self, args: Sequence[str | Path], *, cwd: Path | None = None) -> str:
         command = [str(argument) for argument in args]
@@ -153,6 +180,7 @@ class ProcessRunner:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
+            env=self._environment,
         )
         return result.stdout.strip()
 

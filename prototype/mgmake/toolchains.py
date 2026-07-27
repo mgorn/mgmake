@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import os
+import platform
 import sys
 from pathlib import Path
 
-from .tools import ArchiverStyle, DriverStyle, ToolRole, ToolchainSpec
+from .tools import ArchiverStyle, DriverStyle, ToolRole, ToolchainBootstrap, ToolchainSpec
 
 
 def android_toolchain() -> ToolchainSpec:
@@ -95,7 +96,58 @@ def ios_toolchain() -> ToolchainSpec:
     )
 
 
+def windows_tool_architectures() -> tuple[str, str]:
+    machine = platform.machine().casefold()
+    default_arch = {
+        "amd64": "x64",
+        "x86_64": "x64",
+        "arm64": "arm64",
+        "aarch64": "arm64",
+        "x86": "x86",
+        "i386": "x86",
+        "i686": "x86",
+    }.get(machine, "x64")
+    return (
+        os.environ.get("MGMK_MSVC_ARCH", default_arch),
+        os.environ.get("MGMK_MSVC_HOST_ARCH", default_arch),
+    )
+
+
+def msvc_toolchain() -> ToolchainSpec:
+    target_arch, host_arch = windows_tool_architectures()
+    return ToolchainSpec(
+        name="MSVC",
+        description=(
+            "Microsoft Visual C++ from Visual Studio/Build Tools "
+            "(MGMK_MSVC_ARCH, MGMK_MSVC_HOST_ARCH)"
+        ),
+        candidates={
+            ToolRole.CC: ("cl.exe",),
+            ToolRole.CXX: ("cl.exe",),
+            ToolRole.LINKER: ("cl.exe",),
+            ToolRole.SHARED_LINKER: ("cl.exe",),
+            ToolRole.LIB: ("lib.exe",),
+            ToolRole.ASM: ("ml64.exe", "ml.exe"),
+            ToolRole.RC: ("rc.exe",),
+            ToolRole.MIDL: ("midl.exe",),
+            ToolRole.MT: ("mt.exe",),
+            ToolRole.CMAKE: ("cmake.exe", "cmake"),
+            ToolRole.NINJA: ("ninja.exe", "ninja"),
+            ToolRole.MSBUILD: ("MSBuild.exe", "msbuild"),
+            ToolRole.GIT: ("git.exe", "git"),
+        },
+        driver_style=DriverStyle.MSVC,
+        archiver_style=ArchiverStyle.LIB,
+        compile_options=("/EHsc",),
+        preferred_generators=(ToolRole.NINJA, ToolRole.MSBUILD),
+        bootstrap=ToolchainBootstrap.VISUAL_STUDIO,
+        target_architecture=target_arch,
+        host_architecture=host_arch,
+    )
+
+
 def define_toolchains() -> tuple[ToolchainSpec, ...]:
+    windows_target_arch, windows_host_arch = windows_tool_architectures()
     llvm = ToolchainSpec(
         name="LLVM",
         description="LLVM tools with the Clang C and C++ drivers",
@@ -146,6 +198,10 @@ def define_toolchains() -> tuple[ToolchainSpec, ...]:
         driver_style=DriverStyle.MSVC,
         archiver_style=ArchiverStyle.LIB,
         preferred_generators=(ToolRole.NINJA, ToolRole.MSBUILD),
+        cmake_generator_toolset="ClangCL",
+        bootstrap=ToolchainBootstrap.VISUAL_STUDIO,
+        target_architecture=windows_target_arch,
+        host_architecture=windows_host_arch,
     )
     gcc = ToolchainSpec(
         name="GCC",
@@ -195,4 +251,14 @@ def define_toolchains() -> tuple[ToolchainSpec, ...]:
         cmake_options=("-DCMAKE_SYSTEM_NAME:STRING=Emscripten",),
         preferred_generators=(ToolRole.NINJA,),
     )
-    return (llvm, clang, clang_cl, gcc, apple, android_toolchain(), ios_toolchain(), emscripten)
+    return (
+        llvm,
+        clang,
+        clang_cl,
+        msvc_toolchain(),
+        gcc,
+        apple,
+        android_toolchain(),
+        ios_toolchain(),
+        emscripten,
+    )

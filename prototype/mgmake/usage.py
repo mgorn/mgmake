@@ -137,12 +137,12 @@ def configuration_compile_arguments(config: str, style: DriverStyle) -> list[str
     normalized = config.casefold()
     if style == DriverStyle.MSVC:
         if normalized == "debug":
-            return ["/Od", "/Zi"]
+            return ["/Od", "/Zi", "/MDd"]
         if normalized == "relwithdebinfo":
-            return ["/O2", "/Zi", "/DNDEBUG"]
+            return ["/O2", "/Zi", "/DNDEBUG", "/MD"]
         if normalized == "minsizerel":
-            return ["/O1", "/DNDEBUG"]
-        return ["/O2", "/DNDEBUG"]
+            return ["/O1", "/DNDEBUG", "/MD"]
+        return ["/O2", "/DNDEBUG", "/MD"]
 
     if normalized == "debug":
         return ["-O0", "-g"]

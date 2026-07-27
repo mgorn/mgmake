@@ -10,7 +10,7 @@ from .model import (
     LocalSource,
     Target,
 )
-from .tools import ToolRole, ToolchainSpec
+from .tools import ToolRole, ToolchainBootstrap, ToolchainSpec
 
 __all__ = [
     "BuildError",
@@ -27,5 +27,6 @@ __all__ = [
     "ProcessRunner",
     "Target",
     "ToolRole",
+    "ToolchainBootstrap",
     "ToolchainSpec",
 ]

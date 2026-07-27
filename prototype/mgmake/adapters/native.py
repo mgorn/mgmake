@@ -209,6 +209,7 @@ class NativeCxxAdapter:
                 *self.toolchain.compile_options,
                 *include_arguments(compile_usage, self.toolchain.driver_style),
                 f"/Fe:{output}",
+                "/link",
                 *dependency_usage.link_args,
                 *self.toolchain.link_options,
             )
