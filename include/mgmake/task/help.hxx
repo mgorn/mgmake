@@ -31,7 +31,7 @@ namespace mgmake::task {
 				std::println("\t{:<10} {}", traits_type::name(), traits_type::description());
 			});
 
-			using options_type = decltype(config_v.options())::list_type;
+			using options_type = decltype(config_v.options_list());
 			std::println("\nOptions:");
 			options_type::for_each([]<auto opt_v> {
 				// Only print switches, tasks will be shown first
@@ -42,7 +42,8 @@ namespace mgmake::task {
 					}
 					std::print(ss, "--{}", opt_v.name().view());
 					if constexpr (opt_v.parses()) {
-						using vp = cli::value_parser<typename decltype(opt_v)::storage_value_type>;
+						using value_type = typename decltype(config_v.options_storage())::template get_type<opt_v.storage_key()>;
+						using vp = cli::value_parser<value_type>;
 						std::print(ss, "=<{}>", vp::help_hint);
 					}
 					std::println("\t{:<30} {}", ss.str(), opt_v.description().view());

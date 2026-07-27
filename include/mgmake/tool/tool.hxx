@@ -46,7 +46,7 @@ namespace mgmake::tool {
 			return cli::option
 				.name<cli()>()
 				.template description<description_v>()
-				.template parse<cli(), std::filesystem::path>();
+				.template parse<cli()>();
 		}
 		
 		using option_type = decltype(option());

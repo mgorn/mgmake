@@ -12,10 +12,13 @@
 #include <vector>
 
 namespace mgmake::cli {
-	static constexpr auto task_option = option
-		.name<"task">()
-		.description<"Decides which task should run.">()
-		.storage<"task", std::size_t>();
+	using default_storage = meta::static_dict<>
+		::template emplace<"task", std::size_t>
+		::template emplace<"verbose", bool>
+		::template emplace<"short", bool>
+		::template emplace<"dry_run", bool>
+		::template emplace<"build_dir", std::filesystem::path>
+		::template emplace<"targets", std::vector<std::string>>;
 
 	static constexpr auto verbose_option = option
 		.name<"verbose">().short_name<'v'>()
@@ -35,12 +38,12 @@ namespace mgmake::cli {
 	static constexpr auto build_dir_option = option
 		.name<"build-dir">().short_name<'b'>()
 		.description<"Set the build directory.">()
-		.parse<"build_dir", std::filesystem::path>();
+		.parse<"build_dir">();
 
 	static constexpr auto targets_option = option
 		.name<"targets">().alias<"target">().short_name<'t'>()
 		.description<"Build a specific target. May be passed multiple times.">()
-		.parse<"targets", std::vector<std::string>>();
+		.parse<"targets">();
 	
     // Type list of default options
 	//
@@ -48,7 +51,6 @@ namespace mgmake::cli {
     // default_options before passing the list 
     // to your mgmake config for your own CLI
     using default_options = meta::value_list<
-		task_option,
 		verbose_option,
 		short_option,
 		dry_run_option,

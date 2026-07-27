@@ -28,6 +28,11 @@ namespace mgmake::meta {
 		// The types for the values
 		using value_types = typename map_type::value_types;
 
+		template<meta::static_string key_v, typename value_t>
+		using emplace = static_dict<typename map_type::template emplace<meta::type_value<key_v>, value_t>>;
+		template<meta::static_string key_v>
+		using get_type = typename map_type::template at<meta::type_value<key_v>>;
+
 		// Store the values in a `std::tuple`
 		using storage_type = typename value_types::template apply<std::tuple>;
 

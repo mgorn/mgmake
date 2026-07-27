@@ -20,7 +20,7 @@ namespace mgmake::cli {
     template<auto config_v>
     struct parser {
 		using options_type = decltype(config_v.options());
-		using list_type = options_type::list_type;
+		using list_type = decltype(config_v.options_list());
 
 		// Task options (first arg, no - or --)
 		using tasks_type = typename list_type::template filter<[]<auto opt_v> -> bool {
@@ -159,9 +159,7 @@ namespace mgmake::cli {
 					// If the option expects a value
 					if constexpr (opt_v.parses()) {
 						// What is the expected value type?
-						// TODO: If value_type is a std::vector or other container,
-						// we need to keep reading each arg, parse them, and store...
-						using value_type = decltype(opt_v)::storage_value_type;
+						using value_type = options_type::storage_type::template get_type<opt_v.storage_key()>;
 
 						// Is it `--switch=value` or `--switch value`?
 						if (const auto seperator = arg.find_first_of("="); seperator != std::string_view::npos) {
@@ -174,6 +172,8 @@ namespace mgmake::cli {
 								return std::unexpected(std::format("opt_t::handle_assign failed: {}", result.error()));
 							}
 						} else {
+							// If value_type is a std::vector or other container,
+							// we need to keep reading each arg, parse them, and store...
 							if constexpr (meta::is_vector_v<value_type>) {
 								std::size_t parsed_values = 0;
 								for (auto next_it = std::next(it); next_it != args.end(); ++next_it) {

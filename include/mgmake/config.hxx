@@ -66,15 +66,14 @@ namespace mgmake {
 		[[nodiscard]] static consteval auto options_list() -> builder_type::template set_type<"options_list", options_t> {
 			return {};
 		}
-		static consteval auto options_list() -> builder_type::template get_type_or<"options_list", cli::default_options> {
+		static consteval auto defined_options_list() -> builder_type::template get_type_or<"options_list", cli::default_options> {
 			return {};
 		}
 		template<auto option_v>
 		[[nodiscard]] static consteval auto add_option() {
-			return options_list<typename decltype(options_list())::template append<option_v>>();
+			return options_list<typename decltype(defined_options_list())::template append<option_v>>();
 		}
-
-		static consteval auto full_options_list() {
+		static consteval auto options_list() {
 			// Collect the option associated with every task.
 			using task_options = meta::value_list<>::unwrap_list<typename decltype(tasks_list())::template fold<[]<typename state_t, typename task_t>() consteval {
 				return std::type_identity<typename state_t::template append<meta::type_value<task_t::option>>>{};
@@ -86,12 +85,43 @@ namespace mgmake {
 			}, meta::value_list<>>;
 
 			// Append the contents of task_options, not task_options itself.
-			using full_options_list = decltype(options_list())::template prepend_list<task_options>::template append_list<tool_options>;
+			using full_options_list = decltype(defined_options_list())::template prepend_list<task_options>::template append_list<tool_options>;
 			return full_options_list{};
+		}
+		template<typename opt_storage_t>
+		[[nodiscard]] static consteval auto options_storage() -> builder_type::template set_type<"options_storage", opt_storage_t> {
+			return {};
+		}
+		static consteval auto defined_options_storage() -> builder_type::template get_type_or<"options_storage", cli::default_storage> {
+			return {};
+		}
+		template<meta::static_string key_v, typename value_t>
+		[[nodiscard]] static consteval auto add_option_value() {
+			return options_storage<typename decltype(defined_options_storage())::template emplace<key_v, value_t>>();
+		}
+		static consteval auto options_storage() {
+			// Collect the option for each tool override
+			using tool_options = decltype(tools_list())::template fold<[]<typename state_t, auto tool_v> consteval {
+				return std::type_identity<typename state_t::template append<tool_v.option()>>{};
+			}, meta::value_list<>>;
+
+			// Add every tool option's storage key as a filesystem path.
+			using full_options_storage = typename tool_options::template fold<
+				[]<typename opt_storage_t, auto option_v>() consteval {
+					return std::type_identity<
+						typename opt_storage_t::template emplace<
+							option_v.storage_key(),
+							std::filesystem::path
+						>
+					>{};
+				},
+				decltype(defined_options_storage())
+			>;
+			return full_options_storage{};
 		}
 
 		static consteval auto options() {
-			return cli::options_impl<decltype(full_options_list())>{};
+			return cli::options_impl<decltype(options_storage())>{};
 		}
 		static consteval auto tools() {
 			return tool::tools_impl<decltype(tools_list()), decltype(toolchains_list())>{};
