@@ -12,8 +12,8 @@
 #define MGMAKE_MGMAKE_HXX
 
 #define MGMK_VERSION "0.0.1"
-#define MGMK_VERSION_COMMIT "2927d73"
-#define MGMK_VERSION_DIRTY false
+#define MGMK_VERSION_COMMIT "58b1123"
+#define MGMK_VERSION_DIRTY true
 
 
 // ===== begin include/mgmake/cli/entry.hxx =====
@@ -1603,6 +1603,10 @@ namespace mgmake::cli {
 		using switches_type = typename list_type::template filter<[]<auto opt_v> -> bool {
 			return opt_v.flag();
 		}>;
+		// Options that parse values
+		using parsers_type = typename list_type::template filter<[]<auto opt_v> -> bool {
+			return opt_v.parses();
+		}>;
 
 		template<typename dispatcher_t>
         static inline constexpr std::expected<options_type, std::string> parse(const sys::shell& cmd) {
@@ -2759,6 +2763,35 @@ namespace mgmake::task {
 #endif // MGMAKE_TASK_HELP_HXX// ===== end include/mgmake/task/help.hxx =====
 
 
+// ===== begin include/mgmake/task/tools.hxx =====
+#pragma once
+
+#ifndef MGMAKE_TASK_TOOLS_HXX
+#define MGMAKE_TASK_TOOLS_HXX
+
+// skipped duplicate include: include/mgmake/cli/default_options.hxx
+// skipped duplicate include: include/mgmake/sys/exit_code.hxx
+
+#include <print>
+
+namespace mgmake::task {
+	struct tools {
+		static constexpr auto option = cli::option
+			.name<"tools">()
+			.description<"Discover and cache required tools for the project.">()
+			.task<true>().flag<false>();
+		
+		template<auto config_v>
+		static inline constexpr std::expected<sys::exit_code, std::string> handle(auto& cmd, const auto& opts) {
+			std::println("Tools task");
+			return sys::exit_code::success;
+		}
+	};
+}
+
+#endif // MGMAKE_TASK_TOOLS_HXX// ===== end include/mgmake/task/tools.hxx =====
+
+
 // ===== begin include/mgmake/task/version.hxx =====
 #pragma once
 
@@ -2920,6 +2953,7 @@ namespace mgmake::task {
 		task::build, // The default task when none is specified
 		task::help,
 		task::clean,
+		task::tools,
 		task::fetch,
 		task::version
 	>;

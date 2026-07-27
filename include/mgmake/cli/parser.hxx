@@ -30,6 +30,10 @@ namespace mgmake::cli {
 		using switches_type = typename list_type::template filter<[]<auto opt_v> -> bool {
 			return opt_v.flag();
 		}>;
+		// Options that parse values
+		using parsers_type = typename list_type::template filter<[]<auto opt_v> -> bool {
+			return opt_v.parses();
+		}>;
 
 		template<typename dispatcher_t>
         static inline constexpr std::expected<options_type, std::string> parse(const sys::shell& cmd) {
