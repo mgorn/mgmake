@@ -12,7 +12,7 @@
 #define MGMAKE_MGMAKE_HXX
 
 #define MGMK_VERSION "0.0.1"
-#define MGMK_VERSION_COMMIT "6f0a1e2"
+#define MGMK_VERSION_COMMIT "2927d73"
 #define MGMK_VERSION_DIRTY false
 
 
@@ -728,6 +728,11 @@ namespace mgmake::meta {
 		// The types for the values
 		using value_types = typename map_type::value_types;
 
+		template<meta::static_string key_v, typename value_t>
+		using emplace = static_dict<typename map_type::template emplace<meta::type_value<key_v>, value_t>>;
+		template<meta::static_string key_v>
+		using get_type = typename map_type::template at<meta::type_value<key_v>>;
+
 		// Store the values in a `std::tuple`
 		using storage_type = typename value_types::template apply<std::tuple>;
 
@@ -1030,54 +1035,10 @@ namespace mgmake::meta {
 
 namespace mgmake::cli {
 	// Type list of all options for the build program
-	template<typename opts_t = meta::value_list<>>
+	template<typename storage_t = meta::static_dict<>>
 	struct options_impl {
-		using list_type = opts_t;
-
-		// The type_map for the option storage key/value pairs
-		using storage_map_type = typename list_type::template fold<[]<typename state_t, auto opt_v>() consteval {
-			// If the option uses storage, it has a storage pair
-			if constexpr (opt_v.has_storage) {
-				// Get the pair
-				using pair_type = decltype(opt_v.storage_pair());
-				// Get the key
-				using key_type = pair_type::key_type;
-				// Get the value type
-				using value_type = pair_type::value_type;
-
-				// If the value_type is void, then it is determined by another option (typically a storage option)
-				if constexpr (not std::is_same_v<value_type, void>) {
-					// When emplacing a key, ensure an existing key has the same value type.
-					if constexpr (state_t::template has<key_type>()) {
-						using in_map_type = typename state_t::template at<key_type>;
-						static_assert(std::is_same_v<value_type, in_map_type>, "option storage key value type mismatch!");
-						return std::type_identity<state_t>{};
-					} else {
-						return std::type_identity<typename state_t::template emplace_unique<key_type, value_type>>{};
-					}
-				} else {
-					return std::type_identity<state_t>{};
-				}
-			} else {
-				// The option doesn't have storage, ignore it
-				return std::type_identity<state_t>{};
-			}
-		}, meta::type_map<>>;
-
-		// Ensure deferred `void` storage pairs resolve to a concrete key supplied by another option.
-		using storage_validation = typename list_type::template fold<[]<typename state_t, auto opt_v>() consteval {
-			if constexpr (opt_v.has_storage) {
-				using pair_type = decltype(opt_v.storage_pair());
-				if constexpr (std::is_same_v<typename pair_type::value_type, void>) {
-					static_assert(storage_map_type::template has<typename pair_type::key_type>(), "void option storage value requires another option to define the key's value type");
-				}
-			}
-			return std::type_identity<state_t>{};
-		}, meta::type_list<>>;
-		static_assert(std::is_same_v<storage_validation, meta::type_list<>>);
-
 		// The storage type for the option values
-		using storage_type = meta::static_dict<storage_map_type>;
+		using storage_type = storage_t;
 
 		template<meta::static_string key_v>
 		static consteval decltype(auto) has() {
@@ -1118,6 +1079,7 @@ namespace mgmake::cli {
 			return this->template set<opt_v.storage_key()>(std::forward<decltype(value)>(value));
 		}
 
+		/*
 		constexpr options_impl() {
 			list_type::for_each([&]<auto opt_v> constexpr {
 				if constexpr (opt_v.has_storage) {
@@ -1128,6 +1090,7 @@ namespace mgmake::cli {
 				}
 			});
 		}
+		*/
 		
 	private:
 		storage_type m_storage{};
@@ -1630,7 +1593,7 @@ namespace mgmake::cli {
     template<auto config_v>
     struct parser {
 		using options_type = decltype(config_v.options());
-		using list_type = options_type::list_type;
+		using list_type = decltype(config_v.options_list());
 
 		// Task options (first arg, no - or --)
 		using tasks_type = typename list_type::template filter<[]<auto opt_v> -> bool {
@@ -1769,7 +1732,7 @@ namespace mgmake::cli {
 					// If the option expects a value
 					if constexpr (opt_v.parses()) {
 						// What is the expected value type?
-						using value_type = decltype(opt_v)::storage_value_type;
+						using value_type = options_type::storage_type::template get_type<opt_v.storage_key()>;
 
 						// Is it `--switch=value` or `--switch value`?
 						if (const auto seperator = arg.find_first_of("="); seperator != std::string_view::npos) {
@@ -2264,14 +2227,12 @@ namespace mgmake::cli {
 			return builder_type::template get_value_or<"callback", nullptr>();
 		}
 
-		// Takes a `meta::type_pair<meta::type_value<meta::static_string>, value_type>` for the option value storage
-		// This is what adds the key and value type to the `option_storage`
-		template<typename pair_t>
-		[[nodiscard]] static consteval auto storage_pair() -> typename builder_type::template set_type<"storage_pair", pair_t> {
-			return {};
+		template<meta::static_string key_v>
+		[[nodiscard]] static consteval auto storage_key() {
+			return builder_type::template set_str<"storage_key", key_v>();
 		}
-		static consteval auto storage_pair() -> typename builder_type::template get_type<"storage_pair", false> {
-			return {};
+		static consteval auto storage_key() {
+			return builder_type::template get_str<"storage_key">();
 		}
 
 		// Set the option to set a specific value & assigns the storage pair
@@ -2280,7 +2241,7 @@ namespace mgmake::cli {
 			return callback<[](auto& opts) {
 				static_assert(not std::is_same_v<decltype(value_v), std::nullopt_t>, "No value passed to `option::set<>` (Do we actually need to set the value to nullopt?)");
 				opts.template set<key_v>(value_v);
-			}>().template storage_pair<typename meta::type_pair<meta::type_value<key_v>, std::remove_cvref_t<decltype(value_v)>>>();
+			}>().template storage_key<key_v>();
 		}
 
 		// If the option parses a value (`--switch=value` or `--switch value`) and stores it
@@ -2293,9 +2254,9 @@ namespace mgmake::cli {
 		}
 
 		// Set the option to parse a value & assigns the storage pair
-		template<meta::static_string key_v, typename parse_t>
+		template<meta::static_string key_v>
 		[[nodiscard]] static consteval auto parse() {
-			return parses<true>().template storage_pair<typename meta::type_pair<meta::type_value<key_v>, parse_t>>();
+			return parses<true>().template storage_key<key_v>();
 		}
 
 		template<bool value_v>
@@ -2313,50 +2274,6 @@ namespace mgmake::cli {
 		}
 		static consteval bool flag() {
 			return builder_type::template get_value_or<"flag", true>();
-		}
-
-		// The option is only for reserving a key/value in storage
-		// this disables task and flag
-		template<meta::static_string key_v, typename value_t>
-		[[nodiscard]] static consteval auto storage() {
-			return task<false>()
-				.template flag<false>()
-				.template storage_pair<typename meta::type_pair<meta::type_value<key_v>, value_t>>();
-		}
-
-		static inline constexpr bool has_storage = not std::is_same_v<decltype(storage_pair()), void>;
-		// The key for the storage value, else the option name
-		static inline constexpr decltype(auto) storage_key() {
-			if constexpr (has_storage) {
-				return decltype(storage_pair())::key_type::value;
-			} else {
-				return option_impl{}.name();
-			}
-		}
-		// The value for the storage, else void
-		using storage_value_type = std::invoke_result_t<decltype([] consteval {
-			if constexpr (has_storage) {
-				return std::type_identity<typename decltype(storage_pair())::value_type>{};
-			} else {
-				return std::type_identity<void>{};
-			}
-		})>::type;
-
-		template<auto default_v>
-		static consteval auto default_value() {
-			using default_t = std::remove_cvref_t<decltype(default_v)>;
-			// If we have storage but not an assigned type
-			if constexpr (std::is_same_v<storage_value_type, void> and has_storage) {
-				// Use the type of the default value passed & set the default value
-				return storage_pair<typename meta::type_pair<meta::type_value<storage_key()>, default_t>>().template default_value<default_v>();
-			} else {
-				// The default value must be assignable to the storage value type
-				static_assert(std::is_assignable_v<storage_value_type&, default_t>, "Default value must be assignable to storage value type");
-				return builder_type::template set_value<"default_value", default_v>();
-			}
-		}
-		static consteval auto default_value() {
-			return builder_type::template get_value_or<"default_value", std::nullopt>();
 		}
 
 		static inline constexpr bool match(std::string_view arg) {
@@ -2421,6 +2338,8 @@ namespace mgmake::cli {
 
 			if constexpr (parses()) {
 				// parse the storage_value_type
+				using storage_value_type = std::decay_t<decltype(opts)>::storage_type::template get_type<storage_key()>;
+
 				using vp = value_parser<storage_value_type>;
 				auto result = vp::parse(value);
 				if (not result.has_value()) {
@@ -2465,10 +2384,13 @@ namespace mgmake::cli {
 #include <vector>
 
 namespace mgmake::cli {
-	static constexpr auto task_option = option
-		.name<"task">()
-		.description<"Decides which task should run.">()
-		.storage<"task", std::size_t>();
+	using default_storage = meta::static_dict<>
+		::template emplace<"task", std::size_t>
+		::template emplace<"verbose", bool>
+		::template emplace<"short", bool>
+		::template emplace<"dry_run", bool>
+		::template emplace<"build_dir", std::filesystem::path>
+		::template emplace<"targets", std::vector<std::string>>;
 
 	static constexpr auto verbose_option = option
 		.name<"verbose">().short_name<'v'>()
@@ -2488,12 +2410,12 @@ namespace mgmake::cli {
 	static constexpr auto build_dir_option = option
 		.name<"build-dir">().short_name<'b'>()
 		.description<"Set the build directory.">()
-		.parse<"build_dir", std::filesystem::path>();
+		.parse<"build_dir">();
 
 	static constexpr auto targets_option = option
 		.name<"targets">().alias<"target">().short_name<'t'>()
 		.description<"Build a specific target. May be passed multiple times.">()
-		.parse<"targets", std::vector<std::string>>();
+		.parse<"targets">();
 	
     // Type list of default options
 	//
@@ -2501,7 +2423,6 @@ namespace mgmake::cli {
     // default_options before passing the list 
     // to your mgmake config for your own CLI
     using default_options = meta::value_list<
-		task_option,
 		verbose_option,
 		short_option,
 		dry_run_option,
@@ -2575,7 +2496,7 @@ namespace mgmake::task {
 		using list_type = decltype(config_v.tasks_list());
 
 		static inline constexpr std::expected<sys::exit_code, std::string> invoke(const sys::shell& cmd, const auto& opts) {
-			if constexpr (not opts.template has<cli::task_option>()) {
+			if constexpr (not opts.template has<"task">()) {
 				return std::unexpected("cli::dispatcher::invoke cannot invoke without a task!");
 			} else {
 				return list_type::type_switch([&]<typename task_t> -> std::expected<sys::exit_code, std::string> {
@@ -2583,7 +2504,7 @@ namespace mgmake::task {
 					static_assert(traits_type::template valid_handler<config_v>, "task is missing a handle function");
 
 					return task_t::template handle<config_v>(cmd, opts);
-				}, opts.template get<cli::task_option>());
+				}, opts.template get<"task">());
 			}
 		}
 
@@ -2805,7 +2726,7 @@ namespace mgmake::task {
 				std::println("\t{:<10} {}", traits_type::name(), traits_type::description());
 			});
 
-			using options_type = decltype(config_v.options())::list_type;
+			using options_type = decltype(config_v.options_list());
 			std::println("\nOptions:");
 			options_type::for_each([]<auto opt_v> {
 				// Only print switches, tasks will be shown first
@@ -2816,7 +2737,8 @@ namespace mgmake::task {
 					}
 					std::print(ss, "--{}", opt_v.name().view());
 					if constexpr (opt_v.parses()) {
-						using vp = cli::value_parser<typename decltype(opt_v)::storage_value_type>;
+						using value_type = typename decltype(config_v.options_storage())::template get_type<opt_v.storage_key()>;
+						using vp = cli::value_parser<value_type>;
 						std::print(ss, "=<{}>", vp::help_hint);
 					}
 					std::println("\t{:<30} {}", ss.str(), opt_v.description().view());
@@ -3078,7 +3000,7 @@ namespace mgmake::tool {
 			return cli::option
 				.name<cli()>()
 				.template description<description_v>()
-				.template parse<cli(), std::filesystem::path>();
+				.template parse<cli()>();
 		}
 		
 		using option_type = decltype(option());
@@ -3572,15 +3494,14 @@ namespace mgmake {
 		[[nodiscard]] static consteval auto options_list() -> builder_type::template set_type<"options_list", options_t> {
 			return {};
 		}
-		static consteval auto options_list() -> builder_type::template get_type_or<"options_list", cli::default_options> {
+		static consteval auto defined_options_list() -> builder_type::template get_type_or<"options_list", cli::default_options> {
 			return {};
 		}
 		template<auto option_v>
 		[[nodiscard]] static consteval auto add_option() {
-			return options_list<typename decltype(options_list())::template append<option_v>>();
+			return options_list<typename decltype(defined_options_list())::template append<option_v>>();
 		}
-
-		static consteval auto full_options_list() {
+		static consteval auto options_list() {
 			// Collect the option associated with every task.
 			using task_options = meta::value_list<>::unwrap_list<typename decltype(tasks_list())::template fold<[]<typename state_t, typename task_t>() consteval {
 				return std::type_identity<typename state_t::template append<meta::type_value<task_t::option>>>{};
@@ -3592,12 +3513,43 @@ namespace mgmake {
 			}, meta::value_list<>>;
 
 			// Append the contents of task_options, not task_options itself.
-			using full_options_list = decltype(options_list())::template prepend_list<task_options>::template append_list<tool_options>;
+			using full_options_list = decltype(defined_options_list())::template prepend_list<task_options>::template append_list<tool_options>;
 			return full_options_list{};
+		}
+		template<typename opt_storage_t>
+		[[nodiscard]] static consteval auto options_storage() -> builder_type::template set_type<"options_storage", opt_storage_t> {
+			return {};
+		}
+		static consteval auto defined_options_storage() -> builder_type::template get_type_or<"options_storage", cli::default_storage> {
+			return {};
+		}
+		template<meta::static_string key_v, typename value_t>
+		[[nodiscard]] static consteval auto add_option_value() {
+			return options_storage<typename decltype(defined_options_storage())::template emplace<key_v, value_t>>();
+		}
+		static consteval auto options_storage() {
+			// Collect the option for each tool override
+			using tool_options = decltype(tools_list())::template fold<[]<typename state_t, auto tool_v> consteval {
+				return std::type_identity<typename state_t::template append<tool_v.option()>>{};
+			}, meta::value_list<>>;
+
+			// Add every tool option's storage key as a filesystem path.
+			using full_options_storage = typename tool_options::template fold<
+				[]<typename opt_storage_t, auto option_v>() consteval {
+					return std::type_identity<
+						typename opt_storage_t::template emplace<
+							option_v.storage_key(),
+							std::filesystem::path
+						>
+					>{};
+				},
+				decltype(defined_options_storage())
+			>;
+			return full_options_storage{};
 		}
 
 		static consteval auto options() {
-			return cli::options_impl<decltype(full_options_list())>{};
+			return cli::options_impl<decltype(options_storage())>{};
 		}
 		static consteval auto tools() {
 			return tool::tools_impl<decltype(tools_list()), decltype(toolchains_list())>{};
