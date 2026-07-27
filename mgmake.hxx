@@ -12,8 +12,8 @@
 #define MGMAKE_MGMAKE_HXX
 
 #define MGMK_VERSION "0.0.1"
-#define MGMK_VERSION_COMMIT "274c2d7"
-#define MGMK_VERSION_DIRTY true
+#define MGMK_VERSION_COMMIT "6f0a1e2"
+#define MGMK_VERSION_DIRTY false
 
 
 // ===== begin include/mgmake/cli/entry.hxx =====
