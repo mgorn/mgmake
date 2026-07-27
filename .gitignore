@@ -56,3 +56,4 @@
 *.s
 *.bc
 *.json
+.env
