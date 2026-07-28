@@ -5,6 +5,7 @@ using namespace mgmk::spec;
 using namespace mgmk::tool;
 
 /* Define the project spec */
+/*
 static constexpr auto glmproj = cmake.name<"glm">()
 	.fetch<fetch.git()
 		.name<"glm-src">()
@@ -49,6 +50,32 @@ static constexpr auto c = config
 
 // Define entrypoint
 MGMK_ENTRY(c);
+*/
+
+using glmfetch = fetch::git::url<>
+using glmproj = cmake::name<"glm">
+	::from<fetch
+		::git
+		::url<"https://github.com/g-truc/glm.git">
+	>
+	::define<"GLM_BUILD_LIBRARY", "ON">
+	::define<"GLM_BUILD_TESTS", "OFF">
+	::define<"GLM_BUILD_INSTALL", "ON">
+	::install;
+using glm = glmproj::target<"glm">;
+
+using sdlproj = cmake::name<"sdl">
+	::from<fetch
+		::git
+		::url<"https://github.com/libsdl-org/SDL.git">
+		::tag<"release-3.4.x">
+	>
+	::define<"SDL_EXAMPLES", "OFF">
+	::define<"SDL_WERROR", "OFF">
+	::define<"SDL_SHARED_DEFAULT", "OFF">
+	::define<"BUILD_SHARED_LIBS", "OFF">
+	::install;
+using sdl = sdlproj::target<"SDL3-static">;
 
 /*
 int main(int argc, char* argv[]) {
